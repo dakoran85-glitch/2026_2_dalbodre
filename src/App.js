@@ -228,13 +228,40 @@ const useDalbodreSystem = () => {
     return arr.map(s => ({ ...s, group: s.group || 1, isLeader: !!s.isLeader, role: s.role || '' }));
   }, [students]);
 
+  // 🔥 [누락 복구 완료!] 진화 및 칭호 계산 함수
+  const getEvolution = (score) => {
+    if (score <= evoThresholds.e1) return { icon: '🥚', texts: ["아직은 졸려요...", "안에서 힘을 모으는 중!"] };
+    if (score <= evoThresholds.e2) return { icon: '🐣', texts: ["껍질에 금이 갔어요!", "으쌰으쌰! 힘을 내요!"] };
+    if (score <= evoThresholds.e3) return { icon: '🐥', texts: ["삐약삐약, 반가워요!", "쑥쑥 크고 있어요!"] };
+    if (score <= evoThresholds.e4) return { icon: '🐤', texts: ["폴짝폴짝 뛰는 게 좋아요!", "날개가 조금 커졌어요!"] };
+    if (score <= evoThresholds.e5) return { icon: '🐔', texts: ["이제 제법 어른 티가 나죠?", "위풍당당 걷기!"] };
+    if (score <= evoThresholds.e6) return { icon: '🕊️', texts: ["더 넓은 세상을 보고 싶어요!", "하늘을 나는 기분!"] };
+    if (score <= evoThresholds.e7) return { icon: '🦅', texts: ["하늘의 제왕이 될 테야!", "매서운 눈빛!"] };
+    if (score <= evoThresholds.e8) return { icon: '🦄', texts: ["마법 같은 힘이 솟아나요!", "무지개 위를 달려볼까?"] };
+    if (score <= evoThresholds.e9) return { icon: '🐲', texts: ["크아앙! 내 불꽃을 조심해!", "아직은 꼬마 드래곤!"] };
+    return { icon: '🐉', texts: ["우주를 호령하는 전설의 등장!", "내가 바로 전설이다!"] };
+  };
+
+  const getLifetimeTier = (sum) => {
+    if (sum < tierThresholds.t1) return { icon: '🤎', label: '1. 잠든 씨앗' };
+    if (sum < tierThresholds.t2) return { icon: '🌱', label: '2. 자라나는 새싹' };
+    if (sum < tierThresholds.t3) return { icon: '🌿', label: '3. 파릇한 줄기' };
+    if (sum < tierThresholds.t4) return { icon: '☘️', label: '4. 행운의 네잎클로버' };
+    if (sum < tierThresholds.t5) return { icon: '🌷', label: '5. 수줍은 꽃봉오리' };
+    if (sum < tierThresholds.t6) return { icon: '🌻', label: '6. 활짝 핀 꽃' };
+    if (sum < tierThresholds.t7) return { icon: '🍎', label: '7. 탐스러운 열매' };
+    if (sum < tierThresholds.t8) return { icon: '🌳', label: '8. 든든한 나무' };
+    if (sum < tierThresholds.t9) return { icon: '🌲', label: '9. 거대한 숲' };
+    return { icon: '👑', label: '10. 생명의 세계수' };
+  };
+
   // 3. 파이어베이스 초기 로딩 (1회)
   useEffect(() => {
     const fetchInitial = async () => {
       setHistory(JSON.parse(localStorage.getItem('dal_v32_history')) || []);
       if (!DATABASE_URL || DATABASE_URL.includes("복사한_주소")) { setIsLoading(false); return; }
       
-      const dbUrl = `${DATABASE_URL.replace(/\/$/, '')}/classData_V3.json`;
+      const dbUrl = `${DATABASE_URL.replace(/\/$/, '')}/classData_V2.json`;
       try {
         const response = await fetch(dbUrl);
         const data = await response.json();
@@ -602,7 +629,6 @@ const useDalbodreSystem = () => {
     utils: { getEvolution, getLifetimeTier, currentBossHits: Object.values(bossAttacks || {}).filter(Boolean).length, maxBossHits: safeStudentsArray.length, isDongminGod: gachaConfig.mode === 'special', currentGachaSettings: gachaConfig[gachaConfig.mode || 'normal'] }
   };
 };
-
 // ==========================================
 // 아래부터 Part 3 코드가 이어집니다.
 // ==========================================
