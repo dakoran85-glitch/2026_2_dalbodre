@@ -444,7 +444,8 @@ const useDalbodreSystem = () => {
       gachaConfig, shopItems, leaderConfig, manitoConfig, manualTotalBonus, targetScore, evoThresholds, tierThresholds,
       storeSelected, newRoleName, newItemName, newItemPrice, newBossName, newBossDesc, newBossReward, newBossPenalty,
       newMarketName, newMarketDesc, selectedGachaStudent, selectedStoreStudent, selectedMarketStudent, manualAdjustAmount,
-      manitoRevealState, manitoRevealMsg, effectiveManitoName, secretManitoName, effectiveManitoId, selectedHyunRole, weeklyStreak, isWeeklyClaimed
+      manitoRevealState, manitoRevealMsg, effectiveManitoName, secretManitoName, effectiveManitoId, selectedHyunRole, weeklyStreak, isWeeklyClaimed,
+      leaderBonuses, history, rolesList, students // 🔥 누락되었던 핵심 상태 추가!
     },
     actions: {
       setActiveTab, setTeacherTab, setIsAuthenticated, setPassword, setShowModal, setShowJackpot, setShowGuide, setGroupFilter,
@@ -452,7 +453,7 @@ const useDalbodreSystem = () => {
       setNewMarketName, setNewMarketDesc, setSelectedGachaStudent, setSelectedStoreStudent, setSelectedMarketStudent, setManualAdjustAmount,
       setSelectedHyunRole, setGachaConfig, setManitoConfig, setLeaderConfig, setManualTotalBonus, setTargetScore, setEvoThresholds, setTierThresholds,
       setCheckedGroupGoals, setWeeklyStreak, setIsWeeklyClaimed, syncToFirebase, 
-      
+      setHistory, setRolesList, setStudents, // 🔥 누락되었던 관리실 액션 추가!
       handleAdjust: (id, type, delta, e) => {
         if (delta > 0) playSound('good'); else playSound('bad');
         if (e && delta > 0) { setParticle({ x: e.clientX, y: e.clientY, text: "+", id: Date.now() }); setTimeout(() => setParticle(null), 800); }
@@ -647,7 +648,8 @@ const App = () => {
     gachaConfig, shopItems, leaderConfig, manitoConfig, manualTotalBonus, targetScore, evoThresholds, tierThresholds,
     storeSelected, newRoleName, newItemName, newItemPrice, newBossName, newBossDesc, newBossReward, newBossPenalty,
     newMarketName, newMarketDesc, selectedGachaStudent, selectedStoreStudent, selectedMarketStudent, manualAdjustAmount,
-    manitoRevealState, manitoRevealMsg, effectiveManitoName, secretManitoName, effectiveManitoId, selectedHyunRole, weeklyStreak, isWeeklyClaimed
+    manitoRevealState, manitoRevealMsg, effectiveManitoName, secretManitoName, effectiveManitoId, selectedHyunRole, weeklyStreak, isWeeklyClaimed,
+    leaderBonuses, history, rolesList, students // 🔥 누락되었던 핵심 상태 수신 완료!
   } = state;
 
   // 3. 액션(Actions) 꺼내오기
@@ -657,6 +659,7 @@ const App = () => {
     setNewMarketName, setNewMarketDesc, setSelectedGachaStudent, setSelectedStoreStudent, setSelectedMarketStudent, setManualAdjustAmount,
     setSelectedHyunRole, setGachaConfig, setManitoConfig, setLeaderConfig, setManualTotalBonus, setTargetScore, setEvoThresholds, setTierThresholds,
     setCheckedGroupGoals, setWeeklyStreak, setIsWeeklyClaimed, syncToFirebase, 
+    setHistory, setRolesList, setStudents, // 🔥 누락되었던 관리실 액션 수신 완료!
     handleAdjust, handleToggle, handleGroupAllClear, handlePurify, handleRevealManito, closeManitoReveal, saveDailyRecord, handleLogin,
     handleGacha, handleStudentStoreBuy, handleMarketBuy, handleMultiConsume, handleEvolutionClick, handleAddRole, handleDeleteRole, handleStudentFieldChange,
     handleAddShopItem, handleDeleteShopItem, handleAddBoss, handleDeleteBoss, handleAddMarket, handleDeleteMarket, clearTodayChecks, resetGoalAllScores,
