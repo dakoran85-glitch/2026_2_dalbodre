@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 // ==========================================
-// 🚨 파이어베이스 주소 (선생님의 주소로 꼭 확인하세요!)
+// 🚨 파이어베이스 주소 (선생님의 주소)
 const DATABASE_URL = "https://dalbodre-db-default-rtdb.asia-southeast1.firebasedatabase.app/"; 
 // ==========================================
 
@@ -29,41 +29,66 @@ const playSound = (type) => {
 
 const defaultStudents = Array.from({ length: 26 }, (_, i) => ({ id: i + 1, name: `학생${i + 1}`, role: '향리', group: Math.floor(i / 4) + 1, isLeader: false }));
 
-// 🔥 선생님께서 주신 이미지 기반 5단계 SEL 가이드라인 적용!
-const SEL_GUIDES = { 
-  "자기 인식": "상황: 내 기분이 어땠는지 적어보세요.\n다짐: 내 안의 감정과 빛나는 강점을 어떻게 발견할지 다짐해보세요.", 
-  "자기 관리": "상황: 화가 나거나 포기하고 싶었을 때를 적어보세요.\n다짐: 감정의 파도를 다스리고 목표를 향해 어떻게 나아갈지 다짐해보세요.", 
-  "사회적 인식": "상황: 친구와 생각이 다르거나 오해가 생겼을 때를 적어보세요.\n공감: 타인의 마음을 읽고 다름을 어떻게 인정할지 적어보세요.", 
-  "관계 기술": "상황: 대화나 모둠 활동 중 배려가 필요했던 순간을 적어보세요.\n행동: 함께할 때 더 커지는 마법 같은 우정을 위해 어떻게 행동할지 적어보세요.", 
-  "책임 있는 의사결정": "상황: 우리 반의 규칙이나 분위기를 위한 선택의 순간을 적어보세요.\n다짐: 더 나은 세상을 만드는 나의 선택을 어떻게 실천할지 적어보세요." 
-};
+// 🔥 선생님이 올려주신 이미지 기반 SEL 5단계 가이드라인 적용
+const SEL_OPTIONS = [
+  { id: 'sel1', short: '자기 인식', name: '1단계: 자기 인식 (Self-awareness) - 내 안의 감정과 빛나는 강점 발견하기' },
+  { id: 'sel2', short: '자기 관리', name: '2단계: 자기 관리 (Self-management) - 감정의 파도를 다스리고 목표를 향해 나아가기' },
+  { id: 'sel3', short: '사회적 인식', name: '3단계: 사회적 인식 (Social awareness) - 타인의 마음을 읽고 다름을 인정하기' },
+  { id: 'sel4', short: '관계 기술', name: '4단계: 관계 기술 (Relationship skills) - 함께할 때 더 커지는 마법 같은 우정' },
+  { id: 'sel5', short: '책임있는 의사결정', name: '5단계: 책임 있는 의사결정 (Responsible decision-making) - 더 나은 세상을 만드는 나의 선택' }
+];
 
 const App = () => {
+  // --- UI 및 네비게이션 상태 ---
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [helpSubTab, setHelpSubTab] = useState('inspector');
   const [adminSubTab, setAdminSubTab] = useState('report');
+  
+  // --- 인증 및 모달 상태 ---
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [showModal, setShowModal] = useState(null);
-
-  // 🚨 [복구 완료] 모달 및 폼 상태 변수들 (절대 지우지 않음!)
+  
+  // 🚨 가장 중요! 폼 제어 상태 변수 (명시적 분리 선언)
   const [showPraiseModal, setShowPraiseModal] = useState(false); 
-  const [refTarget, setRefTarget] = useState(""); 
-  const [refTag, setRefTag] = useState(""); 
-  const [refText, setRefText] = useState("");
   const [praiseTarget, setPraiseTarget] = useState(""); 
   const [praiseTag, setPraiseTag] = useState(""); 
   const [praiseText, setPraiseText] = useState("");
-  const [newRole, setNewRole] = useState(""); 
-  const [selectedReportStudent, setSelectedReportStudent] = useState(null);
 
-  // DB 상태 (통합)
+  const [refTarget, setRefTarget] = useState(""); 
+  const [refTag, setRefTag] = useState(""); 
+  const [refText, setRefText] = useState("");
+
+  const [newRole, setNewRole] = useState(""); 
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemPrice, setNewItemPrice] = useState("");
+  const [selectedReportStudent, setSelectedReportStudent] = useState("");
+
+  // --- 통합 데이터베이스 상태 ---
   const [db, setDb] = useState({
-    students: defaultStudents, rolesList: ['학급문고 정리', '우유 배달', '다툼 중재자', '현령', '감찰사'],
-    settings: { title: "달보드레 마음성장 대시보드", menuNames: ["명성 현황판", "성찰과 회복", "도움실", "통합 관리실"], targetScore: 3000, forceShopOpen: false, weeklyTheme: "관계 기술", helpRoomPw: "1111", isGachaOpen: false, isBlackMarketOpen: false, showCumulativeStats: false },
-    gachaConfig: { mode: 'normal', cost: 30, t1: {name:'😭 꽝!', prob:50, reward:0}, t2: {name:'🪙 페이백!', prob:30, reward:30}, t3: {name:'🍬 소소한 간식', prob:15, reward:50}, t4: {name:'🎰 잭팟!!', prob:5, reward:200} },
-    shopItems: [{ id: 'i1', name: '달보드레 연필', price: 30, creator: '선생님' }], blackMarketItems: [{ id: 'b1', name: '선생님과 보드게임권', price: 200 }],
+    students: defaultStudents, 
+    rolesList: ['학급문고 정리', '우유 배달', '다툼 중재자', '현령', '감찰사'],
+    settings: { 
+      title: "달보드레 마음성장 대시보드", 
+      menuNames: ["명성 현황판", "성찰과 회복", "도움실", "통합 관리실"], 
+      targetScore: 3000, 
+      forceShopOpen: false, 
+      weeklyTheme: "4단계: 관계 기술 (Relationship skills) - 함께할 때 더 커지는 마법 같은 우정", 
+      helpRoomPw: "1111", 
+      isGachaOpen: false, 
+      isBlackMarketOpen: false, 
+      showCumulativeStats: false 
+    },
+    gachaConfig: { 
+      mode: 'normal', cost: 30, 
+      t1: {name:'😭 꽝!', prob:50, reward:0}, 
+      t2: {name:'🪙 페이백!', prob:30, reward:30}, 
+      t3: {name:'🍬 소소한 간식', prob:15, reward:50}, 
+      t4: {name:'🎰 잭팟!!', prob:5, reward:200} 
+    },
+    shopItems: [{ id: 'i1', name: '달보드레 연필', price: 30, creator: '선생님' }], 
+    blackMarketItems: [{ id: 'b1', name: '선생님과 보드게임권', price: 200 }],
     roleExp: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {},
     pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [],
     funding: [{ id: 1, name: "체육 한 시간 더", target: 1000, current: 0 }, { id: 2, name: "금요일 팝콘 파티", target: 2000, current: 0 }],
@@ -71,20 +96,28 @@ const App = () => {
     allTime: { exp: {}, penalty: {}, donate: {}, fund: {} } 
   });
 
+  // --- 실시간 동기화 (파이어베이스) ---
   useEffect(() => {
     const fetchLive = async () => {
-      try { const res = await fetch(`${DATABASE_URL}v61Data.json`); const data = await res.json(); if (data) setDb(prev => ({...prev, ...data})); } catch (e) {}
+      try { 
+        const res = await fetch(`${DATABASE_URL}v62Data.json`); 
+        const data = await res.json(); 
+        if (data) setDb(prev => ({...prev, ...data})); 
+      } catch (e) {}
       setIsLoading(false);
     };
-    fetchLive(); const interval = setInterval(fetchLive, 3000); return () => clearInterval(interval);
+    fetchLive(); 
+    const interval = setInterval(fetchLive, 3000); 
+    return () => clearInterval(interval);
   }, []);
 
   const sync = async (updates) => {
-    const nextDb = { ...db, ...updates }; setDb(nextDb);
-    try { await fetch(`${DATABASE_URL}v61Data.json`, { method: 'PATCH', body: JSON.stringify(updates) }); } catch (e) {}
+    const nextDb = { ...db, ...updates }; 
+    setDb(nextDb);
+    try { await fetch(`${DATABASE_URL}v62Data.json`, { method: 'PATCH', body: JSON.stringify(updates) }); } catch (e) {}
   };
 
-  // --- 데이터 연산 ---
+  // --- 연산 로직 ---
   const allStats = useMemo(() => {
     return db.students.map(s => {
       const exp = db.roleExp[s.id] || 0;
@@ -100,7 +133,13 @@ const App = () => {
     });
   }, [db.students, db.roleExp, db.usedCoins, db.studentStatus, db.allTime]);
 
-  const sortedDashboardStats = useMemo(() => [...allStats].sort((a, b) => { const order = { crisis: 0, pending: 1, normal: 2 }; if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status]; return a.id - b.id; }), [allStats]);
+  const sortedDashboardStats = useMemo(() => {
+    return [...allStats].sort((a, b) => { 
+      const order = { crisis: 0, pending: 1, normal: 2 }; 
+      if (order[a.status] !== order[b.status]) return order[a.status] - order[b.status]; 
+      return a.id - b.id; 
+    });
+  }, [allStats]);
   
   const { classReputation, shieldPoints } = useMemo(() => {
     const rawReputation = allStats.reduce((sum, s) => sum + s.exp * 10 - (db.penaltyCount[s.id] || 0) * 20, 0) + db.donations.reduce((sum, d) => sum + d.amount, 0) + (db.manualRepOffset || 0);
@@ -112,7 +151,7 @@ const App = () => {
 
   const isShopOpen = useMemo(() => db.settings.forceShopOpen || new Date().getDay() === 4, [db.settings.forceShopOpen]);
 
-  // --- 핸들러 ---
+  // --- 액션 핸들러 ---
   const handleExpAdjust = (id, delta) => {
     if(delta > 0) playSound('good');
     sync({ 
@@ -194,6 +233,28 @@ const App = () => {
     else alert("비밀번호 오류");
   };
 
+  const handleStudentFieldChange = (id, field, value) => {
+    const next = db.students.map(st => st.id === id ? {...st, [field]: value} : st);
+    setStudents(next); sync({students: next});
+  };
+
+  const handleEmergencyMission = (type) => {
+    const points = type === 'all' ? 26 : 13;
+    if(window.confirm(`긴급 미션 ${type === 'all' ? '전원 완수(+26p)' : '부분 완수(+13p)'}를 반영할까요?`)) {
+      sync({ donations: [{ id: Date.now(), name: "📢 긴급 미션", amount: points }, ...db.donations].slice(0, 15) });
+      alert("명성 보너스가 반영되었습니다!");
+    }
+  };
+
+  const partialReset = (type) => {
+    if(window.confirm(`정말 해당 데이터를 초기화할까요?`)) {
+      if(type === 'donations') sync({ donations: [] });
+      if(type === 'status') sync({ studentStatus: {}, penaltyCount: {} });
+      if(type === 'exp') sync({ roleExp: {} });
+      alert("초기화 완료!");
+    }
+  };
+
   const closeSemester = () => {
     if(window.prompt("1학기를 마감하시겠습니까? 누적(All-Time) 데이터를 제외한 점수와 코인이 리셋됩니다. '마감'을 입력하세요.") === "마감") {
       sync({ roleExp: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], donations: [] });
@@ -201,11 +262,20 @@ const App = () => {
     }
   };
 
+  const factoryReset = () => {
+    if(window.prompt("초기화하시겠습니까? '초기화'를 입력하세요") === "초기화") {
+      sync({ roleExp: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [], funding: [{ id: 1, name: "체육 한 시간 더", target: 1000, current: 0 }, { id: 2, name: "금요일 팝콘 파티", target: 2000, current: 0 }], shieldPoints: 100, allTime: { exp: {}, penalty: {}, donate: {}, fund: {} } });
+      alert("전체 리셋 완료.");
+    }
+  };
+
+  // --- 렌더링 ---
   if (isLoading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-black text-2xl">데이터 동기화 중...</div>;
 
   return (
     <div className="min-h-screen bg-slate-50 pb-32 font-sans text-slate-800 transition-all">
-      {/* 1. 상단 전광판 */}
+      
+      {/* 1. 상단 명성 전광판 */}
       <header className="bg-slate-900 text-white p-8 md:p-12 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600 rounded-full blur-[150px] opacity-30"></div>
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500 rounded-full blur-[100px] opacity-20"></div>
@@ -229,24 +299,24 @@ const App = () => {
         </div>
       </header>
 
-      {/* 기부 & 온기 마키 */}
+      {/* 2. 기부 및 온기 마키 */}
       <div className="bg-indigo-600 text-white py-3 overflow-hidden shadow-lg border-y border-indigo-500 relative z-20">
         <div className="whitespace-nowrap animate-[shimmer_30s_linear_infinite] flex gap-20 text-sm font-black">
           <span className="flex gap-4 items-center"><Coins className="w-4 h-4 text-yellow-400"/> 기부 천사: {db.donations.map(d => `${d.name}(${d.amount}p)`).join(' · ') || '내역이 없습니다.'}</span>
-          <span className="flex gap-4 items-center text-pink-200"><Heart className="w-4 h-4 text-pink-400"/> 온기 소식: {db.approvedPraises.map(p => `[${p.tag}] ${allStats.find(s=>s.id==p.toId)?.name||'나 자신'}: "${p.text}"`).join(' · ') || '따뜻한 소식을 기다립니다.'}</span>
+          <span className="flex gap-4 items-center text-pink-200"><Heart className="w-4 h-4 text-pink-400"/> 온기 소식: {db.approvedPraises.map(p => `[${SEL_OPTIONS.find(opt=>opt.name===p.tag)?.short||'칭찬'}] ${allStats.find(s=>s.id==p.toId)?.name||'나 자신'}: "${p.text}"`).join(' · ') || '따뜻한 소식을 기다립니다.'}</span>
         </div>
       </div>
 
       <main className="max-w-7xl mx-auto p-4 md:p-8">
         
-        {/* 📄 PAGE 1: 대시보드 */}
+        {/* 📄 PAGE 1: 명성 현황판 */}
         {activeTab === 'dashboard' && (
           <div className="space-y-12 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="bg-white p-8 rounded-[40px] shadow-sm border border-blue-100 relative overflow-hidden">
                 <div className="absolute -top-4 -right-4 w-24 h-24 bg-blue-50 rounded-full"></div>
                 <h3 className="text-lg font-black text-blue-600 mb-2 flex items-center gap-2"><Zap className="w-5 h-5"/> 이번 주 마음성장 테마</h3>
-                <p className="text-3xl font-black text-slate-800">{db.settings.weeklyTheme}</p>
+                <p className="text-xl font-black text-slate-800 leading-snug">{db.settings.weeklyTheme}</p>
                 <p className="text-xs font-bold text-slate-400 mt-4 leading-relaxed">테마에 맞는 온기 제보 시<br/>학급 명성 보너스가 부여됩니다.</p>
               </div>
               <div className="lg:col-span-2 bg-white p-8 rounded-[40px] shadow-sm border border-amber-100 flex flex-col justify-between">
@@ -311,7 +381,6 @@ const App = () => {
                     {s.mastery.label} <span className="text-[11px] opacity-70 ml-1">({s.exp}회)</span>
                   </div>
 
-                  {/* 🔥 교사 허용 시 보이는 누적 데이터 (All-Time) */}
                   {db.settings.showCumulativeStats && (
                     <div className="bg-slate-800 p-3 rounded-2xl mb-4 text-[10px] font-bold text-slate-300 grid grid-cols-2 gap-y-1">
                        <span className="col-span-2 text-center text-blue-400 font-black mb-1 border-b border-slate-700 pb-1">누적 성장 데이터</span>
@@ -333,7 +402,7 @@ const App = () => {
           </div>
         )}
 
-        {/* 📄 PAGE 2: 성찰과 회복 */}
+        {/* 📄 PAGE 2: 성찰과 회복 (SEL) */}
         {activeTab === 'reflection' && (
           <div className="max-w-3xl mx-auto animate-in zoom-in-95 duration-500">
              <div className="bg-white p-12 rounded-[50px] shadow-sm border border-slate-100 text-center">
@@ -350,15 +419,15 @@ const App = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-black mb-3 text-slate-600">2. 어떤 마음성장 역량이 부족했나요?</label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {Object.keys(SEL_GUIDES).map(t => (
-                        <button key={t} onClick={() => setRefTag(t)} className={`p-4 rounded-2xl border-2 font-black text-sm transition-all ${refTag === t ? 'bg-green-500 border-green-500 text-white shadow-lg scale-105' : 'bg-white border-slate-200 text-slate-500 hover:border-green-300 hover:bg-green-50'}`}>{t}</button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {SEL_OPTIONS.map(opt => (
+                        <button key={opt.id} onClick={() => setRefTag(opt.name)} className={`p-4 rounded-2xl border-2 font-black text-xs text-left transition-all ${refTag === opt.name ? 'bg-green-500 border-green-500 text-white shadow-lg scale-105' : 'bg-white border-slate-200 text-slate-500 hover:border-green-300 hover:bg-green-50'}`}>{opt.name}</button>
                       ))}
                     </div>
                   </div>
                   <div>
                     <label className="block text-sm font-black mb-3 text-slate-600">3. 공언하기 (성찰과 다짐)</label>
-                    <textarea value={refText} onChange={e=>setRefText(e.target.value)} rows="5" className="w-full p-6 rounded-[30px] border-2 border-slate-200 font-black outline-none focus:border-green-400 bg-white resize-none text-lg leading-relaxed placeholder:text-slate-300 placeholder:font-bold" placeholder={refTag ? SEL_GUIDES[refTag] : "위에서 역량을 먼저 선택하면 구체적인 예시 가이드가 나타납니다."}></textarea>
+                    <textarea value={refText} onChange={e=>setRefText(e.target.value)} rows="5" className="w-full p-6 rounded-[30px] border-2 border-slate-200 font-black outline-none focus:border-green-400 bg-white resize-none text-lg leading-relaxed placeholder:text-slate-300 placeholder:font-bold" placeholder="역량을 먼저 선택하면 구체적인 예시 가이드가 나타납니다."></textarea>
                   </div>
                   <button onClick={submitReflection} className="w-full bg-slate-900 text-white py-6 rounded-[30px] font-black text-xl shadow-2xl hover:bg-slate-800 active:scale-95 transition-all flex justify-center items-center gap-2"><Send className="w-6 h-6"/> 성찰 내용 제출하기</button>
                 </div>
@@ -448,7 +517,7 @@ const App = () => {
 
               {helpSubTab === 'shop' && (
                 <div className="space-y-8 animate-in fade-in">
-                  <div className="flex justify-between items-center mb-8"><h3 className="text-3xl font-black text-slate-800 border-l-8 border-amber-500 pl-6">학급 상점</h3><div className={`px-6 py-3 rounded-full font-black text-sm shadow-md ${isShopOpen ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>{isShopOpen ? "🔓 상점 영업 중" : "🔒 영업 종료 (목요일에 만나요)"}</div></div>
+                  <div className="flex justify-between items-center mb-8"><h3 className="text-3xl font-black text-slate-800 border-l-8 border-amber-500 pl-6">학급 상점</h3><div className={`px-6 py-3 rounded-full font-black text-sm shadow-md ${isShopOpen ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>{isShopOpen ? "🔓 상점 영업 중" : "🔒 영업 종료 (목요일 개방)"}</div></div>
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                     {db.shopItems.map(item => (
                       <div key={item.id} className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 flex flex-col justify-between">
@@ -461,17 +530,18 @@ const App = () => {
                              if(!sid) return alert("선택하세요.");
                              const user = allStats.find(u => u.id == sid);
                              if(user.coins < item.price) return alert("코인 부족.");
-                             if(window.confirm(`${user.name}의 코인을 차감하고 결제할까요?`)) { sync({ usedCoins: { ...db.usedCoins, [sid]: (db.usedCoins[sid] || 0) + item.price } }); alert("결제 완료!"); playSound('buy'); }
+                             if(window.confirm(`${user.name}의 개인 코인을 차감하고 결제할까요?`)) { sync({ usedCoins: { ...db.usedCoins, [sid]: (db.usedCoins[sid] || 0) + item.price } }); alert("결제 승인 완료!"); playSound('buy'); }
                            }} className="bg-amber-500 text-white px-10 rounded-2xl font-black text-lg shadow-lg hover:bg-amber-600 active:scale-95 transition-all">구매 확정</button>
                          </div>
                       </div>
                     ))}
+                    
                     {db.funding.map(f => (
                       <div key={f.id} className="bg-gradient-to-br from-indigo-600 to-blue-800 p-8 rounded-[40px] shadow-xl text-white flex flex-col justify-between relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full blur-2xl"></div>
                         <div className="relative z-10">
                            <h4 className="text-2xl font-black mb-2 flex items-center gap-3"><Target className="w-6 h-6 text-blue-300"/> {f.name} (펀딩)</h4>
-                           <p className="text-sm font-bold text-blue-200 mb-8">십시일반 투자하여 공동의 보상을 얻으세요!</p>
+                           <p className="text-sm font-bold text-blue-200 mb-8">십시일반 투자하여 학급 목표를 달성하세요!</p>
                            <div className="flex justify-between items-end text-lg font-black mb-3"><span>현재: {f.current}p</span><span className="text-blue-300">목표: {f.target}p</span></div>
                            <div className="w-full h-5 bg-white/20 rounded-full mb-10 overflow-hidden border border-white/10"><div className="h-full bg-white transition-all shadow-[0_0_15px_white]" style={{width:`${(f.current/f.target)*100}%`}}></div></div>
                         </div>
@@ -494,7 +564,7 @@ const App = () => {
           </div>
         )}
 
-        {/* 📄 PAGE 4: 통합 관리실 (교사) */}
+        {/* 📄 PAGE 4: 통합 관리실 (교사 전용) */}
         {activeTab === 'admin' && isAuthenticated === 'teacher' && (
           <div className="bg-white rounded-[50px] shadow-sm border border-slate-100 flex flex-col lg:flex-row overflow-hidden min-h-[750px] animate-in slide-in-from-right duration-300">
              <aside className="w-full lg:w-72 bg-slate-900 p-10 flex flex-col gap-4 shrink-0 border-r border-slate-800">
@@ -514,7 +584,7 @@ const App = () => {
                     <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-6 mb-8">🌱 학생별 SEL 마음성장 리포트</h3>
                     <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 flex flex-col md:flex-row gap-10">
                       <div className="w-full md:w-1/3">
-                        <select value={selectedReportStudent || ""} onChange={e=>setSelectedReportStudent(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border border-slate-200 font-black text-lg outline-none mb-6 focus:border-blue-400">
+                        <select value={selectedReportStudent} onChange={e=>setSelectedReportStudent(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border border-slate-200 font-black text-lg outline-none mb-6 focus:border-blue-400">
                           <option value="">학생을 선택하세요</option>
                           {allStats.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
@@ -523,24 +593,26 @@ const App = () => {
                       <div className="w-full md:w-2/3 bg-slate-50 p-8 rounded-3xl border border-slate-200">
                         {selectedReportStudent ? (() => {
                           const s = allStats.find(x => x.id == selectedReportStudent);
-                          const counts = {"자기 인식":0, "자기 관리":0, "사회적 인식":0, "관계 기술":0, "책임 있는 의사결정":0};
+                          const counts = {}; SEL_OPTIONS.forEach(o => counts[o.name] = 0);
                           db.approvedPraises.forEach(p => { if(p.toId == s.id && counts[p.tag] !== undefined) counts[p.tag]++; });
                           const max = Math.max(...Object.values(counts), 5);
                           return (
                             <div className="animate-in fade-in zoom-in-95">
                               <h4 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-2"><Star className="text-yellow-400 fill-yellow-400"/> {s.name} 학생의 강점 분석</h4>
                               <div className="space-y-4 mb-8">
-                                {Object.keys(counts).map(tag => (
+                                {Object.keys(counts).map(tag => {
+                                  const shortName = SEL_OPTIONS.find(opt=>opt.name === tag)?.short || tag;
+                                  return (
                                   <div key={tag} className="flex items-center gap-4">
-                                    <span className="w-28 text-sm font-black text-slate-600 text-right">{tag}</span>
+                                    <span className="w-24 text-sm font-black text-slate-600 text-right">{shortName}</span>
                                     <div className="flex-1 h-6 bg-white rounded-full overflow-hidden border border-slate-200 shadow-inner"><div className="h-full bg-gradient-to-r from-blue-400 to-indigo-500 transition-all duration-1000" style={{width: `${(counts[tag]/max)*100}%`}}></div></div>
                                     <span className="w-10 font-black text-blue-600 text-right">{counts[tag]}회</span>
                                   </div>
-                                ))}
+                                )})}
                               </div>
                               <p className="text-sm font-bold text-slate-500 border-t border-slate-200 pt-6">최근 받은 온기 사연</p>
                               <ul className="mt-4 space-y-3 text-sm text-slate-700">
-                                {db.approvedPraises.filter(p=>p.toId==s.id).slice(0,3).map(p=><li key={p.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 font-bold"><span className="text-xs text-pink-500 bg-pink-50 px-2 py-1 rounded-md mr-2">[{p.tag}]</span>"{p.text}"</li>)}
+                                {db.approvedPraises.filter(p=>p.toId==s.id).slice(0,3).map(p=><li key={p.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 font-bold"><span className="text-xs text-pink-500 bg-pink-50 px-2 py-1 rounded-md mr-2">[{SEL_OPTIONS.find(o=>o.name===p.tag)?.short}]</span>"{p.text}"</li>)}
                                 {db.approvedPraises.filter(p=>p.toId==s.id).length === 0 && <li className="text-slate-400 italic">아직 받은 사연이 없습니다.</li>}
                               </ul>
                             </div>
@@ -578,20 +650,25 @@ const App = () => {
                           <div className="w-full space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                             {db.pendingReflections.map(r => (
                               <div key={r.id} className="bg-red-50 p-5 rounded-2xl border border-red-200 text-left shadow-sm">
-                                <div className="flex justify-between items-center mb-3"><span className="font-black text-red-800 bg-red-100 px-3 py-1 rounded-lg text-xs">{allStats.find(s=>s.id==r.sId)?.name} (성찰)</span><span className="text-[10px] font-bold text-red-400">{r.tag}</span></div>
+                                <div className="flex justify-between items-center mb-3"><span className="font-black text-red-800 bg-red-100 px-3 py-1 rounded-lg text-xs">{allStats.find(s=>s.id==r.sId)?.name} (성찰)</span><span className="text-[10px] font-bold text-red-400">{SEL_OPTIONS.find(opt=>opt.name===r.tag)?.short}</span></div>
                                 <p className="text-sm text-slate-700 font-bold mb-4">"{r.text}"</p>
                                 <div className="flex gap-2">
                                   <button onClick={() => {
                                     const next = db.pendingReflections.filter(pr => pr.id !== r.id);
                                     sync({ pendingReflections: next, studentStatus: { ...db.studentStatus, [r.sId]: 'normal' } });
                                     alert("위기 해제 승인 완료!"); playSound('good');
-                                  }} className="w-full bg-red-500 text-white py-3 rounded-xl font-black text-sm hover:bg-red-600 shadow-md">위기 해제 승인</button>
+                                  }} className="flex-1 bg-red-500 text-white py-3 rounded-xl font-black text-sm hover:bg-red-600 shadow-md">위기 해제 승인</button>
+                                  <button onClick={() => {
+                                    const next = db.pendingReflections.filter(pr => pr.id !== r.id);
+                                    sync({ pendingReflections: next, studentStatus: { ...db.studentStatus, [r.sId]: 'crisis' } });
+                                    alert("반려되었습니다.");
+                                  }} className="px-4 bg-white text-slate-400 font-black rounded-xl border border-slate-200">반려</button>
                                 </div>
                               </div>
                             ))}
                             {db.pendingPraises.map(p => (
                               <div key={p.id} className="bg-pink-50 p-5 rounded-2xl border border-pink-200 text-left shadow-sm">
-                                <div className="flex justify-between items-center mb-3"><span className="font-black text-pink-800 bg-pink-100 px-3 py-1 rounded-lg text-xs">To. {allStats.find(s=>s.id==p.toId)?.name||'나 자신'} (온기)</span><span className="text-[10px] font-bold text-pink-400">{p.tag}</span></div>
+                                <div className="flex justify-between items-center mb-3"><span className="font-black text-pink-800 bg-pink-100 px-3 py-1 rounded-lg text-xs">To. {allStats.find(s=>s.id==p.toId)?.name||'나 자신'} (온기)</span><span className="text-[10px] font-bold text-pink-400">{SEL_OPTIONS.find(opt=>opt.name===p.tag)?.short}</span></div>
                                 <p className="text-sm text-slate-700 font-bold mb-4">"{p.text}"</p>
                                 <button onClick={() => {
                                   const next = db.pendingPraises.filter(pr => pr.id !== p.id);
@@ -623,13 +700,12 @@ const App = () => {
                       <div className="pt-8 border-t border-slate-200">
                         <h4 className="font-black text-lg text-slate-700 mb-4">정규 상점 물품 관리</h4>
                         <div className="flex gap-4 mb-4">
-                          <input type="text" placeholder="새로운 물품 이름" id="new_item_name" className="flex-1 p-4 rounded-xl border border-slate-300 font-bold outline-none"/>
-                          <input type="number" placeholder="가격" id="new_item_price" className="w-32 p-4 rounded-xl border border-slate-300 font-bold outline-none"/>
+                          <input type="text" placeholder="새로운 물품 이름" value={newItemName} onChange={e=>setNewItemName(e.target.value)} className="flex-1 p-4 rounded-xl border border-slate-300 font-bold outline-none"/>
+                          <input type="number" placeholder="가격" value={newItemPrice} onChange={e=>setNewItemPrice(e.target.value)} className="w-32 p-4 rounded-xl border border-slate-300 font-bold outline-none"/>
                           <button onClick={() => {
-                            const name = document.getElementById('new_item_name').value; const price = parseInt(document.getElementById('new_item_price').value);
-                            if(!name || !price) return alert("입력 오류");
-                            sync({ shopItems: [...db.shopItems, { id: Date.now(), name, price, creator: '선생님' }] });
-                            document.getElementById('new_item_name').value = ""; document.getElementById('new_item_price').value = "";
+                            if(!newItemName || !newItemPrice) return alert("입력 오류");
+                            sync({ shopItems: [...db.shopItems, { id: Date.now(), name: newItemName, price: parseInt(newItemPrice), creator: '선생님' }] });
+                            setNewItemName(""); setNewItemPrice("");
                           }} className="bg-blue-600 text-white px-8 rounded-xl font-black shadow-md hover:bg-blue-700">추가</button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -667,7 +743,7 @@ const App = () => {
                           <div>
                             <label className="block text-sm font-black text-slate-500 mb-3">이주의 마음성장(SEL) 테마</label>
                             <select value={db.settings.weeklyTheme} onChange={e=>sync({settings: {...db.settings, weeklyTheme: e.target.value}})} className="w-full p-5 rounded-2xl bg-slate-50 border border-slate-200 font-black text-lg outline-none focus:border-blue-400">
-                              {Object.keys(SEL_GUIDES).map(t => <option key={t} value={t}>{t}</option>)}
+                              {SEL_OPTIONS.map(opt => <option key={opt.id} value={opt.name}>{opt.name}</option>)}
                             </select>
                           </div>
                        </div>
@@ -692,6 +768,27 @@ const App = () => {
                   <div className="animate-in fade-in space-y-8">
                      <h3 className="text-3xl font-black text-slate-800 border-l-8 border-red-500 pl-6 mb-8">데이터 초기화 및 1학기 마감</h3>
                      
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                       <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm text-center">
+                         <Coins className="w-10 h-10 text-yellow-500 mx-auto mb-4"/>
+                         <h4 className="font-black text-lg mb-2">기부 내역 초기화</h4>
+                         <p className="text-xs text-slate-500 font-bold mb-6">명예로운 기부 전광판 내역만 삭제합니다. (명성 수치는 유지됨)</p>
+                         <button onClick={() => partialReset('donations')} className="bg-slate-100 text-slate-600 w-full py-3 rounded-xl font-black hover:bg-yellow-100 hover:text-yellow-700">실행</button>
+                       </div>
+                       <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm text-center">
+                         <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-4"/>
+                         <h4 className="font-black text-lg mb-2">위기 상태 초기화</h4>
+                         <p className="text-xs text-slate-500 font-bold mb-6">현재 🚨위기 및 대기 상태인 학생들을 모두 일반 상태로 복구합니다.</p>
+                         <button onClick={() => partialReset('status')} className="bg-slate-100 text-slate-600 w-full py-3 rounded-xl font-black hover:bg-red-100 hover:text-red-700">실행</button>
+                       </div>
+                       <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm text-center">
+                         <Briefcase className="w-10 h-10 text-indigo-500 mx-auto mb-4"/>
+                         <h4 className="font-black text-lg mb-2">숙련도 초기화</h4>
+                         <p className="text-xs text-slate-500 font-bold mb-6">모든 학생의 1인 1역 숙련도(횟수)를 0으로 리셋합니다.</p>
+                         <button onClick={() => partialReset('exp')} className="bg-slate-100 text-slate-600 w-full py-3 rounded-xl font-black hover:bg-indigo-100 hover:text-indigo-700">실행</button>
+                       </div>
+                     </div>
+
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                        <div className="bg-blue-50 border-4 border-blue-200 p-10 rounded-[40px] text-center shadow-lg">
                           <History className="w-16 h-16 text-blue-500 mx-auto mb-6" />
@@ -700,11 +797,11 @@ const App = () => {
                           <button onClick={closeSemester} className="bg-blue-600 text-white px-10 py-5 rounded-[30px] font-black text-xl shadow-xl hover:bg-blue-700 active:scale-95 transition-all">학기 마감 실행</button>
                        </div>
 
-                       <div className="bg-red-50 border-4 border-red-200 p-10 rounded-[40px] text-center shadow-lg">
-                          <Trash2 className="w-16 h-16 text-red-500 mx-auto mb-6" />
-                          <h3 className="text-3xl font-black mb-4 text-red-800">시스템 완전 공장 초기화</h3>
-                          <p className="text-red-600 font-bold mb-8 text-sm">누적 데이터(All-Time)를 포함한 <b>모든 데이터</b>가 날아갑니다.<br/>테스트 종료 후 새 학년 시작할 때만 사용하세요.</p>
-                          <button onClick={factoryReset} className="bg-red-600 text-white px-10 py-5 rounded-[30px] font-black text-xl shadow-xl hover:bg-red-700 active:scale-95 transition-all">공장 초기화 실행</button>
+                       <div className="bg-red-50 border-4 border-red-200 p-12 rounded-[50px] text-center shadow-lg">
+                          <Trash2 className="w-20 h-20 text-red-500 mx-auto mb-6" />
+                          <h3 className="text-4xl font-black mb-4 text-red-800">시스템 공장 초기화</h3>
+                          <p className="text-red-600 font-bold mb-10 text-lg">초기화 시 <span className="underline">학생 명단을 제외한</span> 모든 데이터가 '0'이 됩니다.<br/>학기 초나 테스트 종료 후 본격적으로 시작할 때 한 번만 사용하세요.</p>
+                          <button onClick={factoryReset} className="bg-red-600 text-white px-16 py-6 rounded-[35px] font-black text-2xl shadow-xl hover:bg-red-700 active:scale-95 transition-all">공장 초기화 실행</button>
                        </div>
                      </div>
                   </div>
@@ -714,7 +811,7 @@ const App = () => {
         )}
       </main>
 
-      {/* 온기 우체통 모달 */}
+      {/* 온기 우체통 모달 (나 자신 칭찬 포함) */}
       {showPraiseModal && (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-[1000] p-4">
           <div className="bg-white p-10 rounded-[50px] w-full max-w-md shadow-2xl animate-in zoom-in-95 border-4 border-pink-100">
@@ -727,9 +824,9 @@ const App = () => {
               </select>
               <select value={praiseTag} onChange={(e)=>setPraiseTag(e.target.value)} className="w-full p-5 rounded-2xl bg-slate-50 border border-slate-200 font-black text-lg outline-none focus:border-pink-400 focus:bg-white shadow-sm">
                 <option value="">어떤 역량인가요?</option>
-                {Object.keys(SEL_GUIDES).map(t => <option key={t} value={t}>{t}</option>)}
+                {SEL_OPTIONS.map(opt => <option key={opt.id} value={opt.name}>{opt.name}</option>)}
               </select>
-              <textarea value={praiseText} onChange={(e)=>setPraiseText(e.target.value)} rows="4" placeholder="어떤 행동을 했는지 적어주세요! (승인 시 전광판에 등록됩니다)" className="w-full p-5 rounded-2xl bg-slate-50 border border-slate-200 font-black outline-none focus:border-pink-400 focus:bg-white resize-none shadow-sm placeholder:font-bold"/>
+              <textarea value={praiseText} onChange={(e)=>setPraiseText(e.target.value)} rows="4" placeholder="어떤 구체적인 행동을 했는지 적어주세요! (선생님 승인 시 전광판에 등록됩니다)" className="w-full p-5 rounded-2xl bg-slate-50 border border-slate-200 font-black outline-none focus:border-pink-400 focus:bg-white resize-none shadow-sm placeholder:font-bold"/>
             </div>
             <div className="flex gap-3">
               <button onClick={() => setShowPraiseModal(false)} className="flex-1 py-5 bg-slate-100 text-slate-500 rounded-[20px] font-black text-lg hover:bg-slate-200 transition-colors">취소</button>
@@ -739,13 +836,13 @@ const App = () => {
         </div>
       )}
 
-      {/* 비번 모달 */}
+      {/* 관리자 비번 모달 */}
       {showModal === 'password' && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-6 z-[9999]">
           <div className="bg-white rounded-[60px] p-16 w-full max-w-lg text-center shadow-2xl animate-in zoom-in-95">
             <Lock className="w-16 h-16 text-blue-600 mx-auto mb-6" />
             <h3 className="text-3xl font-black text-center mb-4">관리자 인증</h3>
-            <p className="text-center text-slate-400 font-bold mb-10 text-sm">교사(6505) 또는 감찰사 비밀번호가 필요합니다.</p>
+            <p className="text-center text-slate-400 font-bold mb-10 text-sm">교사 권한(6505) 또는 감찰사 권한이 필요합니다.</p>
             <input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key === 'Enter' && handleLogin()} className="w-full text-center text-6xl tracking-[15px] font-black p-8 border-4 border-slate-100 rounded-[40px] outline-none mb-12 bg-slate-50 focus:border-blue-400 focus:bg-white shadow-inner" autoFocus />
             <div className="flex gap-4"><button onClick={()=>setShowModal(null)} className="flex-1 py-6 rounded-[30px] font-black text-slate-500 text-xl bg-slate-100 hover:bg-slate-200">취소</button><button onClick={handleLogin} className="flex-1 py-6 rounded-[30px] font-black bg-blue-600 text-white text-xl shadow-xl hover:bg-blue-700 active:scale-95">접속하기</button></div>
           </div>
@@ -755,7 +852,7 @@ const App = () => {
       {/* 하단 네비게이션 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200 px-4 py-4 flex justify-around items-center z-[5000] shadow-[0_-15px_50px_rgba(0,0,0,0.06)] pb-8">
         {[
-          { id: 'dashboard', icon: <Target className="w-7 h-7"/>, label: db.settings.menuNames[0] || "현황판" }, 
+          { id: 'dashboard', icon: <Target className="w-7 h-7"/>, label: db.settings.menuNames[0] || "명성 현황판" }, 
           { id: 'reflection', icon: <BookOpen className="w-7 h-7"/>, label: db.settings.menuNames[1] || "성찰과 회복" }, 
           { id: 'helproom', icon: <Users className="w-7 h-7"/>, label: db.settings.menuNames[2] || "도움실" }, 
           { id: 'admin', icon: <Settings className="w-7 h-7"/>, label: db.settings.menuNames[3] || "통합 관리실" }
