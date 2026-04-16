@@ -234,7 +234,7 @@ const useDalbodreSystem = () => {
       setHistory(JSON.parse(localStorage.getItem('dal_v32_history')) || []);
       if (!DATABASE_URL || DATABASE_URL.includes("복사한_주소")) { setIsLoading(false); return; }
       
-      const dbUrl = `${DATABASE_URL.replace(/\/$/, '')}/classData_V2.json`;
+      const dbUrl = `${DATABASE_URL.replace(/\/$/, '')}/classData_V3.json`;
       try {
         const response = await fetch(dbUrl);
         const data = await response.json();
