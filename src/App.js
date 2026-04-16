@@ -6,23 +6,29 @@ import {
   Minus, Plus, MinusCircle, PlusCircle, AlertTriangle, Database, Gift, UserPlus, RotateCcw, Star, Loader2, Target, Settings, Trash2, ShoppingCart, SlidersHorizontal, Sparkles, Zap, Flame, Crown, Sword, Coins, BookOpen, Briefcase, LayoutDashboard, ClipboardCheck, User
 } from 'lucide-react';
 
+// ==========================================
+// 🚨 파이어베이스 주소 (V2 전용 독립 공간)
 const DATABASE_URL = "https://dalbodre-db-default-rtdb.asia-southeast1.firebasedatabase.app/"; 
+// ==========================================
 
 const playSound = (type) => {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = ctx.createOscillator(); const gain = ctx.createGain();
     osc.connect(gain); gain.connect(ctx.destination);
+    
     if (type === 'good') { osc.frequency.setValueAtTime(600, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1); osc.type = 'sine'; }
     else if (type === 'bad') { osc.frequency.setValueAtTime(300, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.2); osc.type = 'sawtooth'; }
     else if (type === 'gacha' || type === 'buy') { osc.frequency.setValueAtTime(400, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.3); osc.type = 'square'; }
     else if (type === 'jackpot') { osc.type = 'triangle'; osc.frequency.setValueAtTime(440, ctx.currentTime); osc.frequency.setValueAtTime(880, ctx.currentTime + 0.3); }
     else if (type === 'drumroll') { osc.type = 'square'; osc.frequency.setValueAtTime(100, ctx.currentTime); osc.frequency.linearRampToValueAtTime(150, ctx.currentTime + 3); }
     else if (type === 'failSoft') { osc.type = 'sine'; osc.frequency.setValueAtTime(400, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.6); }
+    
     osc.start(); gain.gain.setValueAtTime(0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + (type==='drumroll'?3:(type==='failSoft'?0.6:0.3))); osc.stop(ctx.currentTime + (type==='drumroll'?3:(type==='failSoft'?0.6:0.3)));
   } catch (e) {}
 };
 
+// 🛡️ 데이터 정규화 함수 (백지화 절대 방어)
 const safeArray = (val) => {
   if (!val) return [];
   if (Array.isArray(val)) return val.filter(Boolean);
@@ -30,6 +36,7 @@ const safeArray = (val) => {
   return [];
 };
 
+// 🌟 마니또 외침 멘트 (60개)
 const manitoSuccessMessages = [
   "보이지 않는 곳에서 끝까지 책임을 다해줘서 정말 고마워!", "네가 있어서 오늘 우리 반이 한결 더 따뜻했어!",
   "우리가 널 믿은 만큼, 멋지게 해내 줘서 자랑스러워!", "너의 헌신 덕분에 우리 모두가 기분 좋은 하루를 보냈어!",
@@ -91,17 +98,23 @@ const defaultStudents = [
   { id: 25, name: '차민서', role: '신발장 관리', group: 6, isLeader: false }, { id: 26, name: '배지훈', role: '문 닫기', group: 6, isLeader: false }
 ];
 
-const App = () => {
-  const scriptURL = "https://script.google.com/macros/s/AKfycbw3j6LxhdO0ewIXxkIGrh_pczxrfOJr3A_PTHTsJY1rKb6ES7bPxPQuxRKidd6IWK5_/exec"; 
-  const fmt = (num) => { const n = parseFloat(num); return isNaN(n) ? 0 : parseFloat(n.toFixed(2)); };
-  const getRoleBonus = (role) => { 
-    if (!role || typeof role !== 'string') return 1; 
-    if (role.includes('감찰사')) return 2; 
-    if (role.includes('현령')) return 1.5; 
-    if (role.includes('향리')) return 1.2; 
-    return 1; 
-  };
+const defaultGachaNormal = { cost: 30, t1: { name: '😭 앗! 꽝입니다.', prob: 50, reward: 0 }, t2: { name: '🪙 럭키! 페이백!', prob: 30, reward: 20 }, t3: { name: '🍬 와우! 간식 당첨!', prob: 15, reward: 20 }, t4: { name: '🎰 잭팟!!', prob: 5, reward: 100 } };
+const defaultGachaSpecial = { cost: 30, t1: { name: '😭 앗! 꽝...', prob: 10, reward: 0 }, t2: { name: '🪙 럭키! 페이백!', prob: 20, reward: 20 }, t3: { name: '🍬 혜자 간식 당첨!', prob: 40, reward: 20 }, t4: { name: '✨ 동민신의 축복(잭팟)!!', prob: 30, reward: 150 } };
 
+const fmt = (num) => { const n = parseFloat(num); return isNaN(n) ? 0 : parseFloat(n.toFixed(2)); };
+const getRoleBonus = (role) => { 
+  if (!role || typeof role !== 'string') return 1; 
+  if (role.includes('감찰사')) return 2; 
+  if (role.includes('현령')) return 1.5; 
+  if (role.includes('향리')) return 1.2; 
+  return 1; 
+};
+
+// 🧠 [핵심 로직 분리] 달보드레 통합 시스템 커스텀 훅
+export const useDalbodreSystem = () => {
+  const scriptURL = "https://script.google.com/macros/s/AKfycbw3j6LxhdO0ewIXxkIGrh_pczxrfOJr3A_PTHTsJY1rKb6ES7bPxPQuxRKidd6IWK5_/exec"; 
+  
+  // 1. 상태 변수 선언
   const [activeTab, setActiveTab] = useState('classroom'); 
   const [groupFilter, setGroupFilter] = useState('all'); 
   const [students, setStudents] = useState([]);
@@ -132,15 +145,12 @@ const App = () => {
   const [evoThresholds, setEvoThresholds] = useState({ e1: 50, e2: 100, e3: 200, e4: 300, e5: 400, e6: 500, e7: 700, e8: 1000, e9: 1500 });
   const [tierThresholds, setTierThresholds] = useState({ t1: 200, t2: 400, t3: 600, t4: 800, t5: 1000, t6: 1500, t7: 2000, t8: 3000, t9: 5000 });
   const [shopItems, setShopItems] = useState([{ id: 'item_1', name: '간식 결제', price: 20.0 }, { id: 'item_2', name: '모둠선택 결제', price: 100.0 }]);
-  const defaultGachaNormal = { cost: 30, t1: { name: '😭 앗! 꽝입니다.', prob: 50, reward: 0 }, t2: { name: '🪙 럭키! 페이백!', prob: 30, reward: 20 }, t3: { name: '🍬 와우! 간식 당첨!', prob: 15, reward: 20 }, t4: { name: '🎰 잭팟!!', prob: 5, reward: 100 } };
-  const defaultGachaSpecial = { cost: 30, t1: { name: '😭 앗! 꽝...', prob: 10, reward: 0 }, t2: { name: '🪙 럭키! 페이백!', prob: 20, reward: 20 }, t3: { name: '🍬 혜자 간식 당첨!', prob: 40, reward: 20 }, t4: { name: '✨ 동민신의 축복(잭팟)!!', prob: 30, reward: 150 } };
   const [gachaConfig, setGachaConfig] = useState({ mode: 'normal', normal: defaultGachaNormal, special: defaultGachaSpecial });
   const [gachaEditTab, setGachaEditTab] = useState('normal'); 
   const [bossPresets, setBossPresets] = useState([{ id: 'b1', name: '전담 선생님의 감시', desc: '아이들의 예쁜 마음을 모아 정화하세요!', reward: 100, penalty: 100 }, { id: 'b2', name: '교장 선생님의 순시', desc: '모두가 바른 태도를 보여주면 천사가 됩니다!', reward: 200, penalty: 200 }]);
   const [marketPresets, setMarketPresets] = useState([{ id: 'm1', name: '달보드레 블랙마켓 (일반)', desc: '희귀 아이템을 팔아보세요.' }, { id: 'm2', name: '🌙 속죄의 퀘스트 상점', desc: '감점을 지우고 싶은 자, 퀘스트를 수락하라!' }]);
   const [marketItems, setMarketItems] = useState([{ id: 'm_item_1', name: '마술 직관권', price: 50 }, { id: 'm_item_2', name: '1일 현령 체험권', price: 150 }, { id: 'm_item_3', name: '📜 [퀘스트] 그림자 수호대 (일주일 봉사)', price: 0 }, { id: 'm_item_4', name: '🎭 [퀘스트] 비밀의 무대 (1분 장기자랑)', price: 0 }]);
   const [manitoConfig, setManitoConfig] = useState({ targetId: null, reward: 50 });
-
   const [newRoleName, setNewRoleName] = useState('');
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
@@ -154,7 +164,6 @@ const App = () => {
   const [selectedMarketStudent, setSelectedMarketStudent] = useState("");
   const [selectedStoreStudent, setSelectedStoreStudent] = useState(""); 
   const [manualAdjustAmount, setManualAdjustAmount] = useState(''); 
-
   const [isLoading, setIsLoading] = useState(true);
   const [teacherTab, setTeacherTab] = useState('history');
   const [isAuthenticated, setIsAuthenticated] = useState(false); 
@@ -169,6 +178,7 @@ const App = () => {
   const [manitoRevealMsg, setManitoRevealMsg] = useState("");
   const [selectedHyunRole, setSelectedHyunRole] = useState(null);
 
+  // 2. 안전한 데이터 변환 (백지화 방지)
   const safeRolesArray = useMemo(() => {
     const arr = safeArray(rolesList);
     if (arr.length === 0) return defaultRoles;
@@ -184,6 +194,7 @@ const App = () => {
     return arr.map(s => ({ ...s, group: s.group || 1, isLeader: !!s.isLeader, role: s.role || '' }));
   }, [students]);
 
+  // 3. 파이어베이스 초기 로딩
   useEffect(() => {
     const fetchInitial = async () => {
       setHistory(JSON.parse(localStorage.getItem('dal_v30_history')) || []);
@@ -195,41 +206,30 @@ const App = () => {
         if (data) {
           if (data.students) setStudents(safeArray(data.students));
           if (data.rolesList) setRolesList(safeArray(data.rolesList));
-          setCheckedStudents(data.checkedStudents || {});
-          setClassPrep(data.classPrep || {});
-          setThreeCompliments(data.threeCompliments || {});
-          setTeacherCompliments(data.teacherCompliments || {});
-          setTimeoutChecks(data.timeoutChecks || {});
-          setSubjectChecks(data.subjectChecks || {});
-          setUsedPoints(data.usedPoints || {});
-          setWipedPoints(data.wipedPoints || {});
-          setLeaderBonuses(data.leaderBonuses || {});
-          setWeeklyStreak(data.weeklyStreak || 0);
-          setIsWeeklyClaimed(data.isWeeklyClaimed || false);
-          setActiveBoss(data.activeBoss || null);
-          setBossHp(data.bossHp !== undefined ? data.bossHp : 100);
-          setBossAttacks(data.bossAttacks || {});
-          setBossBonusPoints(data.bossBonusPoints || 0);
-          setActiveMarket(data.activeMarket || null);
-          setManualTotalBonus(data.manualTotalBonus || 0);
-          setTargetScore(data.targetScore || 3000);
-          setLeaderConfig(data.leaderConfig || { allClearBonus: 20 });
+          setCheckedStudents(data.checkedStudents || {}); setClassPrep(data.classPrep || {});
+          setThreeCompliments(data.threeCompliments || {}); setTeacherCompliments(data.teacherCompliments || {});
+          setTimeoutChecks(data.timeoutChecks || {}); setSubjectChecks(data.subjectChecks || {});
+          setUsedPoints(data.usedPoints || {}); setWipedPoints(data.wipedPoints || {});
+          setLeaderBonuses(data.leaderBonuses || {}); setWeeklyStreak(data.weeklyStreak || 0);
+          setIsWeeklyClaimed(data.isWeeklyClaimed || false); setActiveBoss(data.activeBoss || null);
+          setBossAttacks(data.bossAttacks || {}); setBossBonusPoints(data.bossBonusPoints || 0);
+          setActiveMarket(data.activeMarket || null); setManualTotalBonus(data.manualTotalBonus || 0);
+          setTargetScore(data.targetScore || 3000); setLeaderConfig(data.leaderConfig || { allClearBonus: 20 });
           if (data.gachaConfig) setGachaConfig(data.gachaConfig.mode ? data.gachaConfig : { mode: 'normal', normal: data.gachaConfig, special: defaultGachaSpecial });
-          setShopItems(safeArray(data.shopItems));
-          setBossPresets(safeArray(data.bossPresets));
-          setMarketPresets(safeArray(data.marketPresets));
-          setMarketItems(safeArray(data.marketItems));
+          setShopItems(safeArray(data.shopItems)); setBossPresets(safeArray(data.bossPresets));
+          setMarketPresets(safeArray(data.marketPresets)); setMarketItems(safeArray(data.marketItems));
           if (data.manitoConfig) setManitoConfig(data.manitoConfig);
           if (data.evoThresholds) setEvoThresholds(data.evoThresholds);
           if (data.tierThresholds) setTierThresholds(data.tierThresholds);
         }
-      } catch (e) {}
+      } catch (e) { console.error("Firebase Load Error", e); }
       if (scriptURL) { try { const res = await fetch(scriptURL); const data = await res.json(); if (data.history) setHistory(safeArray(data.history)); } catch (e) {} }
       setIsLoading(false);
     };
     fetchInitial();
   }, []);
 
+  // 4. 실시간 동기화
   useEffect(() => {
     if (!DATABASE_URL || DATABASE_URL.includes("복사한_주소")) return;
     const dbUrl = `${DATABASE_URL.replace(/\/$/, '')}/classData_V2.json`;
@@ -238,21 +238,13 @@ const App = () => {
         const response = await fetch(dbUrl);
         const data = await response.json();
         if (data) {
-          setCheckedStudents(data.checkedStudents || {});
-          setClassPrep(data.classPrep || {});
-          setThreeCompliments(data.threeCompliments || {});
-          setTeacherCompliments(data.teacherCompliments || {});
-          setTimeoutChecks(data.timeoutChecks || {});
-          setSubjectChecks(data.subjectChecks || {});
-          setUsedPoints(data.usedPoints || {});
-          setWipedPoints(data.wipedPoints || {});
-          setLeaderBonuses(data.leaderBonuses || {});
-          setActiveBoss(data.activeBoss || null);
-          setBossHp(data.bossHp !== undefined ? data.bossHp : 100);
-          setBossAttacks(data.bossAttacks || {});
-          setBossBonusPoints(data.bossBonusPoints || 0);
-          setManualTotalBonus(data.manualTotalBonus || 0);
-          setWeeklyStreak(data.weeklyStreak || 0);
+          setCheckedStudents(data.checkedStudents || {}); setClassPrep(data.classPrep || {});
+          setThreeCompliments(data.threeCompliments || {}); setTeacherCompliments(data.teacherCompliments || {});
+          setTimeoutChecks(data.timeoutChecks || {}); setSubjectChecks(data.subjectChecks || {});
+          setUsedPoints(data.usedPoints || {}); setWipedPoints(data.wipedPoints || {});
+          setLeaderBonuses(data.leaderBonuses || {}); setActiveBoss(data.activeBoss || null);
+          setBossAttacks(data.bossAttacks || {}); setBossBonusPoints(data.bossBonusPoints || 0);
+          setManualTotalBonus(data.manualTotalBonus || 0); setWeeklyStreak(data.weeklyStreak || 0);
           setIsWeeklyClaimed(data.isWeeklyClaimed || false);
           if (data.students) setStudents(safeArray(data.students));
           if (data.gachaConfig?.mode) setGachaConfig(prev => ({...prev, mode: data.gachaConfig.mode}));
@@ -284,7 +276,6 @@ const App = () => {
       if(updates.wipedPoints) setWipedPoints(updates.wipedPoints);
       if(updates.leaderBonuses) setLeaderBonuses(updates.leaderBonuses);
       if(updates.activeBoss !== undefined) setActiveBoss(updates.activeBoss);
-      if(updates.bossHp !== undefined) setBossHp(updates.bossHp);
       if(updates.bossAttacks !== undefined) setBossAttacks(updates.bossAttacks);
       if(updates.bossBonusPoints !== undefined) setBossBonusPoints(updates.bossBonusPoints);
       if(updates.manualTotalBonus !== undefined) setManualTotalBonus(updates.manualTotalBonus);
@@ -292,45 +283,15 @@ const App = () => {
       if(updates.rolesList) setRolesList(updates.rolesList);
       return;
     }
-    const dbUrl = `${DATABASE_URL.replace(/\/$/, '')}/classData_V2.json`;
-    try { await fetch(dbUrl, { method: 'PATCH', body: JSON.stringify(updates) }); } catch (e) {}
+    try { await fetch(`${DATABASE_URL.replace(/\/$/, '')}/classData_V2.json`, { method: 'PATCH', body: JSON.stringify(updates) }); } catch (e) {}
   };
 
+  // 5. 통계 및 계산 로직
   const todaySeed = new Date().toDateString();
-  const dailyBuffs = [{ title: "오늘은 칭찬의 날!", desc: "모두에게 따뜻한 한마디를!" }, { title: "청결 수호대!", desc: "청소 만점 달성을 위해!" }, { title: "단합의 힘", desc: "모든 미션 통과시 특별 보상" }, { title: "평화로운 하루", desc: "오늘 타임아웃 0명을 향해!" }];
   const seedNum = todaySeed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const todaysBuff = dailyBuffs[seedNum % dailyBuffs.length];
   const defaultRandomManitoId = safeStudentsArray.length > 0 ? safeStudentsArray[seedNum % safeStudentsArray.length].id : 1;
   const effectiveManitoId = manitoConfig?.targetId || defaultRandomManitoId;
   const effectiveManitoName = safeStudentsArray.find(s => s.id === effectiveManitoId)?.name || ''; 
-
-  const dailyGoals = [{ id: 'g1', title: '지적 받지 않음 (50p)', points: 50, icon: <ShieldCheck className="w-5 h-5" /> }, { id: 'g2', title: '매번 박수 성공 (20p)', points: 20, icon: <Volume2 className="w-5 h-5" /> }, { id: 'g4', title: '청소 만점 (10p)', points: 10, icon: <RefreshCcw className="w-5 h-5" /> }, { id: 'g5', title: '전담 태도 우수 (20p)', points: 20, icon: <Clock className="w-5 h-5" /> }];
-
-  const getEvolution = (score) => {
-    if (score <= evoThresholds.e1) return { icon: '🥚', texts: ["아직은 졸려요...", "안에서 힘을 모으는 중!"] };
-    if (score <= evoThresholds.e2) return { icon: '🐣', texts: ["껍질에 금이 갔어요!", "으쌰으쌰! 힘을 내요!"] };
-    if (score <= evoThresholds.e3) return { icon: '🐥', texts: ["삐약삐약, 반가워요!", "쑥쑥 크고 있어요!"] };
-    if (score <= evoThresholds.e4) return { icon: '🐤', texts: ["폴짝폴짝 뛰는 게 좋아요!", "날개가 조금 커졌어요!"] };
-    if (score <= evoThresholds.e5) return { icon: '🐔', texts: ["이제 제법 어른 티가 나죠?", "위풍당당 걷기!"] };
-    if (score <= evoThresholds.e6) return { icon: '🕊️', texts: ["더 넓은 세상을 보고 싶어요!", "하늘을 나는 기분!"] };
-    if (score <= evoThresholds.e7) return { icon: '🦅', texts: ["하늘의 제왕이 될 테야!", "매서운 눈빛!"] };
-    if (score <= evoThresholds.e8) return { icon: '🦄', texts: ["마법 같은 힘이 솟아나요!", "무지개 위를 달려볼까?"] };
-    if (score <= evoThresholds.e9) return { icon: '🐲', texts: ["크아앙! 내 불꽃을 조심해!", "아직은 꼬마 드래곤!"] };
-    return { icon: '🐉', texts: ["우주를 호령하는 전설의 등장!", "내가 바로 전설이다!"] };
-  };
-
-  const getLifetimeTier = (sum) => {
-    if (sum < tierThresholds.t1) return { icon: '🤎', label: '1. 잠든 씨앗' };
-    if (sum < tierThresholds.t2) return { icon: '🌱', label: '2. 자라나는 새싹' };
-    if (sum < tierThresholds.t3) return { icon: '🌿', label: '3. 파릇한 줄기' };
-    if (sum < tierThresholds.t4) return { icon: '☘️', label: '4. 행운의 네잎클로버' };
-    if (sum < tierThresholds.t5) return { icon: '🌷', label: '5. 수줍은 꽃봉오리' };
-    if (sum < tierThresholds.t6) return { icon: '🌻', label: '6. 활짝 핀 꽃' };
-    if (sum < tierThresholds.t7) return { icon: '🍎', label: '7. 탐스러운 열매' };
-    if (sum < tierThresholds.t8) return { icon: '🌳', label: '8. 든든한 나무' };
-    if (sum < tierThresholds.t9) return { icon: '🌲', label: '9. 거대한 숲' };
-    return { icon: '👑', label: '10. 생명의 세계수' };
-  };
 
   const validHistory = useMemo(() => history.filter(h => h.id > resetTimestamp), [history, resetTimestamp]);
 
@@ -367,255 +328,285 @@ const App = () => {
       stats[s.id].used = parseFloat(usedPoints[s.id] || 0);     
       stats[s.id].wiped = parseFloat(wipedPoints[s.id] || 0);   
       stats[s.id].net = fmt(stats[s.id].sum - stats[s.id].used - stats[s.id].wiped); 
-      if (stats[s.id].pos >= 200) stats[s.id].badges.push('🏅'); 
-      if (stats[s.id].pos >= 100 && stats[s.id].neg === 0) stats[s.id].badges.push('🛡️'); 
-      if (stats[s.id].used >= 300) stats[s.id].badges.push('💸'); 
     });
     return Object.values(stats);
   }, [validHistory, todayStudentStats, usedPoints, wipedPoints, safeStudentsArray]);
 
   const todayStats = useMemo(() => {
-    const pos = todayStudentStats.reduce((s, c) => s + c.pos, 0) + dailyGoals.reduce((sum, g) => sum + (checkedGroupGoals[g.id] ? g.points : 0), 0) + (isWeeklyClaimed ? 100 : 0) + (bossBonusPoints > 0 ? bossBonusPoints : 0); 
+    const pos = todayStudentStats.reduce((s, c) => s + c.pos, 0) + (isWeeklyClaimed ? 100 : 0) + (bossBonusPoints > 0 ? bossBonusPoints : 0); 
     const neg = todayStudentStats.reduce((s, c) => s + c.neg, 0) + (bossBonusPoints < 0 ? Math.abs(bossBonusPoints) : 0);
     return { pos, neg, total: pos - neg };
-  }, [todayStudentStats, checkedGroupGoals, isWeeklyClaimed, bossBonusPoints]);
+  }, [todayStudentStats, isWeeklyClaimed, bossBonusPoints]);
 
   const cumulativeClassScore = useMemo(() => {
     const pastTotal = validHistory.reduce((sum, rec) => sum + ((parseFloat(rec.total) || 0) * ((rec.target === 300 || !rec.target) ? 10 : 1)), 0);
     return fmt(pastTotal + todayStats.total + manualTotalBonus);
   }, [validHistory, todayStats, manualTotalBonus]);
 
-  const classGuardian = useMemo(() => {
-    if (cumulativeClassScore < targetScore * 0.3) return { icon: '🥚', name: '우리 반 알', desc: '따뜻한 온기가 필요해요' };
-    if (cumulativeClassScore < targetScore * 0.6) return { icon: '🐲', name: '깨어난 꼬마 용', desc: '우리 반을 지키기 시작했어요!' };
-    if (cumulativeClassScore < targetScore * 0.9) return { icon: '✨🐉', name: '빛의 드래곤', desc: '우리 반은 천하무적!' };
-    return { icon: '👑🐉', name: '전설의 수호신', desc: '기적이 일어나는 교실!' };
-  }, [cumulativeClassScore, targetScore]);
-
-  const top5Gainers = useMemo(() => [...todayStudentStats].sort((a,b) => b.pos - a.pos).slice(0, 5), [todayStudentStats]);
-  const top3Losers = useMemo(() => [...todayStudentStats].sort((a,b) => b.neg - a.neg).filter(s => s.neg > 0).slice(0, 3), [todayStudentStats]);
-  
   const filteredStudents = useMemo(() => {
     if (groupFilter === 'all') return allStats.sort((a,b)=>a.id-b.id);
     return allStats.filter(s => parseInt(s.group) === parseInt(groupFilter)).sort((a,b)=>a.id-b.id);
   }, [allStats, groupFilter]);
 
-  const handleAdjust = (id, type, delta, e) => {
-    if (delta > 0) playSound('good'); else playSound('bad');
-    if (e && delta > 0) showParticle(e.clientX, e.clientY, "+");
-    if (type === 'timeout') syncToFirebase({ timeoutChecks: { ...timeoutChecks, [id]: Math.max(0, fmt((timeoutChecks[id] || 0) + delta)) }});
-    else if (type === 'subject') syncToFirebase({ subjectChecks: { ...subjectChecks, [id]: Math.max(0, fmt((subjectChecks[id] || 0) + delta)) }});
-    else if (type === 'compliment') syncToFirebase({ teacherCompliments: { ...teacherCompliments, [id]: Math.max(0, fmt((teacherCompliments[id] || 0) + delta)) } });
+  // 반환할 상태 및 액션 묶음
+  return {
+    state: {
+      isLoading, activeTab, teacherTab, isAuthenticated, password, showModal, showJackpot, showGuide, particle, tooltipInfo,
+      groupFilter, safeStudentsArray, safeRolesArray, allStats, filteredStudents, todayStats, cumulativeClassScore,
+      checkedStudents, classPrep, threeCompliments, teacherCompliments, timeoutChecks, subjectChecks,
+      activeBoss, bossHp, bossAttacks, bossBonusPoints, activeMarket, marketItems, marketPresets, bossPresets,
+      gachaConfig, shopItems, leaderConfig, manitoConfig, manualTotalBonus, targetScore, evoThresholds, tierThresholds,
+      storeSelected, newRoleName, newItemName, newItemPrice, newBossName, newBossDesc, newBossReward, newBossPenalty,
+      newMarketName, newMarketDesc, selectedGachaStudent, selectedStoreStudent, selectedMarketStudent, manualAdjustAmount,
+      manitoRevealState, manitoRevealMsg, effectiveManitoName, effectiveManitoId, selectedHyunRole
+    },
+    actions: {
+      setActiveTab, setTeacherTab, setIsAuthenticated, setPassword, setShowModal, setShowJackpot, setShowGuide, setGroupFilter,
+      setNewRoleName, setNewItemName, setNewItemPrice, setNewBossName, setNewBossDesc, setNewBossReward, setNewBossPenalty,
+      setNewMarketName, setNewMarketDesc, setSelectedGachaStudent, setSelectedStoreStudent, setSelectedMarketStudent, setManualAdjustAmount,
+      setSelectedHyunRole, setGachaConfig, setManitoConfig, setLeaderConfig, setManualTotalBonus, setTargetScore, setEvoThresholds, setTierThresholds,
+      syncToFirebase, handleAdjust: (id, type, delta, e) => {
+        if (delta > 0) playSound('good'); else playSound('bad');
+        if (e && delta > 0) { setParticle({ x: e.clientX, y: e.clientY, text: "+", id: Date.now() }); setTimeout(() => setParticle(null), 800); }
+        if (type === 'timeout') syncToFirebase({ timeoutChecks: { ...timeoutChecks, [id]: Math.max(0, fmt((timeoutChecks[id] || 0) + delta)) }});
+        else if (type === 'subject') syncToFirebase({ subjectChecks: { ...subjectChecks, [id]: Math.max(0, fmt((subjectChecks[id] || 0) + delta)) }});
+        else if (type === 'compliment') syncToFirebase({ teacherCompliments: { ...teacherCompliments, [id]: Math.max(0, fmt((teacherCompliments[id] || 0) + delta)) } });
+      },
+      handleToggle: (id, type) => {
+        playSound('good');
+        const updates = {};
+        if (type === 'role') updates.checkedStudents = { ...checkedStudents, [id]: !checkedStudents[id] };
+        if (type === 'prep') updates.classPrep = { ...classPrep, [id]: !classPrep[id] };
+        if (type === 'comp') updates.threeCompliments = { ...threeCompliments, [id]: !threeCompliments[id] };
+        syncToFirebase(updates);
+      },
+      handleGroupAllClear: (leaderId, groupNum, e) => {
+        if(leaderBonuses[leaderId]) return alert("이미 오늘 리더십 보너스를 받았습니다!");
+        playSound('good'); if (e) { setParticle({ x: e.clientX, y: e.clientY, text: "👑", id: Date.now() }); setTimeout(() => setParticle(null), 800); }
+        const newRoles = {...checkedStudents}; const newPreps = {...classPrep};
+        safeStudentsArray.filter(s => parseInt(s.group) === parseInt(groupNum)).forEach(s => { newRoles[s.id] = true; newPreps[s.id] = true; });
+        const newBonuses = {...leaderBonuses, [leaderId]: true};
+        setCheckedStudents(newRoles); setClassPrep(newPreps); setLeaderBonuses(newBonuses);
+        syncToFirebase({ checkedStudents: newRoles, classPrep: newPreps, leaderBonuses: newBonuses });
+        alert(`${groupNum}모둠 전원 출격 완료! 보너스 +${leaderConfig.allClearBonus || 20}점 부여!`);
+      },
+      handlePurify: (id, e) => {
+        const isPurified = bossAttacks[id]; const newAttacks = { ...bossAttacks, [id]: !isPurified };
+        if (!isPurified) { playSound('good'); if (e) { setParticle({ x: e.clientX, y: e.clientY, text: "✨", id: Date.now() }); setTimeout(() => setParticle(null), 800); } } else { playSound('bad'); }
+        setBossAttacks(newAttacks); syncToFirebase({ bossAttacks: newAttacks });
+        if (!isPurified && Object.values(newAttacks).filter(Boolean).length >= safeStudentsArray.length) {
+          setTimeout(() => {
+            playSound('jackpot'); setShowModal('bossClear');
+            const newBonus = bossBonusPoints + (activeBoss?.reward || 100);
+            setBossBonusPoints(newBonus); setActiveBoss(null); setBossAttacks({});
+            syncToFirebase({ bossBonusPoints: newBonus, activeBoss: null, bossAttacks: {} });
+          }, 800);
+        }
+      },
+      handleRevealManito: () => {
+        const isSuccess = (checkedStudents[effectiveManitoId] === true && classPrep[effectiveManitoId] === true && threeCompliments[effectiveManitoId] === true && !(timeoutChecks[effectiveManitoId] > 0) && !(subjectChecks[effectiveManitoId] > 0));
+        playSound('drumroll'); setManitoRevealState('loading');
+        setTimeout(() => {
+          if (isSuccess) { playSound('jackpot'); setManitoRevealMsg(manitoSuccessMessages[Math.floor(Math.random() * manitoSuccessMessages.length)]); setManitoRevealState('success'); } 
+          else { playSound('failSoft'); setManitoRevealMsg(manitoFailMessages[Math.floor(Math.random() * manitoFailMessages.length)]); setManitoRevealState('fail'); }
+        }, 3000);
+      },
+      closeManitoReveal: () => setManitoRevealState(null),
+      saveDailyRecord: async () => {
+        if (!window.confirm("오늘 기록을 마감하시겠습니까?\n(마니또 공개를 먼저 진행해 주세요!)")) return;
+        const isSuccess = (checkedStudents[effectiveManitoId] === true && classPrep[effectiveManitoId] === true && threeCompliments[effectiveManitoId] === true && !(timeoutChecks[effectiveManitoId] > 0) && !(subjectChecks[effectiveManitoId] > 0));
+        let extraBonus = 0;
+        if (isSuccess) { alert(`🎉 마니또 미션 최종 성공!\n학급 총점 보너스 +${manitoConfig.reward}점!`); extraBonus = parseFloat(manitoConfig.reward) || 50; }
+        
+        const mergedPer = { ...classPrep }; Object.keys(threeCompliments).forEach(id => { if(threeCompliments[id]) mergedPer[`${id}_3c`] = true; });
+        const record = {
+          id: Date.now(), date: new Date().toLocaleDateString('ko-KR'), time: new Date().toLocaleTimeString('ko-KR', { hour12: false }),
+          positive: todayStats.pos, negative: todayStats.neg, total: todayStats.total + extraBonus, target: targetScore, penaltyConfig: { timeout: penaltyTimeout, subject: penaltySubject }, leaderBonusAmount: leaderConfig.allClearBonus || 20, 
+          rawInd: JSON.stringify(checkedStudents), rawPer: JSON.stringify(mergedPer), rawTComp: JSON.stringify(teacherCompliments), rawTm: JSON.stringify(timeoutChecks), rawSb: JSON.stringify(subjectChecks), rawUsed: JSON.stringify(usedPoints), rawGroup: JSON.stringify(checkedGroupGoals), rawLB: JSON.stringify(leaderBonuses)
+        };
+        
+        setHistory(prev => [record, ...prev]);
+        syncToFirebase({ checkedStudents: {}, classPrep: {}, threeCompliments: {}, teacherCompliments: {}, checkedGroupGoals: {}, timeoutChecks: {}, subjectChecks: {}, activeBoss: null, activeMarket: null, bossBonusPoints: 0, bossAttacks: {}, isWeeklyClaimed: false, leaderBonuses: {} });
+        if (scriptURL) await fetch(scriptURL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'saveRecord', ...record }) });
+        setShowModal('success'); setTimeout(() => setShowModal(null), 2000);
+      },
+      handleLogin: () => {
+        if (password === "6505") { setIsAuthenticated('teacher'); setActiveTab('admin'); setTeacherTab('history'); setShowModal(null); setPassword(""); }
+        else if (password === "1111") { setIsAuthenticated('inspector'); setActiveTab('admin'); setTeacherTab('full-stats'); setShowModal(null); setPassword(""); }
+        else alert("비밀번호가 틀렸습니다.");
+      },
+      handleGacha: (id) => {
+        const user = allStats.find(s => s.id === id);
+        const currentGachaMode = gachaConfig.mode || 'normal'; const currentGachaSettings = gachaConfig[currentGachaMode];
+        if (!user || user.net < currentGachaSettings.cost) return alert(`잔여 점수가 부족합니다!`);
+        if (!window.confirm(`[${user.name}] ${currentGachaSettings.cost}p를 소모하여 뽑기를 진행할까요?`)) return;
+        const rand = Math.random() * 100; let resultMsg = ""; let reward = 0; let cumProb = 0; let isJackpot = false;
+        if (rand < (cumProb += parseFloat(currentGachaSettings?.t1?.prob || 0))) { resultMsg = currentGachaSettings?.t1?.name; reward = parseFloat(currentGachaSettings?.t1?.reward || 0); }
+        else if (rand < (cumProb += parseFloat(currentGachaSettings?.t2?.prob || 0))) { resultMsg = currentGachaSettings?.t2?.name; reward = parseFloat(currentGachaSettings?.t2?.reward || 0); }
+        else if (rand < (cumProb += parseFloat(currentGachaSettings?.t3?.prob || 0))) { resultMsg = currentGachaSettings?.t3?.name; reward = parseFloat(currentGachaSettings?.t3?.reward || 0); }
+        else { resultMsg = currentGachaSettings?.t4?.name; reward = parseFloat(currentGachaSettings?.t4?.reward || 0); isJackpot = true; }
+        syncToFirebase({ usedPoints: { ...usedPoints, [id]: fmt((usedPoints[id] || 0) + parseFloat(currentGachaSettings.cost) - reward) } });
+        setSelectedGachaStudent(""); 
+        if (isJackpot) { playSound('jackpot'); setShowJackpot(true); setTimeout(() => setShowJackpot(false), 6000); } 
+        else { playSound('gacha'); alert(`[가챠 결과] ${resultMsg}`); }
+      },
+      handleStudentStoreBuy: (studentId, item) => {
+        const user = allStats.find(s => s.id === studentId);
+        if (!user || user.net < item.price) return alert("잔여 점수가 부족합니다!");
+        if (!window.confirm(`[${user.name}] 학생, ${item.name}을(를) ${item.price}p에 정말 구매할까요?\n(선생님께 확인받고 누르세요!)`)) return;
+        playSound('buy'); syncToFirebase({ usedPoints: { ...usedPoints, [studentId]: fmt((usedPoints[studentId] || 0) + item.price) } });
+        setSelectedStoreStudent(""); alert(`🎉 [${item.name}] 결제가 완료되었습니다! 선생님께 말씀해 주세요.`);
+      },
+      handleMarketBuy: (studentId, item) => {
+        const user = allStats.find(s => s.id === studentId);
+        if (!user || user.net < item.price) return alert("점수가 부족합니다!");
+        if (!window.confirm(`[${user.name}] 학생, ${item.name}을(를) ${item.price}p에 구매할까요?`)) return;
+        playSound('buy'); syncToFirebase({ usedPoints: { ...usedPoints, [studentId]: fmt((usedPoints[studentId] || 0) + item.price) } });
+        setSelectedMarketStudent(""); alert("구매 완료/퀘스트 신청 완료!");
+      },
+      handleMultiConsume: (amount, label) => {
+        if (storeSelected.length === 0) return alert("학생을 먼저 선택해주세요.");
+        if (!window.confirm(`선택한 ${storeSelected.length}명에게 [${label}] 항목으로 ${amount}점을 차감하시겠습니까?`)) return;
+        const nextUsed = { ...usedPoints }; storeSelected.forEach(id => { nextUsed[id] = fmt((nextUsed[id] || 0) + amount); });
+        syncToFirebase({ usedPoints: nextUsed }); setStoreSelected([]); alert(`${label} 결제 완료!`);
+      },
+      handleEvolutionClick: (id, textsArray) => {
+        const randomText = textsArray[Math.floor(Math.random() * textsArray.length)];
+        setTooltipInfo({ id, text: randomText }); setTimeout(() => setTooltipInfo({ id: null, text: '' }), 2500); 
+      },
+      handleAddRole: () => {
+        if (!newRoleName.trim()) return alert("직업 이름을 입력하세요.");
+        const updatedRoles = [...safeRolesArray, { name: newRoleName.trim(), manual: '' }];
+        setRolesList(updatedRoles); syncToFirebase({ rolesList: updatedRoles }); setNewRoleName('');
+      },
+      handleDeleteRole: (roleToDelete) => {
+        if(window.confirm(`'${roleToDelete}' 직업을 삭제할까요?`)) {
+          const updatedRoles = safeRolesArray.filter(r => r.name !== roleToDelete);
+          setRolesList(updatedRoles); syncToFirebase({ rolesList: updatedRoles });
+        }
+      },
+      handleStudentFieldChange: (studentId, field, value) => {
+        const updatedStudents = safeStudentsArray.map(s => s.id === studentId ? { ...s, [field]: value } : s);
+        setStudents(updatedStudents); syncToFirebase({ students: updatedStudents });
+      },
+      handleAddShopItem: () => {
+        if (!newItemName || !newItemPrice) return alert("입력 오류");
+        const price = parseFloat(newItemPrice); if (isNaN(price)) return;
+        const newItems = [...safeArray(shopItems), { id: `item_${Date.now()}`, name: newItemName, price: fmt(price) }];
+        setShopItems(newItems); syncToFirebase({ shopItems: newItems }); setNewItemName(''); setNewItemPrice('');
+      },
+      handleDeleteShopItem: (id) => { 
+        if (window.confirm("삭제할까요?")) { const newItems = safeArray(shopItems).filter(item => item.id !== id); setShopItems(newItems); syncToFirebase({ shopItems: newItems }); }
+      },
+      handleAddBoss: () => {
+        if (!newBossName || !newBossDesc) return alert("입력 오류");
+        const newBosses = [...safeArray(bossPresets), { id: `b_${Date.now()}`, name: newBossName, desc: newBossDesc, reward: parseFloat(newBossReward)||100, penalty: parseFloat(newBossPenalty)||100 }];
+        setBossPresets(newBosses); syncToFirebase({ bossPresets: newBosses }); setNewBossName(''); setNewBossDesc(''); setNewBossReward(''); setNewBossPenalty('');
+      },
+      handleDeleteBoss: (id) => { const newBosses = safeArray(bossPresets).filter(b => b.id !== id); setBossPresets(newBosses); syncToFirebase({ bossPresets: newBosses }); },
+      handleAddMarket: () => {
+        if (!newMarketName || !newMarketDesc) return alert("입력 오류");
+        const newMarkets = [...safeArray(marketPresets), { id: `m_${Date.now()}`, name: newMarketName, desc: newMarketDesc }];
+        setMarketPresets(newMarkets); syncToFirebase({ marketPresets: newMarkets }); setNewMarketName(''); setNewMarketDesc('');
+      },
+      handleDeleteMarket: (id) => { const newMarkets = safeArray(marketPresets).filter(m => m.id !== id); setMarketPresets(newMarkets); syncToFirebase({ marketPresets: newMarkets }); },
+      clearTodayChecks: () => {
+        if (window.confirm('⚠️ 오늘 하루 동안의 모든 체크를 초기화합니다.')) {
+          syncToFirebase({ checkedStudents: {}, classPrep: {}, threeCompliments: {}, teacherCompliments: {}, checkedGroupGoals: {}, timeoutChecks: {}, subjectChecks: {}, leaderBonuses: {} });
+        }
+      },
+      resetGoalAllScores: () => {
+        if (window.confirm('🚩 잔여 점수를 0으로 만들고 새 목표를 시작할까요? (누적 점수 보존)')) {
+          const newWiped = { ...wipedPoints }; allStats.forEach(user => { newWiped[user.id] = user.sum; });
+          syncToFirebase({ wipedPoints: newWiped, usedPoints: {}, bossBonusPoints: 0, weeklyStreak: 0, isWeeklyClaimed: false, leaderBonuses: {}, manualTotalBonus: 0 });
+          alert('새로운 목표 갱신 완료!');
+        }
+      },
+      resetGoalIndividualScore: (id) => {
+        const user = allStats.find(s => s.id === id); if (!user) return;
+        if (window.confirm(`${user.name} 잔여 점수를 0으로 초기화할까요?`)) syncToFirebase({ wipedPoints: { ...wipedPoints, [id]: user.sum }, usedPoints: { ...usedPoints, [id]: 0 } });
+      },
+      factoryResetSystem: () => {
+        if (!window.confirm('🚨 데이터 공장 초기화. 모든 과거 기록이 삭제됩니다.')) return;
+        if (window.prompt('초기화 라고 입력하세요.') !== '초기화') return;
+        setResetTimestamp(Date.now()); 
+        syncToFirebase({ checkedStudents: {}, classPrep: {}, threeCompliments: {}, teacherCompliments: {}, checkedGroupGoals: {}, timeoutChecks: {}, subjectChecks: {}, usedPoints: {}, wipedPoints: {}, bossBonusPoints: 0, activeBoss: null, activeMarket: null, bossAttacks: {}, weeklyStreak: 0, isWeeklyClaimed: false, manualTotalBonus: 0, leaderBonuses: {} });
+        alert('완전 초기화 완료!');
+      },
+      toggleStoreSelect: (id) => {
+         const newSel = storeSelected.includes(id) ? storeSelected.filter(sid=>sid!==id) : [...storeSelected, id];
+         setStoreSelected(newSel);
+      }
+    },
+    utils: { getEvolution, getLifetimeTier, currentBossHits: Object.values(bossAttacks || {}).filter(Boolean).length, maxBossHits: safeStudentsArray.length, isDongminGod: gachaConfig.mode === 'special', currentGachaSettings: gachaConfig[gachaConfig.mode || 'normal'] }
   };
+};
+// 🎨 [2부: 화면 UI 렌더링 파트]
+const App = () => {
+  // 1부에서 만든 시스템 두뇌(Custom Hook) 연결
+  const { state, actions, utils } = useDalbodreSystem();
 
-  const handleToggle = (id, type) => {
-    playSound('good');
-    const updates = {};
-    if (type === 'role') updates.checkedStudents = { ...checkedStudents, [id]: !checkedStudents[id] };
-    if (type === 'prep') updates.classPrep = { ...classPrep, [id]: !classPrep[id] };
-    if (type === 'comp') updates.threeCompliments = { ...threeCompliments, [id]: !threeCompliments[id] };
-    syncToFirebase(updates);
-  };
+  // 상태(State) 가져오기
+  const {
+    isLoading, activeTab, teacherTab, isAuthenticated, password, showModal, showJackpot, showGuide, particle, tooltipInfo,
+    groupFilter, safeStudentsArray, safeRolesArray, allStats, filteredStudents, todayStats, cumulativeClassScore,
+    checkedStudents, classPrep, threeCompliments, teacherCompliments, timeoutChecks, subjectChecks,
+    activeBoss, bossHp, bossAttacks, bossBonusPoints, activeMarket, marketItems, marketPresets, bossPresets,
+    gachaConfig, shopItems, leaderConfig, manitoConfig, manualTotalBonus, targetScore, evoThresholds, tierThresholds,
+    storeSelected, newRoleName, newItemName, newItemPrice, newBossName, newBossDesc, newBossReward, newBossPenalty,
+    newMarketName, newMarketDesc, selectedGachaStudent, selectedStoreStudent, selectedMarketStudent, manualAdjustAmount,
+    manitoRevealState, manitoRevealMsg, effectiveManitoName, effectiveManitoId, selectedHyunRole
+  } = state;
 
-  const handleGroupAllClear = (leaderId, groupNum, e) => {
-    if(leaderBonuses[leaderId]) return alert("이미 오늘 리더십 보너스를 받았습니다! 내일 다시 시도하세요.");
-    playSound('good'); if (e) showParticle(e.clientX, e.clientY, "👑");
-    const newRoles = {...checkedStudents}; const newPreps = {...classPrep};
-    safeStudentsArray.filter(s => parseInt(s.group) === parseInt(groupNum)).forEach(s => { newRoles[s.id] = true; newPreps[s.id] = true; });
-    const newBonuses = {...leaderBonuses, [leaderId]: true};
-    setCheckedStudents(newRoles); setClassPrep(newPreps); setLeaderBonuses(newBonuses);
-    syncToFirebase({ checkedStudents: newRoles, classPrep: newPreps, leaderBonuses: newBonuses });
-    alert(`${groupNum}모둠 전원 출격 완료! 모둠장에게 리더십 보너스 +${leaderConfig.allClearBonus || 20}점이 부여되었습니다!`);
-  };
+  // 액션(Actions) 가져오기
+  const {
+    setActiveTab, setTeacherTab, setIsAuthenticated, setPassword, setShowModal, setShowJackpot, setShowGuide, setGroupFilter,
+    setNewRoleName, setNewItemName, setNewItemPrice, setNewBossName, setNewBossDesc, setNewBossReward, setNewBossPenalty,
+    setNewMarketName, setNewMarketDesc, setSelectedGachaStudent, setSelectedStoreStudent, setSelectedMarketStudent, setManualAdjustAmount,
+    setSelectedHyunRole, setGachaConfig, setManitoConfig, setLeaderConfig, setManualTotalBonus, setTargetScore, setEvoThresholds, setTierThresholds,
+    syncToFirebase, handleAdjust, handleToggle, handleGroupAllClear, handlePurify, handleRevealManito, closeManitoReveal, saveDailyRecord, handleLogin,
+    handleGacha, handleStudentStoreBuy, handleMarketBuy, handleMultiConsume, handleEvolutionClick, handleAddRole, handleDeleteRole, handleStudentFieldChange,
+    handleAddShopItem, handleDeleteShopItem, handleAddBoss, handleDeleteBoss, handleAddMarket, handleDeleteMarket, clearTodayChecks, resetGoalAllScores,
+    resetGoalIndividualScore, factoryResetSystem, toggleStoreSelect
+  } = actions;
 
-  const handlePurify = (id, e) => {
-    const isPurified = bossAttacks[id];
-    const newAttacks = { ...bossAttacks, [id]: !isPurified };
-    if (!isPurified) { playSound('good'); if (e) showParticle(e.clientX, e.clientY, "✨"); } else { playSound('bad'); }
-    setBossAttacks(newAttacks); syncToFirebase({ bossAttacks: newAttacks });
-    if (!isPurified && Object.values(newAttacks).filter(Boolean).length >= safeStudentsArray.length) {
-      setTimeout(() => {
-        playSound('jackpot'); setShowModal('bossClear');
-        const newBonus = bossBonusPoints + (activeBoss?.reward || 100);
-        setBossBonusPoints(newBonus); setActiveBoss(null); setBossAttacks({});
-        syncToFirebase({ bossBonusPoints: newBonus, activeBoss: null, bossAttacks: {} });
-      }, 800);
-    }
-  };
+  // 도구(Utils) 가져오기
+  const { getEvolution, getLifetimeTier, currentBossHits, maxBossHits, isDongminGod, currentGachaSettings } = utils;
 
-  const currentBossHits = Object.values(bossAttacks || {}).filter(Boolean).length;
-  const maxBossHits = safeStudentsArray.length;
+  // --- 화면 렌더링용 추가 연산 ---
   const bossProgress = Math.min((currentBossHits / maxBossHits) * 100, 100);
-  let bossEmoji = '👿'; if (bossProgress >= 80) bossEmoji = '😇'; else if (bossProgress >= 40) bossEmoji = '🥺';  
+  let bossEmoji = '👿'; 
+  if (bossProgress >= 80) bossEmoji = '😇'; 
+  else if (bossProgress >= 40) bossEmoji = '🥺';
 
-  const isDongminGod = gachaConfig.mode === 'special';
-  const currentGachaSettings = gachaConfig[gachaConfig.mode || 'normal'];
+  const todaySeed = new Date().toDateString();
+  const dailyBuffs = [
+    { title: "오늘은 칭찬의 날!", desc: "모두에게 따뜻한 한마디를!" },
+    { title: "청결 수호대!", desc: "청소 만점 달성을 위해!" },
+    { title: "단합의 힘", desc: "모든 미션 통과시 특별 보상" },
+    { title: "평화로운 하루", desc: "오늘 타임아웃 0명을 향해!" }
+  ];
+  const seedNum = todaySeed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const todaysBuff = dailyBuffs[seedNum % dailyBuffs.length];
 
-  const handleGacha = (id) => {
-    const user = allStats.find(s => s.id === id);
-    if (!user || user.net < currentGachaSettings.cost) return alert(`잔여 점수가 ${currentGachaSettings.cost}p 이상 필요합니다!`);
-    if (!window.confirm(`[${user.name}] ${currentGachaSettings.cost}p를 소모하여 뽑기를 진행할까요?`)) return;
-    const rand = Math.random() * 100; let resultMsg = ""; let reward = 0; let cumProb = 0; let isJackpot = false;
-    if (rand < (cumProb += parseFloat(currentGachaSettings?.t1?.prob || 0))) { resultMsg = currentGachaSettings?.t1?.name; reward = parseFloat(currentGachaSettings?.t1?.reward || 0); }
-    else if (rand < (cumProb += parseFloat(currentGachaSettings?.t2?.prob || 0))) { resultMsg = currentGachaSettings?.t2?.name; reward = parseFloat(currentGachaSettings?.t2?.reward || 0); }
-    else if (rand < (cumProb += parseFloat(currentGachaSettings?.t3?.prob || 0))) { resultMsg = currentGachaSettings?.t3?.name; reward = parseFloat(currentGachaSettings?.t3?.reward || 0); }
-    else { resultMsg = currentGachaSettings?.t4?.name; reward = parseFloat(currentGachaSettings?.t4?.reward || 0); isJackpot = true; }
-    syncToFirebase({ usedPoints: { ...usedPoints, [id]: fmt((usedPoints[id] || 0) + parseFloat(currentGachaSettings.cost) - reward) } });
-    setSelectedGachaStudent(""); 
-    if (isJackpot) { playSound('jackpot'); setShowJackpot(true); setTimeout(() => setShowJackpot(false), 6000); } 
-    else { playSound('gacha'); alert(`[가챠 결과] ${resultMsg}`); }
-  };
+  const classGuardian = (() => {
+    if (cumulativeClassScore < targetScore * 0.3) return { icon: '🥚', name: '우리 반 알', desc: '따뜻한 온기가 필요해요' };
+    if (cumulativeClassScore < targetScore * 0.6) return { icon: '🐲', name: '깨어난 꼬마 용', desc: '우리 반을 지키기 시작했어요!' };
+    if (cumulativeClassScore < targetScore * 0.9) return { icon: '✨🐉', name: '빛의 드래곤', desc: '우리 반은 천하무적!' };
+    return { icon: '👑🐉', name: '전설의 수호신', desc: '기적이 일어나는 교실!' };
+  })();
 
-  const handleStudentStoreBuy = (studentId, item) => {
-    const user = allStats.find(s => s.id === studentId);
-    if (!user || user.net < item.price) return alert("잔여 점수가 부족합니다!");
-    if (!window.confirm(`[${user.name}] 학생, ${item.name}을(를) ${item.price}p에 정말 구매할까요?\n(선생님께 확인받고 누르세요!)`)) return;
-    playSound('buy');
-    syncToFirebase({ usedPoints: { ...usedPoints, [studentId]: fmt((usedPoints[studentId] || 0) + item.price) } });
-    setSelectedStoreStudent(""); alert(`🎉 [${item.name}] 결제가 완료되었습니다! 선생님께 말씀해 주세요.`);
-  };
+  const top5Gainers = [...allStats].sort((a,b) => b.pos - a.pos).slice(0, 5);
+  const top3Losers = [...allStats].sort((a,b) => b.neg - a.neg).filter(s => s.neg > 0).slice(0, 3);
 
-  const handleMarketBuy = (studentId, item) => {
-    const user = allStats.find(s => s.id === studentId);
-    if (!user || user.net < item.price) return alert("점수가 부족합니다!");
-    if (!window.confirm(`[${user.name}] 학생, ${item.name}을(를) ${item.price}p에 구매할까요?`)) return;
-    playSound('buy');
-    syncToFirebase({ usedPoints: { ...usedPoints, [studentId]: fmt((usedPoints[studentId] || 0) + item.price) } });
-    setSelectedMarketStudent(""); alert("구매 완료/퀘스트 신청 완료!");
-  };
-
-  const handleMultiConsume = (amount, label) => {
-    if (storeSelected.length === 0) return alert("학생을 먼저 선택해주세요.");
-    if (!window.confirm(`선택한 ${storeSelected.length}명에게 [${label}] 항목으로 ${amount}점을 차감하시겠습니까?`)) return;
-    const nextUsed = { ...usedPoints };
-    storeSelected.forEach(id => { nextUsed[id] = fmt((nextUsed[id] || 0) + amount); });
-    syncToFirebase({ usedPoints: nextUsed }); setStoreSelected([]); alert(`${label} 결제 완료!`);
-  };
-
-  const showParticle = (x, y, text) => { setParticle({ x, y, text, id: Date.now() }); setTimeout(() => setParticle(null), 800); };
-  const handleEvolutionClick = (id, textsArray) => {
-    const randomText = textsArray[Math.floor(Math.random() * textsArray.length)];
-    setTooltipInfo({ id, text: randomText }); setTimeout(() => setTooltipInfo({ id: null, text: '' }), 2500); 
-  };
-
-  const handleAddRole = () => {
-    if (!newRoleName.trim()) return alert("직업 이름을 입력하세요.");
-    const updatedRoles = [...safeRolesArray, { name: newRoleName.trim(), manual: '' }];
-    setRolesList(updatedRoles); syncToFirebase({ rolesList: updatedRoles }); setNewRoleName('');
-  };
-  const handleDeleteRole = (roleToDelete) => {
-    if(window.confirm(`'${roleToDelete}' 직업을 삭제할까요?`)) {
-      const updatedRoles = safeRolesArray.filter(r => r.name !== roleToDelete);
-      setRolesList(updatedRoles); syncToFirebase({ rolesList: updatedRoles });
-    }
-  };
-  const handleStudentFieldChange = (studentId, field, value) => {
-    const updatedStudents = safeStudentsArray.map(s => s.id === studentId ? { ...s, [field]: value } : s);
-    setStudents(updatedStudents); syncToFirebase({ students: updatedStudents });
-  };
-
-  const handleAddShopItem = () => {
-    if (!newItemName || !newItemPrice) return alert("입력 오류");
-    const price = parseFloat(newItemPrice); if (isNaN(price)) return;
-    const newItems = [...safeArray(shopItems), { id: `item_${Date.now()}`, name: newItemName, price: fmt(price) }];
-    setShopItems(newItems); syncToFirebase({ shopItems: newItems }); setNewItemName(''); setNewItemPrice('');
-  };
-  const handleDeleteShopItem = (id) => { 
-    if (window.confirm("삭제할까요?")) { const newItems = safeArray(shopItems).filter(item => item.id !== id); setShopItems(newItems); syncToFirebase({ shopItems: newItems }); }
-  };
-
-  const handleAddBoss = () => {
-    if (!newBossName || !newBossDesc) return alert("입력 오류");
-    const newBosses = [...safeArray(bossPresets), { id: `b_${Date.now()}`, name: newBossName, desc: newBossDesc, reward: parseFloat(newBossReward)||100, penalty: parseFloat(newBossPenalty)||100 }];
-    setBossPresets(newBosses); syncToFirebase({ bossPresets: newBosses }); setNewBossName(''); setNewBossDesc(''); setNewBossReward(''); setNewBossPenalty('');
-  };
-  const handleDeleteBoss = (id) => { const newBosses = safeArray(bossPresets).filter(b => b.id !== id); setBossPresets(newBosses); syncToFirebase({ bossPresets: newBosses }); };
-
-  const handleAddMarket = () => {
-    if (!newMarketName || !newMarketDesc) return alert("입력 오류");
-    const newMarkets = [...safeArray(marketPresets), { id: `m_${Date.now()}`, name: newMarketName, desc: newMarketDesc }];
-    setMarketPresets(newMarkets); syncToFirebase({ marketPresets: newMarkets }); setNewMarketName(''); setNewMarketDesc('');
-  };
-  const handleDeleteMarket = (id) => { const newMarkets = safeArray(marketPresets).filter(m => m.id !== id); setMarketPresets(newMarkets); syncToFirebase({ marketPresets: newMarkets }); };
-
-  const clearTodayChecks = () => {
-    if (window.confirm('⚠️ 오늘 하루 동안의 모든 체크를 초기화합니다.')) {
-      syncToFirebase({ checkedStudents: {}, classPrep: {}, threeCompliments: {}, teacherCompliments: {}, checkedGroupGoals: {}, timeoutChecks: {}, subjectChecks: {}, leaderBonuses: {} });
-    }
-  };
-
-  const resetGoalAllScores = () => {
-    if (window.confirm('🚩 잔여 점수를 0으로 만들고 새 목표를 시작할까요? (누적 점수 보존)')) {
-      const newWiped = { ...wipedPoints }; allStats.forEach(user => { newWiped[user.id] = user.sum; });
-      syncToFirebase({ wipedPoints: newWiped, usedPoints: {}, bossBonusPoints: 0, weeklyStreak: 0, isWeeklyClaimed: false, leaderBonuses: {}, manualTotalBonus: 0 });
-      alert('새로운 목표 갱신 완료!');
-    }
-  };
-  const resetGoalIndividualScore = (id) => {
-    const user = allStats.find(s => s.id === id); if (!user) return;
-    if (window.confirm(`${user.name} 잔여 점수를 0으로 초기화할까요?`)) syncToFirebase({ wipedPoints: { ...wipedPoints, [id]: user.sum }, usedPoints: { ...usedPoints, [id]: 0 } });
-  };
-
-  const factoryResetSystem = () => {
-    if (!window.confirm('🚨 데이터 공장 초기화. 모든 과거 기록이 삭제됩니다.')) return;
-    if (window.prompt('초기화 라고 입력하세요.') !== '초기화') return;
-    setResetTimestamp(Date.now()); 
-    syncToFirebase({ checkedStudents: {}, classPrep: {}, threeCompliments: {}, teacherCompliments: {}, checkedGroupGoals: {}, timeoutChecks: {}, subjectChecks: {}, usedPoints: {}, wipedPoints: {}, bossBonusPoints: 0, activeBoss: null, activeMarket: null, bossAttacks: {}, weeklyStreak: 0, isWeeklyClaimed: false, manualTotalBonus: 0, leaderBonuses: {} });
-    alert('완전 초기화 완료!');
-  };
-
-  const handleRevealManito = () => {
-    const isSuccess = (checkedStudents[effectiveManitoId] === true && classPrep[effectiveManitoId] === true && threeCompliments[effectiveManitoId] === true && !(timeoutChecks[effectiveManitoId] > 0) && !(subjectChecks[effectiveManitoId] > 0));
-    playSound('drumroll'); setManitoRevealState('loading');
-    setTimeout(() => {
-      if (isSuccess) { playSound('jackpot'); setManitoRevealMsg(manitoSuccessMessages[Math.floor(Math.random() * manitoSuccessMessages.length)]); setManitoRevealState('success'); } 
-      else { playSound('failSoft'); setManitoRevealMsg(manitoFailMessages[Math.floor(Math.random() * manitoFailMessages.length)]); setManitoRevealState('fail'); }
-    }, 3000);
-  };
-  const closeManitoReveal = () => setManitoRevealState(null);
-
-  const saveDailyRecord = async () => {
-    if (!window.confirm("오늘 기록을 마감하시겠습니까?\n(마니또 공개를 학생 화면에서 먼저 진행해 주세요!)")) return;
-    const isSuccess = (checkedStudents[effectiveManitoId] === true && classPrep[effectiveManitoId] === true && threeCompliments[effectiveManitoId] === true && !(timeoutChecks[effectiveManitoId] > 0) && !(subjectChecks[effectiveManitoId] > 0));
-    let extraBonus = 0;
-    if (isSuccess) { alert(`🎉 마니또 미션 최종 성공!\n학급 총점 보너스 +${manitoConfig.reward}점!`); extraBonus = parseFloat(manitoConfig.reward) || 50; }
-    
-    const mergedPer = { ...classPrep }; Object.keys(threeCompliments).forEach(id => { if(threeCompliments[id]) mergedPer[`${id}_3c`] = true; });
-    const record = {
-      id: Date.now(), date: new Date().toLocaleDateString('ko-KR'), time: new Date().toLocaleTimeString('ko-KR', { hour12: false }),
-      positive: todayStats.pos, negative: todayStats.neg, total: todayStats.total + extraBonus, target: targetScore, penaltyConfig: { timeout: penaltyTimeout, subject: penaltySubject }, leaderBonusAmount: leaderConfig.allClearBonus || 20, 
-      rawInd: JSON.stringify(checkedStudents), rawPer: JSON.stringify(mergedPer), rawTComp: JSON.stringify(teacherCompliments), rawTm: JSON.stringify(timeoutChecks), rawSb: JSON.stringify(subjectChecks), rawUsed: JSON.stringify(usedPoints), rawGroup: JSON.stringify(checkedGroupGoals), rawLB: JSON.stringify(leaderBonuses)
-    };
-    
-    setHistory(prev => [record, ...prev]);
-    syncToFirebase({ checkedStudents: {}, classPrep: {}, threeCompliments: {}, teacherCompliments: {}, checkedGroupGoals: {}, timeoutChecks: {}, subjectChecks: {}, activeBoss: null, activeMarket: null, bossBonusPoints: 0, bossAttacks: {}, isWeeklyClaimed: false, leaderBonuses: {} });
-    
-    if (scriptURL) await fetch(scriptURL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'saveRecord', ...record }) });
-    setShowModal('success'); setTimeout(() => setShowModal(null), 2000);
-  };
-
-  const handleLogin = () => {
-    if (password === "6505") { setIsAuthenticated('teacher'); setActiveTab('admin'); setTeacherTab('history'); setShowModal(null); setPassword(""); }
-    else if (password === "1111") { setIsAuthenticated('inspector'); setActiveTab('admin'); setTeacherTab('full-stats'); setShowModal(null); setPassword(""); }
-    else alert("비밀번호가 틀렸습니다.");
-  };
-
-  const getCardStyle = (id) => {
-    const sky = [18, 2, 9, 12]; const yellow = [1, 7, 26, 3, 23]; const pink = [20, 17, 4, 15, 24]; const green = [16, 11, 25, 21, 22, 6, 14]; 
-    if (sky.includes(id)) return 'bg-sky-50 border-sky-100 hover:border-sky-200';
-    if (yellow.includes(id)) return 'bg-yellow-50 border-yellow-100 hover:border-yellow-200';
-    if (pink.includes(id)) return 'bg-pink-50 border-pink-100 hover:border-pink-200';
-    if (green.includes(id)) return 'bg-emerald-50 border-emerald-100 hover:border-emerald-200';
-    return 'bg-white border-slate-100 hover:border-slate-200'; 
-  };
-
+  // 로딩 화면
   if (isLoading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white font-black text-2xl animate-pulse">달보드레 유니버스 로딩 중...</div>;
 
   return (
     <div className={`min-h-screen font-sans pb-24 transition-colors duration-700 ${activeBoss ? 'bg-red-950 text-red-50' : 'bg-slate-50 text-slate-900'}`}>
       {particle && (<div className="fixed pointer-events-none z-[999] animate-fly-up font-black text-2xl text-blue-500" style={{ left: particle.x, top: particle.y }}>{particle.text} <Sparkles className="inline w-5 h-5 text-yellow-400"/></div>)}
 
-      {/* 헤더 */}
+      {/* 통합 헤더 */}
       <header className="bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-3">
           <div className="bg-blue-600 p-2 rounded-xl text-white"><Trophy className="w-6 h-6"/></div>
@@ -671,7 +662,7 @@ const App = () => {
                 <div key={s.id} className={`p-5 rounded-[32px] border-2 bg-white transition-all shadow-sm ${s.isLeader ? 'border-yellow-400 bg-yellow-50/30' : 'border-slate-100'} ${groupFilter !== 'all' ? 'transform scale-105 my-2' : ''}`}>
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
-                       <button onClick={() => { handleEvolutionClick(s.id, getEvolution(s.net).texts); playSound('good'); }} className="relative w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-2xl hover:scale-110 transition-transform">
+                       <button onClick={() => { handleEvolutionClick(s.id, getEvolution(s.net).texts); }} className="relative w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-2xl hover:scale-110 transition-transform">
                           {getEvolution(s.net).icon}
                           {tooltipInfo.id === s.id && <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] font-bold px-3 py-1.5 rounded-xl whitespace-nowrap z-50">{tooltipInfo.text}</div>}
                        </button>
@@ -758,7 +749,7 @@ const App = () => {
           </div>
         )}
 
-        {/* 탭 3: 상점 */}
+        {/* 탭 3: 가챠/상점 */}
         {activeTab === 'shop' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in duration-500">
              <section className={`p-8 rounded-[40px] shadow-sm border relative overflow-hidden ${isDongminGod ? 'bg-gradient-to-br from-purple-900 to-slate-900 border-yellow-400 shadow-[0_0_30px_rgba(168,85,247,0.5)]' : 'bg-yellow-50 border-yellow-200'}`}>
@@ -1030,7 +1021,7 @@ const App = () => {
                                  <input type="text" placeholder="새 직업 추가 (예: 대법관)" value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} className="flex-1 bg-white border-2 border-indigo-200 rounded-2xl px-5 py-3 font-bold outline-none focus:border-indigo-400"/>
                                  <button onClick={handleAddRole} className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black hover:bg-indigo-700 shadow-md"><Plus className="w-5 h-5"/></button>
                                </div>
-                               <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                               <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                                  {safeRolesArray.map(role => (
                                     <div key={role.name} className="bg-white p-4 rounded-2xl border border-indigo-100 shadow-sm flex flex-col gap-2">
                                        <div className="flex justify-between items-center">
@@ -1074,10 +1065,7 @@ const App = () => {
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 gap-3 max-h-[250px] overflow-y-auto custom-scrollbar pr-2 mb-8">
                            {allStats.map(s => (
-                              <button key={s.id} onClick={() => {
-                                 const newSel = storeSelected.includes(s.id) ? storeSelected.filter(id=>id!==s.id) : [...storeSelected, s.id];
-                                 setStoreSelected(newSel);
-                              }} className={`p-4 rounded-2xl border-2 transition-all text-center flex flex-col justify-center items-center gap-1 ${storeSelected.includes(s.id) ? 'bg-amber-100 border-amber-400 shadow-md transform scale-105' : 'bg-white border-slate-200 hover:border-amber-200'}`}>
+                              <button key={s.id} onClick={() => toggleStoreSelect(s.id)} className={`p-4 rounded-2xl border-2 transition-all text-center flex flex-col justify-center items-center gap-1 ${storeSelected.includes(s.id) ? 'bg-amber-100 border-amber-400 shadow-md transform scale-105' : 'bg-white border-slate-200 hover:border-amber-200'}`}>
                                 <span className={`font-black text-sm ${storeSelected.includes(s.id) ? 'text-amber-700' : 'text-slate-600'}`}>{s.name}</span>
                                 <span className={`text-[10px] font-bold ${s.net >= 0 ? 'text-blue-500' : 'text-red-500'}`}>{s.net}p</span>
                               </button>
@@ -1166,7 +1154,7 @@ const App = () => {
                            <div className="flex-1">
                               <label className="text-xs font-black text-yellow-600 block mb-2 ml-1">오늘의 마니또 몰래 지정</label>
                               <select value={manitoConfig?.targetId || ''} onChange={(e) => { const newConf = {...(manitoConfig||{}), targetId: e.target.value ? parseInt(e.target.value) : null}; setManitoConfig(newConf); syncToFirebase({manitoConfig: newConf}); }} className="w-full bg-white border-2 border-yellow-300 rounded-2xl px-5 py-3.5 font-black text-slate-700 outline-none focus:border-yellow-500 shadow-sm">
-                                 <option value="">🎲 시스템 자동 추천 (현재: {secretManitoName})</option>
+                                 <option value="">🎲 시스템 자동 추천 (현재: {effectiveManitoName})</option>
                                  {safeStudentsArray.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                               </select>
                            </div>
@@ -1199,13 +1187,13 @@ const App = () => {
                                    </div>
                                    {activeBoss?.id !== b.id ? (
                                       <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto">
-                                        <button onClick={() => { setActiveBoss(b); setBossHp(100); syncToFirebase({ activeBoss: b, bossHp: 100, bossAttacks: {} }); }} className="flex-1 sm:flex-none bg-red-100 text-red-700 px-4 py-2 rounded-xl text-xs font-black hover:bg-red-200 shadow-sm">출격하기</button>
+                                        <button onClick={() => { setActiveBoss(b); setBossHp(100); syncToFirebase({ activeBoss: b, bossHp: 100, bossAttacks: {} }); }} className="flex-1 sm:flex-none bg-red-100 text-red-700 px-4 py-2 rounded-xl text-xs font-black hover:bg-red-200 shadow-sm">출격</button>
                                         <button onClick={() => handleDeleteBoss(b.id)} className="flex-1 sm:flex-none text-slate-400 hover:text-red-500 text-xs font-bold text-center bg-slate-50 sm:bg-transparent rounded-xl sm:rounded-none py-2 sm:py-0 border sm:border-none border-slate-200">삭제</button>
                                       </div>
                                    ) : (
                                       <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto">
-                                        <button onClick={() => { if(window.confirm('승리(가점) 처리할까요?')) { const newBonus = bossBonusPoints + (activeBoss.reward||100); setBossBonusPoints(newBonus); setActiveBoss(null); syncToFirebase({ bossBonusPoints: newBonus, activeBoss: null, bossAttacks: {} }); alert('보상이 총점에 합산되었습니다!'); } }} className="flex-1 sm:flex-none bg-white text-green-600 px-4 py-1.5 rounded-xl text-xs font-black shadow-sm hover:bg-green-50">승리 (+)</button>
-                                        <button onClick={() => { if(window.confirm('실패(감점) 처리할까요?')) { const newBonus = bossBonusPoints - (activeBoss.penalty||100); setBossBonusPoints(newBonus); setActiveBoss(null); syncToFirebase({ bossBonusPoints: newBonus, activeBoss: null, bossAttacks: {} }); alert('감점되었습니다.'); } }} className="flex-1 sm:flex-none bg-white text-red-600 px-4 py-1.5 rounded-xl text-xs font-black shadow-sm hover:bg-red-50">실패 (-)</button>
+                                        <button onClick={() => { if(window.confirm('승리(가점) 처리할까요?')) { const newBonus = bossBonusPoints + (activeBoss.reward||100); setBossBonusPoints(newBonus); setActiveBoss(null); syncToFirebase({ bossBonusPoints: newBonus, activeBoss: null, bossAttacks: {} }); alert('보상이 총점에 합산되었습니다!'); } }} className="flex-1 sm:flex-none bg-white text-green-600 px-4 py-2 sm:py-1.5 rounded-xl text-xs font-black shadow-sm hover:bg-green-50">승리(+)</button>
+                                        <button onClick={() => { if(window.confirm('실패(감점) 처리할까요?')) { const newBonus = bossBonusPoints - (activeBoss.penalty||100); setBossBonusPoints(newBonus); setActiveBoss(null); syncToFirebase({ bossBonusPoints: newBonus, activeBoss: null, bossAttacks: {} }); alert('감점되었습니다.'); } }} className="flex-1 sm:flex-none bg-white text-red-600 px-4 py-2 sm:py-1.5 rounded-xl text-xs font-black shadow-sm hover:bg-red-50">실패(-)</button>
                                       </div>
                                    )}
                                 </div>
@@ -1361,7 +1349,7 @@ const App = () => {
         )}
       </main>
 
-      {/* 모바일 하단 네비게이션 */}
+      {/* 모바일 최적화 하단 네비게이션 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-2 py-3 flex justify-around items-center z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] pb-safe">
          <button onClick={() => setActiveTab('classroom')} className={`flex flex-col items-center gap-1.5 flex-1 transition-all ${activeTab === 'classroom' ? 'text-blue-600 scale-110 -translate-y-2' : 'text-slate-400 hover:text-blue-400'}`}>
             <LayoutDashboard className="w-5 h-5 md:w-6 md:h-6"/>
@@ -1417,7 +1405,7 @@ const App = () => {
         </div>
       )}
 
-      {/* 마니또 정체 공개 (두구두구) */}
+      {/* 마니또 정체 공개 (두구두구 연출 모달) */}
       {manitoRevealState && (
         <div className="fixed inset-0 flex items-center justify-center z-[9999] bg-slate-900/95 backdrop-blur-md px-4 md:px-6">
           {manitoRevealState === 'loading' ? (
