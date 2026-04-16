@@ -11,11 +11,14 @@ import {
 const DATABASE_URL = "https://dalbodre-db-default-rtdb.asia-southeast1.firebasedatabase.app/"; 
 // ==========================================
 
+// 🎵 사운드 재생 함수
 const playSound = (type) => {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator(); const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(ctx.destination);
+    const osc = ctx.createOscillator(); 
+    const gain = ctx.createGain();
+    osc.connect(gain); 
+    gain.connect(ctx.destination);
     
     if (type === 'good') { osc.frequency.setValueAtTime(600, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1); osc.type = 'sine'; }
     else if (type === 'bad') { osc.frequency.setValueAtTime(300, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.2); osc.type = 'sawtooth'; }
@@ -24,11 +27,16 @@ const playSound = (type) => {
     else if (type === 'drumroll') { osc.type = 'square'; osc.frequency.setValueAtTime(100, ctx.currentTime); osc.frequency.linearRampToValueAtTime(150, ctx.currentTime + 3); }
     else if (type === 'failSoft') { osc.type = 'sine'; osc.frequency.setValueAtTime(400, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.6); }
     
-    osc.start(); gain.gain.setValueAtTime(0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + (type==='drumroll'?3:(type==='failSoft'?0.6:0.3))); osc.stop(ctx.currentTime + (type==='drumroll'?3:(type==='failSoft'?0.6:0.3)));
-  } catch (e) {}
+    osc.start(); 
+    gain.gain.setValueAtTime(0.1, ctx.currentTime); 
+    gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + (type==='drumroll'?3:(type==='failSoft'?0.6:0.3))); 
+    osc.stop(ctx.currentTime + (type==='drumroll'?3:(type==='failSoft'?0.6:0.3)));
+  } catch (e) {
+    console.error("Audio error", e);
+  }
 };
 
-// 🛡️ 데이터 정규화 함수 (백지화 절대 방어)
+// 🛡️ 백지화(Crash) 방지용 데이터 정규화 함수
 const safeArray = (val) => {
   if (!val) return [];
   if (Array.isArray(val)) return val.filter(Boolean);
@@ -73,6 +81,7 @@ const manitoFailMessages = [
   "마음 무거웠지? 이제 다 내려놓고 편안하게 쉬어.", "우리가 널 믿는 마음은 변함없어. 기운 내, 파이팅!"
 ];
 
+// 🌟 초기 데이터 및 설정
 const defaultRoles = [
   { name: '학급문고 정리', manual: '' }, { name: '우유 배달', manual: '' }, { name: '다툼 중재자', manual: '' }, 
   { name: '생활태도 체크', manual: '' }, { name: '현령(칠/신/질)', manual: '' }, { name: '질서 관리', manual: '' }, 
@@ -102,6 +111,7 @@ const defaultGachaNormal = { cost: 30, t1: { name: '😭 앗! 꽝입니다.', pr
 const defaultGachaSpecial = { cost: 30, t1: { name: '😭 앗! 꽝...', prob: 10, reward: 0 }, t2: { name: '🪙 럭키! 페이백!', prob: 20, reward: 20 }, t3: { name: '🍬 혜자 간식 당첨!', prob: 40, reward: 20 }, t4: { name: '✨ 동민신의 축복(잭팟)!!', prob: 30, reward: 150 } };
 
 const fmt = (num) => { const n = parseFloat(num); return isNaN(n) ? 0 : parseFloat(n.toFixed(2)); };
+
 const getRoleBonus = (role) => { 
   if (!role || typeof role !== 'string') return 1; 
   if (role.includes('감찰사')) return 2; 
@@ -110,11 +120,15 @@ const getRoleBonus = (role) => {
   return 1; 
 };
 
-// 🧠 [핵심 로직 분리] 달보드레 통합 시스템 커스텀 훅
-export const useDalbodreSystem = () => {
+// ==========================================
+// 아래부터 Part 2 코드가 이어집니다.
+// ==========================================
+
+// 🧠 [Part 2: 핵심 로직 훅 (두뇌 엔진)]
+const useDalbodreSystem = () => {
   const scriptURL = "https://script.google.com/macros/s/AKfycbw3j6LxhdO0ewIXxkIGrh_pczxrfOJr3A_PTHTsJY1rKb6ES7bPxPQuxRKidd6IWK5_/exec"; 
   
-  // 1. 상태 변수 선언
+  // 1. 상태 변수 선언 (State)
   const [activeTab, setActiveTab] = useState('classroom'); 
   const [groupFilter, setGroupFilter] = useState('all'); 
   const [students, setStudents] = useState([]);
@@ -144,13 +158,32 @@ export const useDalbodreSystem = () => {
   const [leaderConfig, setLeaderConfig] = useState({ allClearBonus: 20 });
   const [evoThresholds, setEvoThresholds] = useState({ e1: 50, e2: 100, e3: 200, e4: 300, e5: 400, e6: 500, e7: 700, e8: 1000, e9: 1500 });
   const [tierThresholds, setTierThresholds] = useState({ t1: 200, t2: 400, t3: 600, t4: 800, t5: 1000, t6: 1500, t7: 2000, t8: 3000, t9: 5000 });
-  const [shopItems, setShopItems] = useState([{ id: 'item_1', name: '간식 결제', price: 20.0 }, { id: 'item_2', name: '모둠선택 결제', price: 100.0 }]);
+  
+  const [shopItems, setShopItems] = useState([
+    { id: 'item_1', name: '간식 결제', price: 20.0 }, 
+    { id: 'item_2', name: '모둠선택 결제', price: 100.0 }
+  ]);
   const [gachaConfig, setGachaConfig] = useState({ mode: 'normal', normal: defaultGachaNormal, special: defaultGachaSpecial });
   const [gachaEditTab, setGachaEditTab] = useState('normal'); 
-  const [bossPresets, setBossPresets] = useState([{ id: 'b1', name: '전담 선생님의 감시', desc: '아이들의 예쁜 마음을 모아 정화하세요!', reward: 100, penalty: 100 }, { id: 'b2', name: '교장 선생님의 순시', desc: '모두가 바른 태도를 보여주면 천사가 됩니다!', reward: 200, penalty: 200 }]);
-  const [marketPresets, setMarketPresets] = useState([{ id: 'm1', name: '달보드레 블랙마켓 (일반)', desc: '희귀 아이템을 팔아보세요.' }, { id: 'm2', name: '🌙 속죄의 퀘스트 상점', desc: '감점을 지우고 싶은 자, 퀘스트를 수락하라!' }]);
-  const [marketItems, setMarketItems] = useState([{ id: 'm_item_1', name: '마술 직관권', price: 50 }, { id: 'm_item_2', name: '1일 현령 체험권', price: 150 }, { id: 'm_item_3', name: '📜 [퀘스트] 그림자 수호대 (일주일 봉사)', price: 0 }, { id: 'm_item_4', name: '🎭 [퀘스트] 비밀의 무대 (1분 장기자랑)', price: 0 }]);
+  
+  const [bossPresets, setBossPresets] = useState([
+    { id: 'b1', name: '전담 선생님의 감시', desc: '아이들의 예쁜 마음을 모아 정화하세요!', reward: 100, penalty: 100 }, 
+    { id: 'b2', name: '교장 선생님의 순시', desc: '모두가 바른 태도를 보여주면 천사가 됩니다!', reward: 200, penalty: 200 }
+  ]);
+  const [marketPresets, setMarketPresets] = useState([
+    { id: 'm1', name: '달보드레 블랙마켓 (일반)', desc: '희귀 아이템을 팔아보세요.' }, 
+    { id: 'm2', name: '🌙 속죄의 퀘스트 상점', desc: '감점을 지우고 싶은 자, 퀘스트를 수락하라!' }
+  ]);
+  const [marketItems, setMarketItems] = useState([
+    { id: 'm_item_1', name: '마술 직관권', price: 50 }, 
+    { id: 'm_item_2', name: '1일 현령 체험권', price: 150 }, 
+    { id: 'm_item_3', name: '📜 [퀘스트] 그림자 수호대 (일주일 봉사)', price: 0 }, 
+    { id: 'm_item_4', name: '🎭 [퀘스트] 비밀의 무대 (1분 장기자랑)', price: 0 }
+  ]);
+  
   const [manitoConfig, setManitoConfig] = useState({ targetId: null, reward: 50 });
+  const [checkedGroupGoals, setCheckedGroupGoals] = useState({});
+
   const [newRoleName, setNewRoleName] = useState('');
   const [newItemName, setNewItemName] = useState('');
   const [newItemPrice, setNewItemPrice] = useState('');
@@ -164,6 +197,7 @@ export const useDalbodreSystem = () => {
   const [selectedMarketStudent, setSelectedMarketStudent] = useState("");
   const [selectedStoreStudent, setSelectedStoreStudent] = useState(""); 
   const [manualAdjustAmount, setManualAdjustAmount] = useState(''); 
+  
   const [isLoading, setIsLoading] = useState(true);
   const [teacherTab, setTeacherTab] = useState('history');
   const [isAuthenticated, setIsAuthenticated] = useState(false); 
@@ -178,7 +212,7 @@ export const useDalbodreSystem = () => {
   const [manitoRevealMsg, setManitoRevealMsg] = useState("");
   const [selectedHyunRole, setSelectedHyunRole] = useState(null);
 
-  // 2. 안전한 데이터 변환 (백지화 방지)
+  // 2. 안전한 데이터 변환 (백지화 방지용)
   const safeRolesArray = useMemo(() => {
     const arr = safeArray(rolesList);
     if (arr.length === 0) return defaultRoles;
@@ -194,11 +228,12 @@ export const useDalbodreSystem = () => {
     return arr.map(s => ({ ...s, group: s.group || 1, isLeader: !!s.isLeader, role: s.role || '' }));
   }, [students]);
 
-  // 3. 파이어베이스 초기 로딩
+  // 3. 파이어베이스 초기 로딩 (1회)
   useEffect(() => {
     const fetchInitial = async () => {
-      setHistory(JSON.parse(localStorage.getItem('dal_v30_history')) || []);
+      setHistory(JSON.parse(localStorage.getItem('dal_v32_history')) || []);
       if (!DATABASE_URL || DATABASE_URL.includes("복사한_주소")) { setIsLoading(false); return; }
+      
       const dbUrl = `${DATABASE_URL.replace(/\/$/, '')}/classData_V2.json`;
       try {
         const response = await fetch(dbUrl);
@@ -215,6 +250,7 @@ export const useDalbodreSystem = () => {
           setBossAttacks(data.bossAttacks || {}); setBossBonusPoints(data.bossBonusPoints || 0);
           setActiveMarket(data.activeMarket || null); setManualTotalBonus(data.manualTotalBonus || 0);
           setTargetScore(data.targetScore || 3000); setLeaderConfig(data.leaderConfig || { allClearBonus: 20 });
+          setCheckedGroupGoals(data.checkedGroupGoals || {});
           if (data.gachaConfig) setGachaConfig(data.gachaConfig.mode ? data.gachaConfig : { mode: 'normal', normal: data.gachaConfig, special: defaultGachaSpecial });
           setShopItems(safeArray(data.shopItems)); setBossPresets(safeArray(data.bossPresets));
           setMarketPresets(safeArray(data.marketPresets)); setMarketItems(safeArray(data.marketItems));
@@ -223,13 +259,20 @@ export const useDalbodreSystem = () => {
           if (data.tierThresholds) setTierThresholds(data.tierThresholds);
         }
       } catch (e) { console.error("Firebase Load Error", e); }
-      if (scriptURL) { try { const res = await fetch(scriptURL); const data = await res.json(); if (data.history) setHistory(safeArray(data.history)); } catch (e) {} }
+      
+      if (scriptURL) { 
+        try { 
+          const res = await fetch(scriptURL); 
+          const data = await res.json(); 
+          if (data.history) setHistory(safeArray(data.history)); 
+        } catch (e) {} 
+      }
       setIsLoading(false);
     };
     fetchInitial();
   }, []);
 
-  // 4. 실시간 동기화
+  // 4. 파이어베이스 실시간 수신기 (1.5초)
   useEffect(() => {
     if (!DATABASE_URL || DATABASE_URL.includes("복사한_주소")) return;
     const dbUrl = `${DATABASE_URL.replace(/\/$/, '')}/classData_V2.json`;
@@ -245,7 +288,7 @@ export const useDalbodreSystem = () => {
           setLeaderBonuses(data.leaderBonuses || {}); setActiveBoss(data.activeBoss || null);
           setBossAttacks(data.bossAttacks || {}); setBossBonusPoints(data.bossBonusPoints || 0);
           setManualTotalBonus(data.manualTotalBonus || 0); setWeeklyStreak(data.weeklyStreak || 0);
-          setIsWeeklyClaimed(data.isWeeklyClaimed || false);
+          setIsWeeklyClaimed(data.isWeeklyClaimed || false); setCheckedGroupGoals(data.checkedGroupGoals || {});
           if (data.students) setStudents(safeArray(data.students));
           if (data.gachaConfig?.mode) setGachaConfig(prev => ({...prev, mode: data.gachaConfig.mode}));
         }
@@ -254,9 +297,10 @@ export const useDalbodreSystem = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // 5. 설정값 백업 및 저장
   useEffect(() => {
     if (isLoading) return;
-    localStorage.setItem('dal_v30_history', JSON.stringify(history));
+    localStorage.setItem('dal_v32_history', JSON.stringify(history));
     if (DATABASE_URL && !DATABASE_URL.includes("복사한_주소")) {
        const dbUrl = `${DATABASE_URL.replace(/\/$/, '')}/classData_V2.json`;
        const configUpdates = { shopItems, bossPresets, marketPresets, marketItems, gachaConfig, manitoConfig, evoThresholds, tierThresholds, targetScore, leaderConfig, rolesList };
@@ -275,6 +319,7 @@ export const useDalbodreSystem = () => {
       if(updates.usedPoints) setUsedPoints(updates.usedPoints);
       if(updates.wipedPoints) setWipedPoints(updates.wipedPoints);
       if(updates.leaderBonuses) setLeaderBonuses(updates.leaderBonuses);
+      if(updates.checkedGroupGoals) setCheckedGroupGoals(updates.checkedGroupGoals);
       if(updates.activeBoss !== undefined) setActiveBoss(updates.activeBoss);
       if(updates.bossAttacks !== undefined) setBossAttacks(updates.bossAttacks);
       if(updates.bossBonusPoints !== undefined) setBossBonusPoints(updates.bossBonusPoints);
@@ -286,10 +331,11 @@ export const useDalbodreSystem = () => {
     try { await fetch(`${DATABASE_URL.replace(/\/$/, '')}/classData_V2.json`, { method: 'PATCH', body: JSON.stringify(updates) }); } catch (e) {}
   };
 
-  // 5. 통계 및 계산 로직
+  // 6. 마니또 & 통계 계산
   const todaySeed = new Date().toDateString();
   const seedNum = todaySeed.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const defaultRandomManitoId = safeStudentsArray.length > 0 ? safeStudentsArray[seedNum % safeStudentsArray.length].id : 1;
+  const secretManitoName = safeStudentsArray.find(s => s.id === defaultRandomManitoId)?.name || ''; 
   const effectiveManitoId = manitoConfig?.targetId || defaultRandomManitoId;
   const effectiveManitoName = safeStudentsArray.find(s => s.id === effectiveManitoId)?.name || ''; 
 
@@ -328,15 +374,28 @@ export const useDalbodreSystem = () => {
       stats[s.id].used = parseFloat(usedPoints[s.id] || 0);     
       stats[s.id].wiped = parseFloat(wipedPoints[s.id] || 0);   
       stats[s.id].net = fmt(stats[s.id].sum - stats[s.id].used - stats[s.id].wiped); 
+      if (stats[s.id].pos >= 200) stats[s.id].badges.push('🏅'); 
+      if (stats[s.id].pos >= 100 && stats[s.id].neg === 0) stats[s.id].badges.push('🛡️'); 
+      if (stats[s.id].used >= 300) stats[s.id].badges.push('💸'); 
     });
     return Object.values(stats);
   }, [validHistory, todayStudentStats, usedPoints, wipedPoints, safeStudentsArray]);
 
   const todayStats = useMemo(() => {
-    const pos = todayStudentStats.reduce((s, c) => s + c.pos, 0) + (isWeeklyClaimed ? 100 : 0) + (bossBonusPoints > 0 ? bossBonusPoints : 0); 
+    // 그룹 목표 점수 계산 포함 (checkedGroupGoals)
+    const groupGoalPoints = Object.keys(checkedGroupGoals).reduce((sum, gId) => {
+      if (checkedGroupGoals[gId]) {
+        // g1:50p, g2:20p, g4:10p, g5:20p
+        if (gId==='g1') return sum + 50; if (gId==='g2') return sum + 20;
+        if (gId==='g4') return sum + 10; if (gId==='g5') return sum + 20;
+      }
+      return sum;
+    }, 0);
+
+    const pos = todayStudentStats.reduce((s, c) => s + c.pos, 0) + groupGoalPoints + (isWeeklyClaimed ? 100 : 0) + (bossBonusPoints > 0 ? bossBonusPoints : 0); 
     const neg = todayStudentStats.reduce((s, c) => s + c.neg, 0) + (bossBonusPoints < 0 ? Math.abs(bossBonusPoints) : 0);
     return { pos, neg, total: pos - neg };
-  }, [todayStudentStats, isWeeklyClaimed, bossBonusPoints]);
+  }, [todayStudentStats, checkedGroupGoals, isWeeklyClaimed, bossBonusPoints]);
 
   const cumulativeClassScore = useMemo(() => {
     const pastTotal = validHistory.reduce((sum, rec) => sum + ((parseFloat(rec.total) || 0) * ((rec.target === 300 || !rec.target) ? 10 : 1)), 0);
@@ -348,24 +407,26 @@ export const useDalbodreSystem = () => {
     return allStats.filter(s => parseInt(s.group) === parseInt(groupFilter)).sort((a,b)=>a.id-b.id);
   }, [allStats, groupFilter]);
 
-  // 반환할 상태 및 액션 묶음
+  // 7. 액션 묶음 리턴
   return {
     state: {
       isLoading, activeTab, teacherTab, isAuthenticated, password, showModal, showJackpot, showGuide, particle, tooltipInfo,
       groupFilter, safeStudentsArray, safeRolesArray, allStats, filteredStudents, todayStats, cumulativeClassScore,
-      checkedStudents, classPrep, threeCompliments, teacherCompliments, timeoutChecks, subjectChecks,
+      checkedStudents, classPrep, threeCompliments, teacherCompliments, timeoutChecks, subjectChecks, checkedGroupGoals,
       activeBoss, bossHp, bossAttacks, bossBonusPoints, activeMarket, marketItems, marketPresets, bossPresets,
       gachaConfig, shopItems, leaderConfig, manitoConfig, manualTotalBonus, targetScore, evoThresholds, tierThresholds,
       storeSelected, newRoleName, newItemName, newItemPrice, newBossName, newBossDesc, newBossReward, newBossPenalty,
       newMarketName, newMarketDesc, selectedGachaStudent, selectedStoreStudent, selectedMarketStudent, manualAdjustAmount,
-      manitoRevealState, manitoRevealMsg, effectiveManitoName, effectiveManitoId, selectedHyunRole
+      manitoRevealState, manitoRevealMsg, effectiveManitoName, secretManitoName, effectiveManitoId, selectedHyunRole, weeklyStreak, isWeeklyClaimed
     },
     actions: {
       setActiveTab, setTeacherTab, setIsAuthenticated, setPassword, setShowModal, setShowJackpot, setShowGuide, setGroupFilter,
       setNewRoleName, setNewItemName, setNewItemPrice, setNewBossName, setNewBossDesc, setNewBossReward, setNewBossPenalty,
       setNewMarketName, setNewMarketDesc, setSelectedGachaStudent, setSelectedStoreStudent, setSelectedMarketStudent, setManualAdjustAmount,
       setSelectedHyunRole, setGachaConfig, setManitoConfig, setLeaderConfig, setManualTotalBonus, setTargetScore, setEvoThresholds, setTierThresholds,
-      syncToFirebase, handleAdjust: (id, type, delta, e) => {
+      setCheckedGroupGoals, setWeeklyStreak, setIsWeeklyClaimed, syncToFirebase, 
+      
+      handleAdjust: (id, type, delta, e) => {
         if (delta > 0) playSound('good'); else playSound('bad');
         if (e && delta > 0) { setParticle({ x: e.clientX, y: e.clientY, text: "+", id: Date.now() }); setTimeout(() => setParticle(null), 800); }
         if (type === 'timeout') syncToFirebase({ timeoutChecks: { ...timeoutChecks, [id]: Math.max(0, fmt((timeoutChecks[id] || 0) + delta)) }});
@@ -541,39 +602,45 @@ export const useDalbodreSystem = () => {
     utils: { getEvolution, getLifetimeTier, currentBossHits: Object.values(bossAttacks || {}).filter(Boolean).length, maxBossHits: safeStudentsArray.length, isDongminGod: gachaConfig.mode === 'special', currentGachaSettings: gachaConfig[gachaConfig.mode || 'normal'] }
   };
 };
-// 🎨 [2부: 화면 UI 렌더링 파트]
+
+// ==========================================
+// 아래부터 Part 3 코드가 이어집니다.
+// ==========================================
+
+// 🎨 [Part 3: 화면 UI 렌더링 컴포넌트]
 const App = () => {
-  // 1부에서 만든 시스템 두뇌(Custom Hook) 연결
+  // 1. 시스템 두뇌(Custom Hook) 연결
   const { state, actions, utils } = useDalbodreSystem();
 
-  // 상태(State) 가져오기
+  // 2. 상태(State) 꺼내오기
   const {
     isLoading, activeTab, teacherTab, isAuthenticated, password, showModal, showJackpot, showGuide, particle, tooltipInfo,
     groupFilter, safeStudentsArray, safeRolesArray, allStats, filteredStudents, todayStats, cumulativeClassScore,
-    checkedStudents, classPrep, threeCompliments, teacherCompliments, timeoutChecks, subjectChecks,
+    checkedStudents, classPrep, threeCompliments, teacherCompliments, timeoutChecks, subjectChecks, checkedGroupGoals,
     activeBoss, bossHp, bossAttacks, bossBonusPoints, activeMarket, marketItems, marketPresets, bossPresets,
     gachaConfig, shopItems, leaderConfig, manitoConfig, manualTotalBonus, targetScore, evoThresholds, tierThresholds,
     storeSelected, newRoleName, newItemName, newItemPrice, newBossName, newBossDesc, newBossReward, newBossPenalty,
     newMarketName, newMarketDesc, selectedGachaStudent, selectedStoreStudent, selectedMarketStudent, manualAdjustAmount,
-    manitoRevealState, manitoRevealMsg, effectiveManitoName, effectiveManitoId, selectedHyunRole
+    manitoRevealState, manitoRevealMsg, effectiveManitoName, secretManitoName, effectiveManitoId, selectedHyunRole, weeklyStreak, isWeeklyClaimed
   } = state;
 
-  // 액션(Actions) 가져오기
+  // 3. 액션(Actions) 꺼내오기
   const {
     setActiveTab, setTeacherTab, setIsAuthenticated, setPassword, setShowModal, setShowJackpot, setShowGuide, setGroupFilter,
     setNewRoleName, setNewItemName, setNewItemPrice, setNewBossName, setNewBossDesc, setNewBossReward, setNewBossPenalty,
     setNewMarketName, setNewMarketDesc, setSelectedGachaStudent, setSelectedStoreStudent, setSelectedMarketStudent, setManualAdjustAmount,
     setSelectedHyunRole, setGachaConfig, setManitoConfig, setLeaderConfig, setManualTotalBonus, setTargetScore, setEvoThresholds, setTierThresholds,
-    syncToFirebase, handleAdjust, handleToggle, handleGroupAllClear, handlePurify, handleRevealManito, closeManitoReveal, saveDailyRecord, handleLogin,
+    setCheckedGroupGoals, setWeeklyStreak, setIsWeeklyClaimed, syncToFirebase, 
+    handleAdjust, handleToggle, handleGroupAllClear, handlePurify, handleRevealManito, closeManitoReveal, saveDailyRecord, handleLogin,
     handleGacha, handleStudentStoreBuy, handleMarketBuy, handleMultiConsume, handleEvolutionClick, handleAddRole, handleDeleteRole, handleStudentFieldChange,
     handleAddShopItem, handleDeleteShopItem, handleAddBoss, handleDeleteBoss, handleAddMarket, handleDeleteMarket, clearTodayChecks, resetGoalAllScores,
     resetGoalIndividualScore, factoryResetSystem, toggleStoreSelect
   } = actions;
 
-  // 도구(Utils) 가져오기
+  // 4. 유틸리티(Utils) 꺼내오기
   const { getEvolution, getLifetimeTier, currentBossHits, maxBossHits, isDongminGod, currentGachaSettings } = utils;
 
-  // --- 화면 렌더링용 추가 연산 ---
+  // --- 화면 렌더링용 추가 계산 로직 ---
   const bossProgress = Math.min((currentBossHits / maxBossHits) * 100, 100);
   let bossEmoji = '👿'; 
   if (bossProgress >= 80) bossEmoji = '😇'; 
@@ -829,7 +896,7 @@ const App = () => {
           </div>
         )}
 
-        {/* 탭 4: 반 정보 */}
+        {/* 탭 4: 반 정보 (수호신, 랭킹, 진화 가이드) */}
         {activeTab === 'info' && (
           <div className="space-y-8 animate-in zoom-in duration-500">
              <div className="bg-white rounded-[40px] p-10 border border-slate-200 text-center shadow-sm">
@@ -916,10 +983,11 @@ const App = () => {
           </div>
         )}
 
-        {/* 탭 5: 관리실 */}
+        {/* 탭 5: 관리실 (선생님 & 감찰사 전용) */}
         {activeTab === 'admin' && isAuthenticated && (
           <div className="bg-white rounded-[48px] shadow-sm border border-slate-200 min-h-[700px] flex overflow-hidden animate-in slide-in-from-right duration-300 flex-col lg:flex-row">
              
+             {/* 좌측 사이드바 메뉴 */}
              <aside className="w-full lg:w-72 bg-slate-50 border-b lg:border-r border-slate-100 p-8 flex flex-col shrink-0">
                 <div className="mb-6 lg:mb-10 text-center">
                    <div className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4 ${isAuthenticated === 'teacher' ? 'bg-blue-100 text-blue-600' : 'bg-indigo-100 text-indigo-600'}`}>
@@ -945,9 +1013,10 @@ const App = () => {
                 </div>
              </aside>
              
+             {/* 우측 메인 패널 */}
              <section className="flex-1 p-6 md:p-10 overflow-y-auto bg-white custom-scrollbar relative">
                 
-                {/* 1. 마감 리포트 */}
+                {/* 관리실 1. 마감 리포트 */}
                 {teacherTab === 'history' && isAuthenticated === 'teacher' && (
                   <div className="space-y-6">
                      <h3 className="text-2xl md:text-3xl font-black text-slate-800 mb-10 px-2 border-l-8 border-blue-600 pl-4 md:pl-6">날짜별 마감 리포트</h3>
@@ -967,7 +1036,7 @@ const App = () => {
                   </div>
                 )}
 
-                {/* 2. 인사/역할 관리 */}
+                {/* 관리실 2. 인사/역할 관리 */}
                 {teacherTab === 'full-stats' && (
                   <div className="space-y-8">
                      <h3 className="text-2xl md:text-3xl font-black text-slate-800 mb-8 px-2 border-l-8 border-indigo-500 pl-4 md:pl-6">학생 인사 및 역할 발령</h3>
@@ -1012,6 +1081,7 @@ const App = () => {
                         </table>
                      </div>
 
+                     {/* 교사 전용 부가 기능 (인사 탭) */}
                      {isAuthenticated === 'teacher' && (
                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mt-10">
                           <div className="bg-indigo-50 p-8 rounded-[40px] border border-indigo-200 shadow-sm flex flex-col justify-between">
@@ -1051,7 +1121,7 @@ const App = () => {
                   </div>
                 )}
 
-                {/* 3. 상점/가챠 세팅 */}
+                {/* 관리실 3. 상점/가챠 세팅 */}
                 {teacherTab === 'store' && isAuthenticated === 'teacher' && (
                   <div className="space-y-8 h-full flex flex-col">
                      <div className="flex justify-between items-end mb-6 px-2">
@@ -1143,7 +1213,7 @@ const App = () => {
                   </div>
                 )}
 
-                {/* 4. 이벤트 통제소 */}
+                {/* 관리실 4. 이벤트 통제소 */}
                 {teacherTab === 'events' && isAuthenticated === 'teacher' && (
                   <div className="space-y-8">
                      <h3 className="text-2xl md:text-3xl font-black text-slate-800 mb-8 px-2 border-l-8 border-red-500 pl-4 md:pl-6">스페셜 이벤트 통제소</h3>
@@ -1154,7 +1224,7 @@ const App = () => {
                            <div className="flex-1">
                               <label className="text-xs font-black text-yellow-600 block mb-2 ml-1">오늘의 마니또 몰래 지정</label>
                               <select value={manitoConfig?.targetId || ''} onChange={(e) => { const newConf = {...(manitoConfig||{}), targetId: e.target.value ? parseInt(e.target.value) : null}; setManitoConfig(newConf); syncToFirebase({manitoConfig: newConf}); }} className="w-full bg-white border-2 border-yellow-300 rounded-2xl px-5 py-3.5 font-black text-slate-700 outline-none focus:border-yellow-500 shadow-sm">
-                                 <option value="">🎲 시스템 자동 추천 (현재: {effectiveManitoName})</option>
+                                 <option value="">🎲 시스템 자동 추천 (현재: {secretManitoName})</option>
                                  {safeStudentsArray.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                               </select>
                            </div>
@@ -1265,7 +1335,7 @@ const App = () => {
                   </div>
                 )}
 
-                {/* 5. 시스템 설정 탭 */}
+                {/* 관리실 5. 시스템 설정 */}
                 {teacherTab === 'settings' && isAuthenticated === 'teacher' && (
                   <div className="space-y-8">
                      <h3 className="text-2xl md:text-3xl font-black text-slate-800 mb-8 px-2 border-l-8 border-slate-700 pl-4 md:pl-6">시스템 코어 설정</h3>
@@ -1349,7 +1419,7 @@ const App = () => {
         )}
       </main>
 
-      {/* 모바일 최적화 하단 네비게이션 */}
+      {/* 모바일 하단 네비게이션 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-2 py-3 flex justify-around items-center z-50 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] pb-safe">
          <button onClick={() => setActiveTab('classroom')} className={`flex flex-col items-center gap-1.5 flex-1 transition-all ${activeTab === 'classroom' ? 'text-blue-600 scale-110 -translate-y-2' : 'text-slate-400 hover:text-blue-400'}`}>
             <LayoutDashboard className="w-5 h-5 md:w-6 md:h-6"/>
@@ -1405,7 +1475,7 @@ const App = () => {
         </div>
       )}
 
-      {/* 마니또 정체 공개 (두구두구 연출 모달) */}
+      {/* 마니또 정체 공개 모달 */}
       {manitoRevealState && (
         <div className="fixed inset-0 flex items-center justify-center z-[9999] bg-slate-900/95 backdrop-blur-md px-4 md:px-6">
           {manitoRevealState === 'loading' ? (
