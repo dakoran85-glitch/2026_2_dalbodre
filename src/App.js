@@ -4,7 +4,8 @@ import {
   Users, Trophy, ShieldCheck, Heart, Lock, History, Save, X, 
   Plus, Minus, AlertTriangle, Sparkles, Star, Target, Settings, 
   Trash2, ShoppingCart, CheckCircle2, BookOpen, UserCheck, Briefcase, 
-  Zap, Crown, Gift, Coins, BarChart3, MessageSquare, Send, Gavel
+  Zap, Crown, Gift, Coins, BarChart3, MessageSquare, Send, Gavel, 
+  Leaf, TreeDeciduous, Bird, Flame, Shield
 } from 'lucide-react';
 
 // ==========================================
@@ -14,33 +15,29 @@ const DATABASE_URL = "https://dalbodre-db-default-rtdb.asia-southeast1.firebased
 
 const safeArray = (val) => (Array.isArray(val) ? val.filter(Boolean) : (typeof val === 'object' && val ? Object.values(val).filter(Boolean) : []));
 
-// 🎵 아기자기한 효과음 엔진
+// 🎵 효과음 엔진
 const playSound = (type) => {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = ctx.createOscillator(); const gain = ctx.createGain();
     osc.connect(gain); gain.connect(ctx.destination);
     if (type === 'good') { 
-      osc.frequency.setValueAtTime(600, ctx.currentTime); 
-      osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1); 
+      osc.frequency.setValueAtTime(600, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1); 
       osc.type = 'sine'; osc.start(); gain.gain.setValueAtTime(0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.3); osc.stop(ctx.currentTime + 0.3); 
     } else if (type === 'bad') { 
-      osc.frequency.setValueAtTime(300, ctx.currentTime); 
-      osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.2); 
+      osc.frequency.setValueAtTime(300, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + 0.2); 
       osc.type = 'sawtooth'; osc.start(); gain.gain.setValueAtTime(0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.3); osc.stop(ctx.currentTime + 0.3); 
     } else if (type === 'buy' || type === 'gacha') { 
-      osc.frequency.setValueAtTime(500, ctx.currentTime); 
-      osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.2); 
+      osc.frequency.setValueAtTime(500, ctx.currentTime); osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.2); 
       osc.type = 'square'; osc.start(); gain.gain.setValueAtTime(0.1, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.2); osc.stop(ctx.currentTime + 0.2); 
     } else if (type === 'jackpot') { 
-      osc.type = 'triangle'; 
-      [440, 554.37, 659.25, 880].forEach((f, i) => osc.frequency.setValueAtTime(f, ctx.currentTime + i*0.1));
+      osc.type = 'triangle'; [440, 554.37, 659.25, 880].forEach((f, i) => osc.frequency.setValueAtTime(f, ctx.currentTime + i*0.1));
       osc.start(); gain.gain.setValueAtTime(0.2, ctx.currentTime); gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.6); osc.stop(ctx.currentTime + 0.6); 
     }
   } catch (e) {}
 };
 
-// 🔥 학생 명단 원본 완벽 탑재
+// 🔥 학생 명단
 const defaultStudents = [
   { id: 1, name: '금채율', role: '학급문고 정리', group: 1, isLeader: true }, { id: 2, name: '김라희', role: '우유 배달', group: 1, isLeader: false },
   { id: 3, name: '김민지', role: '다툼 중재자', group: 1, isLeader: false }, { id: 4, name: '김수은', role: '생활태도 체크', group: 1, isLeader: false },
@@ -66,18 +63,18 @@ const SEL_OPTIONS = [
 ];
 
 const SEL_GUIDES = { 
-  "1단계: 자기 인식 (Self-awareness)": "상황: 내 기분이 어땠는지 적어보세요.\n다짐: 내 안의 감정과 강점을 어떻게 발견할지 다짐해보세요.", 
-  "2단계: 자기 관리 (Self-management)": "상황: 화가 나거나 포기하고 싶었을 때를 적어보세요.\n다짐: 감정의 파도를 다스리고 목표를 향해 어떻게 나아갈지 적어보세요.", 
-  "3단계: 사회적 인식 (Social awareness)": "상황: 친구와 생각이 다르거나 오해가 생겼을 때를 적어보세요.\n공감: 타인의 마음을 읽고 다름을 어떻게 인정할지 적어보세요.", 
-  "4단계: 관계 기술 (Relationship skills)": "상황: 대화나 모둠 활동 중 배려가 필요했던 순간을 적어보세요.\n행동: 마법 같은 우정을 위해 어떻게 행동할지 적어보세요.", 
-  "5단계: 책임 있는 의사결정 (Responsible decision-making)": "상황: 우리 반의 규칙이나 분위기를 위한 선택의 순간을 적어보세요.\n다짐: 더 나은 세상을 만드는 나의 선택을 실천해보세요." 
+  "1단계: 자기 인식 (Self-awareness)": "상황: 그때 내 몸과 마음에서 어떤 느낌이 들었나요?\n다짐: 내 진짜 감정의 원인은 무엇이었고, 나의 어떤 강점을 활용해 이 마음을 보듬어줄 수 있을까요?", 
+  "2단계: 자기 관리 (Self-management)": "상황: 화가 나거나 포기하고 싶었을 때 내 행동은 어땠나요?\n다짐: 감정의 파도를 다스리고, 다음에는 어떻게 다르게 행동할지 구체적으로 적어보세요.", 
+  "3단계: 사회적 인식 (Social awareness)": "상황: 친구의 표정이나 말투를 보았을 때 친구의 마음은 어땠을 것 같나요?\n공감: 내가 그 친구의 입장이었다면 어떤 따뜻한 말이나 도움이 필요했을지 상상해 보세요.", 
+  "4단계: 관계 기술 (Relationship skills)": "상황: 대화나 활동 중 서로 오해가 생기거나 배려가 부족했던 순간을 적어보세요.\n행동: 마법 같은 우정을 다시 이어가기 위해 내가 먼저 할 수 있는 행동은 무엇인가요?", 
+  "5단계: 책임 있는 의사결정 (Responsible decision-making)": "상황: 우리 반의 규칙이나 분위기를 흐릴 수 있었던 나의 선택은 무엇이었나요?\n다짐: 나뿐만 아니라 우리 모두를 위해 더 나은 세상을 만드는 바른 선택을 실천해보세요." 
 };
 
 const PRAISE_GUIDES = {
   "1단계: 자기 인식 (Self-awareness)": "칭찬 예시: 스스로의 장점을 알고 자신감 있게 도전한 모습을 칭찬해요!",
   "2단계: 자기 관리 (Self-management)": "칭찬 예시: 짜증 날 수 있는 상황에서도 감정을 잘 조절하고 끝까지 해낸 모습을 칭찬해요!",
   "3단계: 사회적 인식 (Social awareness)": "칭찬 예시: 도움이 필요한 친구의 마음을 먼저 알아채고 공감해 준 모습을 칭찬해요!",
-  "4단계: 관계 기술 (Relationship skills)": "칭찬 예시: 친구의 말을 잘 경청하고, 모둠 활동에서 배려하며 협동한 모습을 칭찬해요!",
+  "4단계: 관계 기술 (Relationship skills)": "칭찬 예시: 친구의 말을 잘 경청하고, 배려하며 협동한 모습을 칭찬해요!",
   "5단계: 책임 있는 의사결정 (Responsible decision-making)": "칭찬 예시: 학급을 위해 솔선수범하여 바른 선택을 하고 실천한 모습을 칭찬해요!"
 };
 
@@ -99,7 +96,7 @@ export default function App() {
   const [password, setPassword] = useState("");
   const [showModal, setShowModal] = useState(null);
   
-  // 🚨 폼 관련 상태 (누락 방지 철저)
+  // 폼 관련 상태
   const [showPraiseModal, setShowPraiseModal] = useState(false); 
   const [praiseTarget, setPraiseTarget] = useState(""); 
   const [praiseTag, setPraiseTag] = useState(""); 
@@ -118,24 +115,36 @@ export default function App() {
   const [newStudentName, setNewStudentName] = useState("");
   const [newStudentGroup, setNewStudentGroup] = useState("1");
   const [newStudentRole, setNewStudentRole] = useState("");
+  
+  // 펀딩 추가 폼 상태
+  const [newFundName, setNewFundName] = useState("");
+  const [newFundTarget, setNewFundTarget] = useState("");
+
+  // 수동 점수 입력 상태
+  const [manualScoreInput, setManualScoreInput] = useState("");
 
   // --- 통합 파이어베이스 DB State ---
   const [db, setDb] = useState({
     students: defaultStudents, 
     rolesList: ['학급문고 정리', '우유 배달', '다툼 중재자', '현령', '감찰사'],
-    settings: { title: "달보드레 행복 교실 🌸", menuNames: ["행복 현황판", "성찰과 회복", "도움실", "관리실"], targetScore: 3000, forceShopOpen: false, weeklyTheme: "4단계: 관계 기술 (Relationship skills)", helpRoomPw: "1111", isGachaOpen: false, isBlackMarketOpen: false, showCumulativeStats: false },
+    settings: { 
+      title: "달보드레 행복 교실 🌸", menuNames: ["행복 현황판", "성찰과 회복", "도움실", "관리실"], 
+      targetScore: 5000, forceShopOpen: false, weeklyTheme: "4단계: 관계 기술 (Relationship skills)", 
+      helpRoomPw: "1111", isGachaOpen: false, isBlackMarketOpen: false, showCumulativeStats: false,
+      pointConfig: { praiseBasic: 10, praiseBonus: 15, penalty: 20 }
+    },
     gachaConfig: { mode: 'normal', cost: 30, t1: {name:'😭 꽝!', prob:50, reward:0}, t2: {name:'🪙 페이백!', prob:30, reward:30}, t3: {name:'🍬 소소한 간식', prob:15, reward:50}, t4: {name:'🎰 잭팟!!', prob:5, reward:200} },
     shopItems: [{ id: 'i1', name: '달보드레 연필', price: 30, creator: '선생님' }], blackMarketItems: [{ id: 'b1', name: '보드게임권', price: 200, creator: '선생님' }],
-    pendingShopItems: [], roleExp: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [],
+    pendingShopItems: [], roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [],
     funding: [{ id: 1, name: "체육 시간 더 ⚽", target: 1000, current: 0 }, { id: 2, name: "팝콘 파티 🍿", target: 2000, current: 0 }],
-    manualRepOffset: 0, shieldPoints: 100, allTime: { exp: {}, penalty: {}, donate: {}, fund: {} }, activeMission: { isActive: false, participants: [] }
+    manualRepOffset: 0, shieldPoints: 0, allTime: { exp: {}, penalty: {}, donate: {}, fund: {} }, activeMission: { isActive: false, participants: [] }
   });
 
   // --- 실시간 DB 동기화 ---
   useEffect(() => {
     const fetchLive = async () => {
       try { 
-        const res = await fetch(`${DATABASE_URL}v72Data.json`); 
+        const res = await fetch(`${DATABASE_URL}v74Data.json`); 
         const data = await res.json(); 
         if (data) setDb(prev => ({...prev, ...data, settings: {...prev.settings, ...(data.settings||{})}, allTime: {...prev.allTime, ...(data.allTime||{})}, activeMission: data.activeMission || {isActive:false, participants:[]}, pendingShopItems: safeArray(data.pendingShopItems)})); 
       } catch (e) {}
@@ -146,21 +155,24 @@ export default function App() {
 
   const sync = async (updates) => {
     const nextDb = { ...db, ...updates }; setDb(nextDb);
-    try { await fetch(`${DATABASE_URL}v72Data.json`, { method: 'PATCH', body: JSON.stringify(updates) }); } catch (e) {}
+    try { await fetch(`${DATABASE_URL}v74Data.json`, { method: 'PATCH', body: JSON.stringify(updates) }); } catch (e) {}
   };
 
-  // --- 연산 로직 (안전한 렌더링을 위한 Memoization) ---
+  // --- 연산 로직 ---
   const safeStudents = safeArray(db.students);
 
   const allStats = useMemo(() => {
     return safeStudents.map(s => {
-      const exp = db.roleExp[s.id] || 0; const coins = Math.max(0, exp * 10 - (db.usedCoins[s.id] || 0));
+      const exp = db.roleExp[s.id] || 0; 
+      const bonus = db.bonusCoins?.[s.id] || 0;
+      // 코인은 (1인1역 숙련도*10) + (온기 보너스 코인) - 사용한 코인
+      const coins = Math.max(0, (exp * 10) + bonus - (db.usedCoins[s.id] || 0));
       let mastery = { label: '🌱 인턴', color: 'text-emerald-700', bg: 'bg-emerald-100' };
       if (exp >= 20) mastery = { label: '👑 장인', color: 'text-amber-700', bg: 'bg-amber-100' };
       else if (exp >= 10) mastery = { label: '💎 전문가', color: 'text-blue-700', bg: 'bg-blue-100' };
       return { ...s, exp, coins, mastery, status: db.studentStatus[s.id] || 'normal', atExp: db.allTime?.exp?.[s.id] || 0, atDonate: db.allTime?.donate?.[s.id] || 0, atFund: db.allTime?.fund?.[s.id] || 0, atPen: db.allTime?.penalty?.[s.id] || 0 };
     });
-  }, [safeStudents, db.roleExp, db.usedCoins, db.studentStatus, db.allTime]);
+  }, [safeStudents, db.roleExp, db.bonusCoins, db.usedCoins, db.studentStatus, db.allTime]);
 
   const sortedDashboardStats = useMemo(() => {
     if (db.settings.showCumulativeStats) return [...allStats].sort((a, b) => a.id - b.id);
@@ -169,32 +181,36 @@ export default function App() {
 
   const groupedByGroupStats = useMemo(() => [...allStats].sort((a, b) => a.group - b.group || a.id - b.id), [allStats]);
   
-  const { classReputation, shieldPoints } = useMemo(() => {
-    const raw = allStats.reduce((sum, s) => sum + s.exp * 10 - (db.penaltyCount[s.id] || 0) * 20, 0) + safeArray(db.donations).reduce((sum, d) => sum + d.amount, 0) + (db.manualRepOffset || 0);
-    let r = raw; let s = db.shieldPoints || 0;
-    if (raw > db.settings.targetScore) { r = db.settings.targetScore; s = raw - db.settings.targetScore; } else r = Math.max(0, raw);
-    return { classReputation: r, shieldPoints: s };
-  }, [allStats, db.penaltyCount, db.donations, db.settings.targetScore, db.manualRepOffset, db.shieldPoints]);
+  // 평판 점수 및 5단계 진화 계산
+  const { classReputation, shieldPoints, evolutionLevel } = useMemo(() => {
+    const raw = allStats.reduce((sum, s) => sum + (s.exp * 10) + (db.bonusCoins?.[s.id] || 0) - ((db.penaltyCount[s.id] || 0) * (db.settings.pointConfig?.penalty || 20)), 0) + safeArray(db.donations).reduce((sum, d) => sum + d.amount, 0) + (db.manualRepOffset || 0);
+    let r = Math.max(0, raw);
+    let s = db.shieldPoints || 0;
+    if (raw > db.settings.targetScore) { 
+      r = db.settings.targetScore; 
+      s = raw - db.settings.targetScore; 
+    }
+    const level = Math.min(Math.floor(r / 1000), 5); // 0~5단계
+    return { classReputation: r, shieldPoints: s, evolutionLevel: level };
+  }, [allStats, db.penaltyCount, db.bonusCoins, db.donations, db.settings.targetScore, db.manualRepOffset, db.settings.pointConfig, db.shieldPoints]);
 
   const topExp = useMemo(() => [...allStats].sort((a,b) => b.atExp - a.atExp).filter(s => s.atExp > 0).slice(0,5), [allStats]);
   const topDonate = useMemo(() => [...allStats].sort((a,b) => b.atDonate - a.atDonate).filter(s => s.atDonate > 0).slice(0,5), [allStats]);
   const topFund = useMemo(() => [...allStats].sort((a,b) => b.atFund - a.atFund).filter(s => s.atFund > 0).slice(0,5), [allStats]);
   const isShopOpen = useMemo(() => db.settings.forceShopOpen || new Date().getDay() === 4, [db.settings.forceShopOpen]);
 
-  // 성찰 센터 멘트 로직
   const selectedRefStudentPraises = useMemo(() => {
     if (!refTarget) return []; return safeArray(db.approvedPraises).filter(p => p.toId == refTarget);
   }, [refTarget, db.approvedPraises]);
   const randomPraise = selectedRefStudentPraises.length > 0 ? selectedRefStudentPraises[Math.floor(Math.random() * selectedRefStudentPraises.length)] : null;
 
-  // --- 함수 핸들러 (액션 모음) ---
+  // --- 함수 핸들러 ---
   const handleExpAdjust = (id, delta) => { if(delta > 0) playSound('good'); sync({ roleExp: { ...db.roleExp, [id]: Math.max(0, (db.roleExp[id]||0) + delta) }, allTime: { ...db.allTime, exp: { ...db.allTime.exp, [id]: Math.max(0, (db.allTime.exp?.[id]||0) + delta) } } }); };
   const handleGivePenalty = (id) => { if (!isAuthenticated) return setShowModal('password'); if (window.confirm("위기 지정할까요?")) { playSound('bad'); sync({ studentStatus: { ...db.studentStatus, [id]: 'crisis' }, penaltyCount: { ...db.penaltyCount, [id]: (db.penaltyCount[id] || 0) + 1 }, allTime: { ...db.allTime, penalty: { ...db.allTime.penalty, [id]: (db.allTime.penalty?.[id] || 0) + 1 } } }); } };
   const handleDonate = (sId, amount) => { const u = allStats.find(s => s.id == sId); if (!u || u.coins < amount) return alert("코인 부족!"); playSound('buy'); sync({ usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + amount }, donations: [{ id: Date.now(), name: u.name, amount }, ...safeArray(db.donations)].slice(0, 15), allTime: { ...db.allTime, donate: { ...db.allTime.donate, [sId]: (db.allTime.donate?.[sId] || 0) + amount } } }); alert("기부 완료! ✨"); };
   const handleFund = (fId, sId, amount) => { const u = allStats.find(s => s.id == sId); if (!u || u.coins < amount) return alert("코인 부족!"); playSound('buy'); sync({ usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + amount }, funding: safeArray(db.funding).map(f => f.id === fId ? { ...f, current: f.current + amount } : f), allTime: { ...db.allTime, fund: { ...db.allTime.fund, [sId]: (db.allTime.fund?.[sId] || 0) + amount } } }); alert("투자 완료!"); };
   const handleGacha = (sId) => { const u = allStats.find(s => s.id == sId); const c = db.gachaConfig; if (!u || u.coins < c.cost) return alert("코인 부족!"); if(!window.confirm(`${c.cost}🪙 소모 가챠?`)) return; const rand = Math.random() * 100; let msg = ""; let rew = 0; let p = 0; let isJ = false; if (rand < (p += c.t1.prob)) { msg = c.t1.name; rew = c.t1.reward; } else if (rand < (p += c.t2.prob)) { msg = c.t2.name; rew = c.t2.reward; } else if (rand < (p += c.t3.prob)) { msg = c.t3.name; rew = c.t3.reward; } else { msg = c.t4.name; rew = c.t4.reward; isJ = true; } sync({ usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + c.cost - rew } }); if(isJ) { playSound('jackpot'); alert(`🎉 잭팟!! [${msg}]`); } else { playSound('buy'); alert(`결과: ${msg}`); } };
   
-  // 🔥 [수정 완료] 미션 에러 완벽 방어 (safeArray 추가)
   const startMission = () => { if(window.confirm("긴급 미션 발동?")) sync({ activeMission: { isActive: true, participants: [] } }); };
   const endMission = () => { if(window.confirm("미션 강제 종료?")) sync({ activeMission: { isActive: false, participants: [] } }); };
   const participateMission = (sId) => { 
@@ -220,15 +236,34 @@ export default function App() {
   const handleStudentFieldChange = (id, field, value) => sync({ students: safeStudents.map(st => st.id === id ? {...st, [field]: value} : st) });
   const handleAddStudent = () => { if(!newStudentName) return; const nextId = safeStudents.length > 0 ? Math.max(...safeStudents.map(s=>s.id)) + 1 : 1; sync({ students: [...safeStudents, { id: nextId, name: newStudentName, role: newStudentRole || '향리', group: parseInt(newStudentGroup), isLeader: false }] }); setNewStudentName(""); alert("전입 완료!"); };
   const handleRemoveStudent = (id) => { if(window.confirm("삭제할까요?")) sync({ students: safeStudents.filter(s => s.id !== id) }); };
-  const handleEmergencyMission = (type) => { const pts = type === 'all' ? 26 : 13; if(window.confirm(`미션 반영?`)) sync({ donations: [{ id: Date.now(), name: "📢 긴급 미션", amount: pts }, ...safeArray(db.donations)].slice(0, 15) }); };
   const partialReset = (type) => { if(window.confirm(`초기화할까요?`)) { if(type === 'donations') sync({ donations: [] }); if(type === 'status') sync({ studentStatus: {}, penaltyCount: {} }); if(type === 'exp') sync({ roleExp: {} }); alert("초기화 완료!"); } };
-  const closeSemester = () => { if(window.prompt("마감하시겠습니까? '마감'을 입력하세요.") === "마감") { sync({ roleExp: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], donations: [] }); alert("학기 마감 완료! 🌱"); } };
-  const factoryReset = () => { if(window.prompt("공장초기화하시겠습니까? '초기화'를 입력하세요") === "초기화") { sync({ roleExp: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [], pendingShopItems: [], funding: [{ id: 1, name: "체육 시간 추가", target: 1000, current: 0 }, { id: 2, name: "팝콘 파티", target: 2000, current: 0 }], manualRepOffset: 0, shieldPoints: 100, allTime: { exp: {}, penalty: {}, donate: {}, fund: {} } }); alert("전체 리셋 완료."); } };
+  const closeSemester = () => { if(window.prompt("마감하시겠습니까? '마감'을 입력하세요.") === "마감") { sync({ roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], donations: [] }); alert("학기 마감 완료! 🌱"); } };
+  const factoryReset = () => { if(window.prompt("공장초기화하시겠습니까? '초기화'를 입력하세요") === "초기화") { sync({ roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [], pendingShopItems: [], funding: [{ id: 1, name: "체육 시간 추가", target: 1000, current: 0 }, { id: 2, name: "팝콘 파티", target: 2000, current: 0 }], manualRepOffset: 0, shieldPoints: 0, allTime: { exp: {}, penalty: {}, donate: {}, fund: {} } }); alert("전체 리셋 완료."); } };
 
+  // 진화 애니메이션 렌더링 헬퍼
+  const renderEvolution = (level) => {
+    switch(level) {
+      case 0: return <div className="flex items-center gap-2 text-emerald-400 animate-pulse"><Leaf className="w-8 h-8"/> <Sparkles className="w-5 h-5 text-yellow-300"/></div>;
+      case 1: return <div className="flex items-center gap-2 text-emerald-500 animate-bounce"><TreeDeciduous className="w-10 h-10"/> <Bird className="w-6 h-6 text-orange-300"/></div>;
+      case 2: return <div className="flex items-center gap-2 text-pink-400"><TreeDeciduous className="w-12 h-12 fill-pink-200"/> <Bird className="w-8 h-8 text-orange-400 animate-pulse"/></div>;
+      case 3: return <div className="flex items-center gap-2 text-yellow-500 drop-shadow-md"><TreeDeciduous className="w-14 h-14 fill-yellow-200"/> <Flame className="w-10 h-10 text-red-500 animate-bounce"/></div>;
+      case 4: 
+      case 5: return <div className="flex items-center gap-3 text-yellow-300 drop-shadow-[0_0_15px_rgba(250,204,21,0.8)]"><TreeDeciduous className="w-16 h-16 fill-yellow-100 animate-pulse"/> <Bird className="w-12 h-12 fill-red-500 text-red-600 animate-bounce"/> <Shield className="w-8 h-8 text-blue-300 animate-spin-slow"/></div>;
+      default: return null;
+    }
+  };
+
+  const getMissionCompleteMsg = (id) => {
+    const msgs = ["고마워!", "멋진 시민!", "역시 최고야!", "함께 해줘서 든든해!", "확인 완료!"];
+    return msgs[id % msgs.length];
+  };
+
+// === [1부 끝] === 
+// 🚨 이 다음 줄부터 [2부] 코드를 그대로 이어서 붙여넣어 주시면 됩니다! 🚨
 return (
     <div className="min-h-screen bg-amber-50/50 pb-32 font-sans text-slate-800 transition-all">
       
-      {/* 1. 아기자기한 명성 전광판 */}
+      {/* 1. 아기자기한 명성 전광판 (세계수와 불사조 애니메이션 탑재) */}
       <header className="bg-gradient-to-br from-amber-100 to-orange-100 p-8 md:p-12 shadow-sm relative overflow-hidden border-b-4 border-white">
         <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-[100px] opacity-60"></div>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
@@ -236,12 +271,14 @@ return (
             <h1 className="text-amber-800 font-black text-lg mb-2 flex items-center justify-center md:justify-start gap-2"><Sparkles className="text-amber-500 w-5 h-5"/> {db.settings.title}</h1>
             <div className="flex items-center justify-center md:justify-start gap-4">
               <span className="text-8xl font-black text-amber-900 drop-shadow-sm tracking-tighter">{classReputation}</span><span className="text-3xl font-black text-amber-600 mt-6">p</span>
-              <div className="w-6 h-6 rounded-full bg-amber-400 animate-breathe shadow-[0_0_20px_rgba(251,191,36,0.8)] mt-6"></div>
+              {/* ✨ 5단계 진화 애니메이션 출력 영역 */}
+              <div className="ml-6 mt-4">{renderEvolution(evolutionLevel)}</div>
             </div>
-            <div className="w-full md:w-[500px] h-6 bg-white rounded-full mt-6 overflow-hidden shadow-inner border-2 border-amber-200">
+            
+            <div className="w-full md:w-[600px] h-6 bg-white rounded-full mt-6 overflow-hidden shadow-inner border-2 border-amber-200">
               <div className="h-full bg-gradient-to-r from-yellow-300 to-orange-400 transition-all duration-1000" style={{ width: `${Math.min((classReputation/db.settings.targetScore)*100, 100)}%` }}></div>
             </div>
-            <div className="flex justify-between md:w-[500px] mt-2">
+            <div className="flex justify-between md:w-[600px] mt-2">
               <div className="flex-1 overflow-hidden whitespace-nowrap text-xs font-bold text-amber-700 bg-white/50 px-3 py-1 rounded-full border border-amber-200 inline-block mr-4">
                 <span className="animate-[shimmer_20s_linear_infinite] inline-block">✨ 명예의 기부: {safeArray(db.donations).map(d => `${d.name}(${d.amount}p)`).join(' · ') || '따뜻한 기부를 기다려요!'}</span>
               </div>
@@ -250,9 +287,9 @@ return (
           </div>
           
           <div className="flex flex-col items-center bg-white/80 p-8 rounded-[40px] border-4 border-white shadow-xl backdrop-blur-md">
-            <ShieldCheck className={`w-16 h-16 mb-2 ${shieldPoints > 0 ? 'text-emerald-400 animate-pulse' : 'text-slate-300'}`} />
-            <span className="text-xs font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full mb-2">보호막 에너지</span>
-            <span className={`text-6xl font-black ${shieldPoints > 0 ? 'text-emerald-500' : 'text-slate-300'}`}>{shieldPoints}</span>
+            <ShieldCheck className={`w-16 h-16 mb-2 ${shieldPoints > 0 ? 'text-blue-400 animate-pulse' : 'text-slate-300'}`} />
+            <span className="text-xs font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full mb-2">초월 보호막</span>
+            <span className={`text-6xl font-black ${shieldPoints > 0 ? 'text-blue-500' : 'text-slate-300'}`}>{shieldPoints}</span>
           </div>
         </div>
       </header>
@@ -286,18 +323,37 @@ return (
               </div>
             </div>
 
-            {/* 🎮 교사 발동 긴급 미션 배너 (에러 방어 완벽 적용) */}
+            {/* 🎮 교사 발동 긴급 미션 배너 (UI 대폭 개편) */}
             {db.activeMission.isActive && (
               <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-8 rounded-[40px] shadow-2xl text-white relative overflow-hidden animate-in zoom-in-95 border-4 border-blue-300">
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
-                <div className="relative z-10 text-center">
+                <div className="relative z-10 text-center mb-8">
                   <Zap className="w-16 h-16 text-yellow-300 mx-auto mb-4 animate-bounce" />
                   <h2 className="text-3xl font-black mb-2 text-yellow-100">🚨 긴급 퀘스트 발동! 🚨</h2>
-                  <p className="text-lg font-bold mb-6">모두가 미션을 완수하고 카드의 [내 미션 완료!] 버튼을 누르세요.<br/>전원 성공 시 엄청난 보너스가 쏟아집니다!</p>
-                  <div className="w-full bg-black/20 h-6 rounded-full overflow-hidden border border-white/30">
+                  <p className="text-lg font-bold mb-6">모두가 미션을 완수하고 아래 버튼을 누르세요!<br/>전원 성공 시 엄청난 보너스가 쏟아집니다!</p>
+                  <div className="w-full max-w-2xl mx-auto bg-black/20 h-6 rounded-full overflow-hidden border border-white/30">
                     <div className="h-full bg-yellow-400 transition-all" style={{width:`${(safeArray(db.activeMission.participants).length / safeStudents.length)*100}%`}}></div>
                   </div>
                   <p className="font-black mt-2 text-yellow-200">진행률: {safeArray(db.activeMission.participants).length} / {safeStudents.length} 명 완료</p>
+                </div>
+                
+                {/* 분리된 긴급 미션 참여 버튼 구역 */}
+                <div className="relative z-10 max-w-4xl mx-auto bg-white/10 p-6 rounded-3xl backdrop-blur-sm border border-white/20">
+                  <h3 className="text-xl font-black mb-4 text-center text-blue-100 border-b border-white/20 pb-4">👇 아직 완료하지 않은 시민들 👇</h3>
+                  <div className="flex flex-wrap justify-center gap-3 mb-8">
+                    {safeStudents.filter(s => !safeArray(db.activeMission.participants).includes(s.id)).map(s => (
+                      <button key={s.id} onClick={() => participateMission(s.id)} className="bg-white/80 hover:bg-yellow-300 text-blue-900 px-4 py-3 rounded-2xl font-black text-sm shadow-md transition-all active:scale-95">{s.name} 완료하기 ✋</button>
+                    ))}
+                    {safeStudents.filter(s => !safeArray(db.activeMission.participants).includes(s.id)).length === 0 && <p className="text-white font-bold opacity-70">모두 완료했습니다!</p>}
+                  </div>
+
+                  <h3 className="text-xl font-black mb-4 text-center text-emerald-200 border-b border-white/20 pb-4">✅ 미션 완수 시민 명단 ✅</h3>
+                  <div className="flex flex-wrap justify-center gap-3">
+                    {safeStudents.filter(s => safeArray(db.activeMission.participants).includes(s.id)).map(s => (
+                      <div key={s.id} className="bg-emerald-500 text-white px-4 py-3 rounded-2xl font-black text-sm shadow-inner border border-emerald-400 flex items-center gap-2 animate-in zoom-in"><CheckCircle2 className="w-4 h-4"/> {s.name} {getMissionCompleteMsg(s.id)}</div>
+                    ))}
+                    {safeArray(db.activeMission.participants).length === 0 && <p className="text-white font-bold opacity-70">아직 완료한 시민이 없습니다.</p>}
+                  </div>
                 </div>
               </div>
             )}
@@ -305,7 +361,7 @@ return (
             {/* 테마 & 펀딩 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-emerald-100 flex flex-col justify-center">
-                <h3 className="text-sm font-black text-emerald-600 mb-2 flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-full w-max"><Star className="w-4 h-4"/> 이주의 마음성장(SEL) 테마</h3>
+                <h3 className="text-sm font-black text-emerald-600 mb-2 flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-full w-max"><Star className="w-4 h-4"/> 이 주의 마음성장(SEL) 테마</h3>
                 <p className="text-2xl font-black text-slate-800 mt-4 leading-snug">{db.settings.weeklyTheme}</p>
                 <p className="text-sm font-bold text-emerald-700 mt-4 bg-emerald-50 p-4 rounded-2xl border border-emerald-100">{THEME_DESCRIPTIONS[db.settings.weeklyTheme] || "이번 주도 마음 성장을 위해 함께 노력해봐요!"}</p>
               </div>
@@ -331,7 +387,7 @@ return (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
                   {db.settings.isGachaOpen && (
                     <div className="bg-black/50 p-6 rounded-3xl border border-yellow-400/50 flex justify-between items-center">
-                      <div><h3 className="text-xl font-black text-white">{db.gachaConfig.mode === 'special' ? '✨ 동민신 가챠' : '🎁 일반 행운 가챠'}</h3><p className="text-xs text-yellow-200 mt-1">1회 {db.gachaConfig.cost} 🪙</p></div>
+                      <div><h3 className="text-xl font-black text-white">{db.gachaConfig.mode === 'special' ? '✨ 선생님 찬스 가챠' : '🎁 일반 행운 가챠'}</h3><p className="text-xs text-yellow-200 mt-1">1회 {db.gachaConfig.cost} 🪙</p></div>
                       <select className="p-3 rounded-xl bg-yellow-400 text-yellow-900 font-black outline-none text-sm" onChange={(e)=>{if(e.target.value) handleGacha(e.target.value); e.target.value='';}}>
                         <option value="">도전할 사람?</option>{allStats.map(s => <option key={s.id} value={s.id}>{s.name}({s.coins}🪙)</option>)}
                       </select>
@@ -370,20 +426,29 @@ return (
               <button onClick={() => setShowPraiseModal(true)} className="w-full sm:w-auto bg-pink-400 text-white px-8 py-4 rounded-full font-black shadow-lg hover:bg-pink-500 active:scale-95 transition-all flex items-center justify-center gap-2"><Heart className="w-6 h-6 fill-white"/> 온기 우체통</button>
             </div>
             
+            {/* 개인 카드 영역 (코인 및 1인1역 UI 강화) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-5">
               {sortedDashboardStats.map(s => (
                 <div key={s.id} className={`p-5 rounded-[30px] border-4 shadow-sm transition-all relative flex flex-col bg-white hover:shadow-xl ${s.status === 'crisis' ? 'border-red-300 bg-red-50' : (s.status === 'pending' ? 'border-orange-300 bg-orange-50' : 'border-white hover:border-amber-200')}`}>
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="w-10 h-10 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center font-black text-lg shadow-inner">{s.id}</span>
-                    <div className="text-right"><p className="text-[9px] font-black text-slate-400 uppercase">My Coins</p><p className="font-black text-amber-600 text-xl">{s.coins} 🪙</p></div>
+                  
+                  {/* 상단 번호 및 코인 배치 최적화 */}
+                  <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-3">
+                      <span className="w-10 h-10 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center font-black text-lg shadow-inner">{s.id}</span>
+                      <div><p className="text-[10px] font-black text-slate-400 uppercase leading-tight">My Coins</p><p className="font-black text-amber-600 text-xl leading-tight">{s.coins} 🪙</p></div>
+                    </div>
                   </div>
                   
-                  <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
+                  {/* 중앙 이름 및 1인1역 강조 */}
+                  <div className="flex items-center justify-between mb-4">
                     <div>
-                      <p className="text-[10px] font-black text-slate-400">{s.group}모둠 · {s.role}</p>
-                      <h3 className="text-xl font-black flex items-center gap-1 text-slate-800">{s.name} {s.isLeader && <Crown className="w-4 h-4 text-amber-400 fill-amber-400"/>}</h3>
+                      <p className="text-xs font-black text-blue-500 mb-1">{s.group}모둠 · <span className="text-blue-700 text-sm">{s.role}</span></p>
+                      <h3 className={`text-2xl font-black flex items-center gap-1 ${s.exp >= 20 ? 'text-amber-600 drop-shadow-sm' : 'text-slate-800'}`}>
+                        {s.name} {s.isLeader && <Crown className="w-5 h-5 text-amber-400 fill-amber-400"/>}
+                        {s.exp >= 20 && <Sparkles className="w-5 h-5 text-yellow-400 animate-spin-slow"/>}
+                      </h3>
                     </div>
-                    <div className={`text-[10px] font-black px-2 py-1 rounded-lg border ${s.mastery.bg} ${s.mastery.color} ${s.exp >= 20 ? 'border-amber-300 shadow-sm' : 'border-transparent'} text-center leading-tight`}>
+                    <div className={`text-[10px] font-black px-2 py-1 rounded-lg border ${s.mastery.bg} ${s.mastery.color} ${s.exp >= 20 ? 'border-amber-300 shadow-sm scale-110' : 'border-transparent'} text-center leading-tight transition-all`}>
                       {s.mastery.label}<br/><span className="opacity-80">({s.exp}회)</span>
                     </div>
                   </div>
@@ -393,14 +458,6 @@ return (
                        <span>✅완수: <span className="text-blue-600">{s.atExp}</span></span><span>💎기부: <span className="text-amber-600">{s.atDonate}</span></span>
                        <span>🚀펀딩: <span className="text-pink-600">{s.atFund}</span></span><span className="text-red-400">🚨위기: <span className="text-red-600">{s.atPen}</span></span>
                     </div>
-                  )}
-
-                  {/* 🎮 개인 미션 완료 버튼 방어막 */}
-                  {db.activeMission.isActive && !safeArray(db.activeMission.participants).includes(s.id) && (
-                    <button onClick={() => participateMission(s.id)} className="w-full bg-blue-500 text-white font-black py-3 rounded-2xl mb-3 shadow-md animate-bounce hover:bg-blue-600">✋ 내 미션 완료!</button>
-                  )}
-                  {db.activeMission.isActive && safeArray(db.activeMission.participants).includes(s.id) && (
-                    <div className="w-full bg-blue-100 text-blue-600 font-black py-3 rounded-2xl mb-3 text-center text-sm">✅ 확인 완료</div>
                   )}
                   
                   <div className="mt-auto">
@@ -453,7 +510,7 @@ return (
                   </div>
                   <div>
                     <label className="block text-sm font-black mb-3 text-emerald-800 bg-emerald-100 inline-block px-3 py-1 rounded-full">3. 마음의 다짐 적기</label>
-                    <textarea value={refText} onChange={e=>setRefText(e.target.value)} rows="5" className="w-full p-6 rounded-[30px] border-2 border-white font-black outline-none focus:border-emerald-300 bg-white resize-none text-base leading-relaxed placeholder:text-slate-300 placeholder:font-bold shadow-sm" placeholder={refTag ? SEL_GUIDES[refTag] : "역량을 선택하면 친절한 글쓰기 가이드가 나타납니다."}></textarea>
+                    <textarea value={refText} onChange={e=>setRefText(e.target.value)} rows="6" className="w-full p-6 rounded-[30px] border-2 border-white font-black outline-none focus:border-emerald-300 bg-white resize-none text-sm leading-relaxed placeholder:text-slate-300 placeholder:font-bold shadow-sm" placeholder={refTag ? SEL_GUIDES[refTag] : "역량을 선택하면 친절한 글쓰기 가이드가 나타납니다."}></textarea>
                   </div>
                   <button onClick={submitReflection} className="w-full bg-emerald-600 text-white py-6 rounded-[30px] font-black text-xl shadow-xl hover:bg-emerald-700 active:scale-95 transition-all flex justify-center items-center gap-2"><Send className="w-6 h-6"/> 다짐 제출하기</button>
                 </div>
@@ -523,7 +580,10 @@ return (
 
               {helpSubTab === 'magistrate' && (
                 <div className="space-y-6 animate-in fade-in">
-                  <h3 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-2 bg-blue-100 inline-block px-5 py-2 rounded-full"><BookOpen className="text-blue-600"/> 현령 향리 관리소</h3>
+                  <div className="flex justify-between items-center mb-8">
+                    <h3 className="text-2xl font-black text-slate-800 flex items-center gap-2 bg-blue-100 inline-block px-5 py-2 rounded-full"><BookOpen className="text-blue-600"/> 현령 향리 관리소</h3>
+                    <p className="text-sm font-bold text-blue-500 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">※ 이곳에서 올리는 점수만 '장인' 승급 숙련도에 반영됩니다.</p>
+                  </div>
                   {[1,2,3,4,5,6].map(groupNum => {
                     const groupMembers = groupedByGroupStats.filter(s => s.group === groupNum);
                     if(groupMembers.length === 0) return null;
@@ -623,12 +683,12 @@ return (
         {activeTab === 'admin' && isAuthenticated === 'teacher' && (
           <div className="bg-white rounded-[50px] shadow-sm border border-slate-100 flex flex-col lg:flex-row overflow-hidden min-h-[750px] animate-in slide-in-from-right duration-300">
              <aside className="w-full lg:w-72 bg-slate-900 p-10 flex flex-col gap-4 shrink-0 border-r border-slate-800">
-                <div className="text-center mb-8"><Lock className="w-16 h-16 text-blue-500 mx-auto mb-4" /><h3 className="text-2xl font-black text-white">관리자 센터</h3><p className="text-slate-400 text-xs font-bold mt-2">최고 권한 모드</p></div>
+                <div className="text-center mb-8"><Lock className="w-16 h-16 text-blue-500 mx-auto mb-4" /><h3 className="text-2xl font-black text-white">관리자 센터</h3><p className="text-slate-400 text-xs font-bold mt-2">마스터 권한 모드</p></div>
                 <button onClick={() => setAdminSubTab('report')} className={`w-full p-4 rounded-2xl font-black text-left flex items-center gap-4 transition-all text-base ${adminSubTab === 'report' ? 'bg-blue-600 text-white shadow-lg translate-x-2' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}><BarChart3 className="w-5 h-5"/> SEL 리포트</button>
                 <button onClick={() => setAdminSubTab('mission')} className={`w-full p-4 rounded-2xl font-black text-left flex items-center gap-4 transition-all text-base ${adminSubTab === 'mission' ? 'bg-blue-600 text-white shadow-lg translate-x-2' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}><Zap className="w-5 h-5"/> 결재 및 미션</button>
-                <button onClick={() => setAdminSubTab('shopAdmin')} className={`w-full p-4 rounded-2xl font-black text-left flex items-center gap-4 transition-all text-base ${adminSubTab === 'shopAdmin' ? 'bg-blue-600 text-white shadow-lg translate-x-2' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}><ShoppingCart className="w-5 h-5"/> 상점 통제소</button>
+                <button onClick={() => setAdminSubTab('shopAdmin')} className={`w-full p-4 rounded-2xl font-black text-left flex items-center gap-4 transition-all text-base ${adminSubTab === 'shopAdmin' ? 'bg-blue-600 text-white shadow-lg translate-x-2' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}><ShoppingCart className="w-5 h-5"/> 상점 및 펀딩 통제소</button>
                 <button onClick={() => setAdminSubTab('students')} className={`w-full p-4 rounded-2xl font-black text-left flex items-center gap-4 transition-all text-base ${adminSubTab === 'students' ? 'bg-blue-600 text-white shadow-lg translate-x-2' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}><Users className="w-5 h-5"/> 명단 관리</button>
-                <button onClick={() => setAdminSubTab('settings')} className={`w-full p-4 rounded-2xl font-black text-left flex items-center gap-4 transition-all text-base ${adminSubTab === 'settings' ? 'bg-blue-600 text-white shadow-lg translate-x-2' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}><Settings className="w-5 h-5"/> 환경 설정</button>
+                <button onClick={() => setAdminSubTab('settings')} className={`w-full p-4 rounded-2xl font-black text-left flex items-center gap-4 transition-all text-base ${adminSubTab === 'settings' ? 'bg-blue-600 text-white shadow-lg translate-x-2' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}><Settings className="w-5 h-5"/> 환경 및 점수 밸런스</button>
                 <button onClick={() => setAdminSubTab('reset')} className={`w-full p-4 rounded-2xl font-black text-left flex items-center gap-4 transition-all text-base ${adminSubTab === 'reset' ? 'bg-red-600 text-white shadow-lg translate-x-2' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}><History className="w-5 h-5"/> 초기화/마감</button>
                 <button onClick={() => { setIsAuthenticated(false); setActiveTab('dashboard'); }} className="mt-auto p-4 bg-slate-800 text-slate-400 font-black rounded-2xl hover:bg-slate-700 transition-all text-center">로그아웃</button>
              </aside>
@@ -710,19 +770,13 @@ return (
                   <div className="space-y-8 animate-in fade-in">
                     <div className="flex justify-between items-center mb-8">
                       <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-6">긴급 미션 및 결재함</h3>
-                      <div className="bg-slate-100 p-2 rounded-2xl flex items-center gap-4 border border-slate-200">
-                        <span className="text-sm font-black text-slate-500 pl-4">학급 평판 수동 조절:</span>
-                        <button onClick={() => sync({ manualRepOffset: (db.manualRepOffset||0) - 1 })} className="p-2 bg-white text-red-500 rounded-xl hover:bg-red-50 shadow-sm"><Minus className="w-5 h-5"/></button>
-                        <span className="w-12 text-center font-black text-xl text-blue-600">{db.manualRepOffset||0}</span>
-                        <button onClick={() => sync({ manualRepOffset: (db.manualRepOffset||0) + 1 })} className="p-2 bg-white text-blue-500 rounded-xl hover:bg-blue-50 shadow-sm"><Plus className="w-5 h-5"/></button>
-                      </div>
                     </div>
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                        <div className="bg-white p-10 rounded-[40px] shadow-sm border border-blue-100 flex flex-col items-center text-center relative overflow-hidden">
                           {db.activeMission.isActive && <div className="absolute inset-0 bg-blue-50 animate-pulse -z-10"></div>}
                           <Zap className="w-20 h-20 text-blue-500 mb-6" />
                           <h4 className="text-3xl font-black mb-4 text-slate-800">교사 참여형 긴급 미션</h4>
-                          <p className="text-slate-500 font-bold mb-8 text-sm leading-relaxed">미션을 발동하면 학생들 카드에 완료 버튼이 생깁니다.<br/>누를 때마다 즉시 0.5점씩 오르며, 전원 성공 시 보너스가 터집니다!</p>
+                          <p className="text-slate-500 font-bold mb-8 text-sm leading-relaxed">미션을 발동하면 대시보드 중앙에 완료 버튼이 생깁니다.<br/>누를 때마다 즉시 0.5점씩 오르며, 전원 성공 시 보너스가 터집니다!</p>
                           <div className="flex gap-4 w-full">
                             {!db.activeMission.isActive ? (
                               <button onClick={startMission} className="flex-1 bg-blue-600 text-white py-6 rounded-[30px] font-black text-xl shadow-xl hover:bg-blue-700 active:scale-95 transition-all">🚀 미션 발동하기</button>
@@ -767,7 +821,27 @@ return (
                                   <span className="font-black text-pink-800 bg-pink-100 px-3 py-1 rounded-lg text-xs">To. {allStats.find(s=>s.id==p.toId)?.name||'나 자신'} (온기)</span><span className="text-[10px] font-bold text-pink-400">{SEL_OPTIONS.find(opt=>opt.name===p.tag)?.short}</span>
                                 </div>
                                 <p className="text-sm text-slate-700 font-bold mb-4">"{p.text}"</p>
-                                <button onClick={() => { const next = db.pendingPraises.filter(pr => pr.id !== p.id); const app = [p, ...safeArray(db.approvedPraises)].slice(0,10); if(p.toId !== 'me') { sync({ pendingPraises: next, approvedPraises: app, roleExp: { ...db.roleExp, [p.toId]: (db.roleExp[p.toId]||0) + 1 }, allTime: { ...db.allTime, exp: { ...db.allTime.exp, [p.toId]: (db.allTime.exp?.[p.toId]||0)+1 } } }); } else { sync({ pendingPraises: next, approvedPraises: app }); } alert("온기 승인 완료! (+10p)"); playSound('good'); }} className="w-full bg-pink-500 text-white py-3 rounded-xl font-black text-sm hover:bg-pink-600 shadow-md">온기 사연 승인</button>
+                                <button onClick={() => { 
+                                  const next = db.pendingPraises.filter(pr => pr.id !== p.id); 
+                                  const app = [p, ...safeArray(db.approvedPraises)].slice(0,10); 
+                                  
+                                  // 테마 일치 여부 검사하여 보너스 코인 지급
+                                  const isThemeMatch = p.tag === db.settings.weeklyTheme;
+                                  const earnedCoins = isThemeMatch ? (db.settings.pointConfig?.praiseBonus || 15) : (db.settings.pointConfig?.praiseBasic || 10);
+
+                                  if(p.toId !== 'me') { 
+                                    sync({ 
+                                      pendingPraises: next, approvedPraises: app, 
+                                      // 🔥 1인1역 exp가 아니라 보너스 코인(bonusCoins)을 직접 올려줌!
+                                      bonusCoins: { ...db.bonusCoins, [p.toId]: (db.bonusCoins?.[p.toId] || 0) + earnedCoins },
+                                      allTime: { ...db.allTime, exp: { ...db.allTime.exp, [p.toId]: (db.allTime.exp?.[p.toId]||0) + 1 } } 
+                                    }); 
+                                  } else { 
+                                    sync({ pendingPraises: next, approvedPraises: app }); 
+                                  } 
+                                  alert(`온기 승인 완료! (+${earnedCoins}🪙) ${isThemeMatch ? '🎉 테마 일치 보너스 적용!' : ''}`); 
+                                  playSound('good'); 
+                                }} className="w-full bg-pink-500 text-white py-3 rounded-xl font-black text-sm hover:bg-pink-600 shadow-md">온기 사연 승인</button>
                               </div>
                             ))}
                             {safeArray(db.pendingShopItems).length === 0 && safeArray(db.pendingReflections).length === 0 && safeArray(db.pendingPraises).length === 0 && <p className="text-slate-400 font-black py-10 border-2 border-dashed rounded-3xl">결재 대기열이 비어있습니다.</p>}
@@ -779,7 +853,7 @@ return (
 
                 {adminSubTab === 'shopAdmin' && (
                   <div className="space-y-8 animate-in fade-in">
-                    <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-6 mb-8">상점 및 이벤트 통제소</h3>
+                    <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-6 mb-8">상점 및 펀딩 통제소</h3>
                     <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 space-y-8">
                       <div className="flex flex-wrap gap-4">
                          <button onClick={() => sync({ settings: { ...db.settings, forceShopOpen: !db.settings.forceShopOpen } })} className={`flex-1 py-5 rounded-2xl font-black text-lg transition-all ${db.settings.forceShopOpen ? 'bg-amber-500 text-white shadow-xl' : 'bg-slate-100 text-slate-500'}`}>정규 상점 개방: {db.settings.forceShopOpen ? 'ON' : 'OFF (목요일만)'}</button>
@@ -826,11 +900,33 @@ return (
                         </div>
                       </div>
 
+                      {/* 🚀 크라우드 펀딩 관리 섹션 추가 */}
+                      <div className="pt-8 border-t border-slate-200 bg-blue-50 p-8 rounded-3xl mt-8">
+                        <h4 className="font-black text-lg text-blue-800 mb-4 flex items-center gap-2"><Target className="w-5 h-5"/> 크라우드 펀딩 항목 관리</h4>
+                        <div className="flex gap-4 mb-6">
+                          <input type="text" placeholder="새로운 펀딩 목표 (예: 피자 파티)" value={newFundName} onChange={e=>setNewFundName(e.target.value)} className="flex-1 p-4 rounded-xl border border-blue-200 font-bold outline-none focus:border-blue-400"/>
+                          <input type="number" placeholder="목표 점수" value={newFundTarget} onChange={e=>setNewFundTarget(e.target.value)} className="w-32 p-4 rounded-xl border border-blue-200 font-bold outline-none focus:border-blue-400"/>
+                          <button onClick={() => {
+                            if(!newFundName || !newFundTarget) return alert("입력 오류");
+                            sync({ funding: [...safeArray(db.funding), { id: Date.now(), name: newFundName, target: parseInt(newFundTarget), current: 0 }] });
+                            setNewFundName(""); setNewFundTarget("");
+                          }} className="bg-blue-600 text-white px-8 rounded-xl font-black shadow-md hover:bg-blue-700">생성</button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {safeArray(db.funding).map(f => (
+                            <div key={f.id} className="bg-white p-4 rounded-2xl border border-blue-200 flex justify-between items-center shadow-sm">
+                              <div><h4 className="font-black text-blue-900">{f.name}</h4><p className="text-blue-500 font-bold text-xs mt-1">현재: {f.current} / 목표: {f.target}p</p></div>
+                              <button onClick={() => { if(window.confirm("이 펀딩을 삭제할까요?")) sync({ funding: safeArray(db.funding).filter(x => x.id !== f.id) }); }} className="p-2 bg-red-50 text-red-500 rounded-lg hover:bg-red-100"><Trash2 className="w-4 h-4"/></button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
                       <div className="pt-8 border-t border-slate-200 bg-yellow-50 p-8 rounded-3xl mt-8">
                         <h4 className="font-black text-lg text-yellow-800 mb-6 flex justify-between items-center">
                           가챠 확률 및 문구 세팅 
                           <button onClick={()=>sync({ gachaConfig: { ...db.gachaConfig, mode: db.gachaConfig.mode === 'special' ? 'normal' : 'special' } })} className={`px-4 py-2 rounded-xl text-sm ${db.gachaConfig.mode === 'special' ? 'bg-purple-600 text-white shadow-md' : 'bg-yellow-400 text-yellow-900 shadow-md'}`}>
-                            {db.gachaConfig.mode === 'special' ? '✨ 동민신 모드' : '🎁 일반 모드'} 변경
+                            {db.gachaConfig.mode === 'special' ? '✨ 선생님 찬스 모드' : '🎁 일반 모드'} 변경
                           </button>
                         </h4>
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -852,7 +948,20 @@ return (
 
                 {adminSubTab === 'settings' && (
                   <div className="space-y-8 animate-in fade-in">
-                    <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-6 mb-8">시스템 텍스트 & 테마 커스텀</h3>
+                    <div className="flex justify-between items-center mb-8">
+                      <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-6">환경 및 점수 밸런스 통제소</h3>
+                      {/* 🛠️ 학급 평판 점수 수동 직접 입력 기능 */}
+                      <div className="bg-slate-100 p-3 rounded-2xl flex items-center gap-3 border border-slate-200 shadow-inner">
+                        <span className="text-sm font-black text-slate-500">명성 점수 강제 조정:</span>
+                        <input type="number" value={manualScoreInput} onChange={e=>setManualScoreInput(e.target.value)} placeholder="+50 또는 -20" className="w-32 p-2 rounded-xl border border-white font-black outline-none text-center focus:ring-2 ring-blue-300"/>
+                        <button onClick={() => {
+                          const val = parseInt(manualScoreInput);
+                          if(isNaN(val)) return alert("숫자를 입력하세요.");
+                          if(window.confirm(`평판 점수에 ${val}점을 더할까요?`)) { sync({ manualRepOffset: (db.manualRepOffset||0) + val }); setManualScoreInput(""); }
+                        }} className="bg-blue-600 text-white px-4 py-2 rounded-xl font-black text-sm hover:bg-blue-700 shadow-md">적용</button>
+                      </div>
+                    </div>
+
                     <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 space-y-8">
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                           <div>
@@ -860,12 +969,36 @@ return (
                             <input type="text" value={db.settings.title} onChange={e=>sync({settings: {...db.settings, title: e.target.value}})} className="w-full p-5 rounded-2xl bg-slate-50 border border-slate-200 font-black text-lg outline-none focus:border-blue-400"/>
                           </div>
                           <div>
-                            <label className="block text-sm font-black text-slate-500 mb-3">이주의 마음성장(SEL) 테마</label>
+                            <label className="block text-sm font-black text-slate-500 mb-3">이 주의 마음성장(SEL) 테마</label>
                             <select value={db.settings.weeklyTheme} onChange={e=>sync({settings: {...db.settings, weeklyTheme: e.target.value}})} className="w-full p-5 rounded-2xl bg-slate-50 border border-slate-200 font-black text-lg outline-none focus:border-blue-400">
                               {SEL_OPTIONS.map(opt => <option key={opt.id} value={opt.name}>{opt.name}</option>)}
                             </select>
                           </div>
                        </div>
+                       
+                       {/* ⚖️ 만능 점수 밸런스 설정 구역 */}
+                       <div className="pt-6 border-t border-slate-100 bg-indigo-50 p-8 rounded-3xl">
+                          <h4 className="font-black text-lg text-indigo-800 mb-4 flex items-center gap-2"><Settings className="w-5 h-5"/> 만능 점수 밸런스 설정</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div>
+                              <label className="block text-xs font-black text-indigo-600 mb-2" title="학급의 최종 목표 점수입니다. 5000점 초과 시 보호막으로 쌓입니다.">최고 목표 명성 점수</label>
+                              <input type="number" value={db.settings.targetScore} onChange={e=>sync({settings: {...db.settings, targetScore: parseInt(e.target.value)}})} className="w-full p-3 rounded-xl border-none font-black outline-none shadow-sm"/>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-black text-indigo-600 mb-2">온기 우체통 기본 보상(🪙)</label>
+                              <input type="number" value={db.settings.pointConfig?.praiseBasic || 10} onChange={e=>sync({settings: {...db.settings, pointConfig: {...db.settings.pointConfig, praiseBasic: parseInt(e.target.value)}}})} className="w-full p-3 rounded-xl border-none font-black outline-none shadow-sm"/>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-black text-indigo-600 mb-2">테마 일치 온기 보상(🪙)</label>
+                              <input type="number" value={db.settings.pointConfig?.praiseBonus || 15} onChange={e=>sync({settings: {...db.settings, pointConfig: {...db.settings.pointConfig, praiseBonus: parseInt(e.target.value)}}})} className="w-full p-3 rounded-xl border-none font-black outline-none shadow-sm text-pink-500"/>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-black text-red-500 mb-2">위기 지정 시 차감 점수</label>
+                              <input type="number" value={db.settings.pointConfig?.penalty || 20} onChange={e=>sync({settings: {...db.settings, pointConfig: {...db.settings.pointConfig, penalty: parseInt(e.target.value)}}})} className="w-full p-3 rounded-xl border-none font-black outline-none shadow-sm text-red-600"/>
+                            </div>
+                          </div>
+                       </div>
+
                        <div className="pt-6 border-t border-slate-100">
                           <label className="block text-sm font-black text-slate-500 mb-4">하단 메뉴 이름 수정 (4개 순서대로)</label>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -965,7 +1098,7 @@ return (
           <div className="bg-white rounded-[60px] p-16 w-full max-w-lg text-center shadow-2xl animate-in zoom-in-95 border-4 border-blue-100">
             <Lock className="w-16 h-16 text-blue-500 mx-auto mb-6" />
             <h3 className="text-3xl font-black text-center mb-4 text-blue-900">관리자 인증</h3>
-            <p className="text-center text-slate-400 font-bold mb-10 text-sm">교사 권한(6505) 또는 감찰사 권한이 필요합니다.</p>
+            <p className="text-center text-slate-400 font-bold mb-10 text-sm">마스터 권한(6505) 또는 감찰사 권한이 필요합니다.</p>
             <input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key === 'Enter' && handleLogin()} className="w-full text-center text-6xl tracking-[15px] font-black p-8 border-4 border-slate-100 rounded-[40px] outline-none mb-12 bg-slate-50 focus:border-blue-400 focus:bg-white shadow-inner" autoFocus />
             <div className="flex gap-4">
               <button onClick={()=>setShowModal(null)} className="flex-1 py-6 rounded-[30px] font-black text-slate-500 text-xl bg-slate-100 hover:bg-slate-200 transition-colors">취소</button>
@@ -1002,6 +1135,7 @@ return (
         .fade-in { animation-name: fadeIn; }
         .zoom-in-95 { animation-name: zoomIn95; }
         .slide-in-from-top-4 { animation-name: slideInTop; }
+        .animate-spin-slow { animation: spin 4s linear infinite; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes zoomIn95 { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         @keyframes slideInTop { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
