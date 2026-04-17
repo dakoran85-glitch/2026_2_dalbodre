@@ -178,13 +178,26 @@ export default function App() {
   const handleFund = (fId, sId, amount) => { const u = allStats.find(s => s.id == sId); if (!u || u.coins < amount) return alert("코인 부족!"); playSound('buy'); sync({ usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + amount }, funding: safeArray(db.funding).map(f => f.id === fId ? { ...f, current: f.current + amount } : f), allTime: { ...db.allTime, fund: { ...db.allTime.fund, [sId]: (db.allTime.fund?.[sId] || 0) + amount } } }); alert("투자 완료!"); };
   const handleGacha = (sId) => { const u = allStats.find(s => s.id == sId); const c = db.gachaConfig; if (!u || u.coins < c.cost) return alert("코인 부족!"); if(!window.confirm(`${c.cost}🪙 소모 가챠?`)) return; const rand = Math.random() * 100; let msg = ""; let rew = 0; let p = 0; let isJ = false; if (rand < (p += c.t1.prob)) { msg = c.t1.name; rew = c.t1.reward; } else if (rand < (p += c.t2.prob)) { msg = c.t2.name; rew = c.t2.reward; } else if (rand < (p += c.t3.prob)) { msg = c.t3.name; rew = c.t3.reward; } else { msg = c.t4.name; rew = c.t4.reward; isJ = true; } sync({ usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + c.cost - rew } }); if(isJ) { playSound('jackpot'); alert(`🎉 잭팟!! [${msg}]`); } else { playSound('buy'); alert(`결과: ${msg}`); } };
   
+  // 🔥 [수정 완료] 미션 에러 완벽 방어 (safeArray 추가)
   const startMission = () => { if(window.confirm("긴급 미션 발동?")) sync({ activeMission: { isActive: true, participants: [] } }); };
   const endMission = () => { if(window.confirm("미션 강제 종료?")) sync({ activeMission: { isActive: false, participants: [] } }); };
-  const participateMission = (sId) => { const currentP = safeArray(db.activeMission.participants);
-if(currentP.includes(sId)) return;
-const nextP = [...currentP, sId]; let nextO = (db.manualRepOffset || 0) + 0.5; let nextM = { isActive: true, participants: nextP }; if (nextP.length >= safeStudents.length) { playSound('jackpot'); alert("🎉 전원 미션 성공!"); nextO += (safeStudents.length * 0.5); nextM.isActive = false; } sync({ manualRepOffset: nextO, activeMission: nextM }); };
-  const submitArtisanItem = () => { if(!artisanTarget || !artisanItemName || !artisanItemPrice) return alert("입력 오류"); const artisan = allStats.find(s => s.id == artisanTarget); if(!artisan || artisan.exp < 20) return alert("장인만 가능"); sync({ pendingShopItems: [{ id: Date.now(), name: artisanItemName, price: parseInt(artisanItemPrice), creator: artisan.name }, ...safeArray(db.pendingShopItems)] }); setArtisanTarget(""); setArtisanItemName(""); setArtisanItemPrice(""); alert("공방 아이템 결재 올림! 🛠️"); };
+  const participateMission = (sId) => { 
+    const currentP = safeArray(db.activeMission.participants);
+    if(currentP.includes(sId)) return; 
+    playSound('good'); 
+    const nextP = [...currentP, sId]; 
+    let nextO = (db.manualRepOffset || 0) + 0.5; 
+    let nextM = { isActive: true, participants: nextP }; 
+    if (nextP.length >= safeStudents.length) { 
+      playSound('jackpot'); 
+      alert("🎉 전원 미션 성공!"); 
+      nextO += (safeStudents.length * 0.5); 
+      nextM.isActive = false; 
+    } 
+    sync({ manualRepOffset: nextO, activeMission: nextM }); 
+  };
   
+  const submitArtisanItem = () => { if(!artisanTarget || !artisanItemName || !artisanItemPrice) return alert("입력 오류"); const artisan = allStats.find(s => s.id == artisanTarget); if(!artisan || artisan.exp < 20) return alert("장인만 가능"); sync({ pendingShopItems: [{ id: Date.now(), name: artisanItemName, price: parseInt(artisanItemPrice), creator: artisan.name }, ...safeArray(db.pendingShopItems)] }); setArtisanTarget(""); setArtisanItemName(""); setArtisanItemPrice(""); alert("공방 아이템 결재 올림! 🛠️"); };
   const submitPraise = () => { if (!praiseTarget || !praiseTag || !praiseText) return alert("빈칸 확인!"); sync({ pendingPraises: [{ id: Date.now(), toId: praiseTarget, tag: praiseTag, text: praiseText, date: new Date().toLocaleDateString() }, ...safeArray(db.pendingPraises)] }); setShowPraiseModal(false); setPraiseTarget(""); setPraiseText(""); setPraiseTag(""); alert("온기 배달 완료! 💌"); };
   const submitReflection = () => { if (!refTarget || !refTag || !refText) return alert("빈칸 확인!"); sync({ pendingReflections: [{ id: Date.now(), sId: refTarget, tag: refTag, text: refText, date: new Date().toLocaleDateString() }, ...safeArray(db.pendingReflections)], studentStatus: { ...db.studentStatus, [refTarget]: 'pending' } }); setRefTarget(""); setRefText(""); setRefTag(""); alert("다짐 제출 완료! 📝"); };
   const handleLogin = () => { if (password === "6505") { setIsAuthenticated('teacher'); setActiveTab('admin'); setShowModal(null); setPassword(""); } else if (password === db.settings.helpRoomPw) { setIsAuthenticated('inspector'); setActiveTab('helproom'); setShowModal(null); setPassword(""); } else { alert("비밀번호 오류 ❌"); playSound('bad'); } };
@@ -257,7 +270,7 @@ return (
               </div>
             </div>
 
-            {/* 🎮 교사 발동 긴급 미션 배너 */}
+            {/* 🎮 교사 발동 긴급 미션 배너 (에러 방어 완벽 적용) */}
             {db.activeMission.isActive && (
               <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-8 rounded-[40px] shadow-2xl text-white relative overflow-hidden animate-in zoom-in-95 border-4 border-blue-300">
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
@@ -266,9 +279,9 @@ return (
                   <h2 className="text-3xl font-black mb-2 text-yellow-100">🚨 긴급 퀘스트 발동! 🚨</h2>
                   <p className="text-lg font-bold mb-6">모두가 미션을 완수하고 카드의 [내 미션 완료!] 버튼을 누르세요.<br/>전원 성공 시 엄청난 보너스가 쏟아집니다!</p>
                   <div className="w-full bg-black/20 h-6 rounded-full overflow-hidden border border-white/30">
-                    <div className="h-full bg-yellow-400 transition-all" style={{width:`${(db.activeMission.participants.length / safeStudents.length)*100}%`}}></div>
+                    <div className="h-full bg-yellow-400 transition-all" style={{width:`${(safeArray(db.activeMission.participants).length / safeStudents.length)*100}%`}}></div>
                   </div>
-                  <p className="font-black mt-2 text-yellow-200">진행률: {db.activeMission.participants.length} / {safeStudents.length} 명 완료</p>
+                  <p className="font-black mt-2 text-yellow-200">진행률: {safeArray(db.activeMission.participants).length} / {safeStudents.length} 명 완료</p>
                 </div>
               </div>
             )}
@@ -365,10 +378,11 @@ return (
                     </div>
                   )}
 
-                  {db.activeMission.isActive && !db.activeMission.participants.includes(s.id) && (
+                  {/* 🎮 개인 미션 완료 버튼 방어막 */}
+                  {db.activeMission.isActive && !safeArray(db.activeMission.participants).includes(s.id) && (
                     <button onClick={() => participateMission(s.id)} className="w-full bg-blue-500 text-white font-black py-3 rounded-2xl mb-3 shadow-md animate-bounce hover:bg-blue-600">✋ 내 미션 완료!</button>
                   )}
-                  {db.activeMission.isActive && db.activeMission.participants.includes(s.id) && (
+                  {db.activeMission.isActive && safeArray(db.activeMission.participants).includes(s.id) && (
                     <div className="w-full bg-blue-100 text-blue-600 font-black py-3 rounded-2xl mb-3 text-center text-sm">✅ 확인 완료</div>
                   )}
                   
@@ -699,7 +713,7 @@ return (
                               <button onClick={endMission} className="flex-1 bg-red-500 text-white py-6 rounded-[30px] font-black text-xl shadow-xl hover:bg-red-600 active:scale-95 transition-all">🛑 미션 강제 종료 (현재까지 인정)</button>
                             )}
                           </div>
-                          {db.activeMission.isActive && <p className="mt-6 font-black text-blue-600 bg-white px-4 py-2 rounded-full border border-blue-200">현재 {db.activeMission.participants.length}명 참여 완료!</p>}
+                          {db.activeMission.isActive && <p className="mt-6 font-black text-blue-600 bg-white px-4 py-2 rounded-full border border-blue-200">현재 {safeArray(db.activeMission.participants).length}명 참여 완료!</p>}
                        </div>
 
                        <div className="bg-white p-10 rounded-[40px] shadow-sm border border-green-100 flex flex-col items-center text-center">
