@@ -73,6 +73,22 @@ const SEL_GUIDES = {
   "5단계: 책임 있는 의사결정 (Responsible decision-making)": "상황: 우리 반의 규칙이나 분위기를 위한 선택의 순간을 적어보세요.\n다짐: 더 나은 세상을 만드는 나의 선택을 실천해보세요." 
 };
 
+const PRAISE_GUIDES = {
+  "1단계: 자기 인식 (Self-awareness)": "칭찬 예시: 스스로의 장점을 알고 자신감 있게 도전한 모습을 칭찬해요!",
+  "2단계: 자기 관리 (Self-management)": "칭찬 예시: 짜증 날 수 있는 상황에서도 감정을 잘 조절하고 끝까지 해낸 모습을 칭찬해요!",
+  "3단계: 사회적 인식 (Social awareness)": "칭찬 예시: 도움이 필요한 친구의 마음을 먼저 알아채고 공감해 준 모습을 칭찬해요!",
+  "4단계: 관계 기술 (Relationship skills)": "칭찬 예시: 친구의 말을 잘 경청하고, 모둠 활동에서 배려하며 협동한 모습을 칭찬해요!",
+  "5단계: 책임 있는 의사결정 (Responsible decision-making)": "칭찬 예시: 학급을 위해 솔선수범하여 바른 선택을 하고 실천한 모습을 칭찬해요!"
+};
+
+const THEME_DESCRIPTIONS = {
+  "1단계: 자기 인식 (Self-awareness)": "나의 감정과 강점을 발견하고 이해하는 한 주를 보내요! 🌱",
+  "2단계: 자기 관리 (Self-management)": "감정을 조절하고 목표를 향해 끝까지 노력하는 한 주를 보내요! ⛵",
+  "3단계: 사회적 인식 (Social awareness)": "친구의 마음에 공감하고 다름을 존중하는 한 주를 보내요! 🤝",
+  "4단계: 관계 기술 (Relationship skills)": "서로 소통하고 배려하며 마법 같은 우정을 쌓는 한 주를 보내요! ✨",
+  "5단계: 책임 있는 의사결정 (Responsible decision-making)": "나와 공동체를 위해 책임감 있는 바른 선택을 하는 한 주를 보내요! ⚖️"
+};
+
 export default function App() {
   // --- UI & 상태 변수 ---
   const [isLoading, setIsLoading] = useState(true);
@@ -288,9 +304,10 @@ return (
 
             {/* 테마 & 펀딩 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-emerald-100">
-                <h3 className="text-sm font-black text-emerald-600 mb-2 flex items-center gap-2 bg-emerald-50 inline-block px-4 py-2 rounded-full"><Star className="w-4 h-4"/> 이주의 마음성장(SEL) 테마</h3>
+              <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-emerald-100 flex flex-col justify-center">
+                <h3 className="text-sm font-black text-emerald-600 mb-2 flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-full w-max"><Star className="w-4 h-4"/> 이주의 마음성장(SEL) 테마</h3>
                 <p className="text-2xl font-black text-slate-800 mt-4 leading-snug">{db.settings.weeklyTheme}</p>
+                <p className="text-sm font-bold text-emerald-700 mt-4 bg-emerald-50 p-4 rounded-2xl border border-emerald-100">{THEME_DESCRIPTIONS[db.settings.weeklyTheme] || "이번 주도 마음 성장을 위해 함께 노력해봐요!"}</p>
               </div>
               <div className="lg:col-span-2 bg-white p-8 rounded-[40px] shadow-sm border-2 border-amber-100 flex flex-col justify-between">
                 <h3 className="text-sm font-black text-amber-600 mb-4 flex items-center gap-2 bg-amber-50 inline-block px-4 py-2 rounded-full"><Target className="w-4 h-4"/> 다 함께 크라우드 펀딩</h3>
@@ -932,7 +949,7 @@ return (
                 <option value="">어떤 역량인가요?</option>
                 {SEL_OPTIONS.map(opt => <option key={opt.name} value={opt.name}>{opt.name}</option>)}
               </select>
-              <textarea value={praiseText} onChange={(e)=>setPraiseText(e.target.value)} rows="4" placeholder="어떤 구체적인 행동을 했는지 적어주세요! (선생님 승인 시 전광판에 등록됩니다)" className="w-full p-5 rounded-2xl bg-slate-50 border border-slate-200 font-black outline-none focus:border-pink-400 focus:bg-white resize-none shadow-sm placeholder:font-bold"/>
+              <textarea value={praiseText} onChange={(e)=>setPraiseText(e.target.value)} rows="4" placeholder={praiseTag ? PRAISE_GUIDES[praiseTag] : "위에서 역량을 먼저 선택하면 친절한 칭찬 가이드가 나타납니다! 💌"} className="w-full p-5 rounded-3xl bg-pink-50 border-2 border-pink-100 font-black outline-none focus:border-pink-400 focus:bg-white resize-none shadow-inner placeholder:font-bold placeholder:text-pink-400 text-pink-900"/>
             </div>
             <div className="flex gap-3">
               <button onClick={() => setShowPraiseModal(false)} className="flex-1 py-5 bg-slate-100 text-slate-500 rounded-[20px] font-black text-lg hover:bg-slate-200 transition-colors">취소</button>
