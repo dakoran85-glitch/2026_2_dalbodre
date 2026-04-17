@@ -994,6 +994,4 @@ return (
       `}</style>
     </div>
   );
-};
-
-export default App;
+}
