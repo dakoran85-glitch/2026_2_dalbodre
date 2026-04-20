@@ -37,7 +37,7 @@ const playSound = (type) => {
   } catch (e) {}
 };
 
-// 🔥 에니어그램 데이터 (교사용 AI 힌트)
+// 🔥 에니어그램 데이터
 const ENNEAGRAM_DATA = {
   "1": { name: '1번(개혁가)', desc: '규칙과 책임을 잘 지켜요. 결과보다 과정의 꼼꼼함과 정직함을 알아주세요.' },
   "2": { name: '2번(조력자)', desc: '관계와 배려를 중시해요. "네 덕분에 고마워"라는 진심 어린 인사가 가장 큰 힘이 됩니다.' },
@@ -134,7 +134,7 @@ export default function App() {
       pointConfig: { praiseBasic: 10, praiseBonus: 15, penalty: 20 }
     },
     gachaConfig: { mode: 'normal', cost: 30, t1: {name:'😭 꽝!', prob:50, reward:0}, t2: {name:'🪙 페이백!', prob:30, reward:30}, t3: {name:'🍬 소소한 간식', prob:15, reward:50}, t4: {name:'🎰 잭팟!!', prob:5, reward:200} },
-    coopQuest: { q1: 50, q2: 20, q3: 20, q4: 100, goodWeek: 0 },
+    coopQuest: { q1Name: "다 함께 바른 생활", q1: 50, q2Name: "환대와 응원", q2: 20, q3Name: "전담수업 태도 우수", q3: 20, q4Name: "사이좋은 일주일", q4: 100, goodWeek: 0 },
     weeklyRelay: { isActive: true, title: "이번 주 온기 사연 30개 돌파!", target: 30, current: 0, rewardCoin: 50, rewardRep: 100, completed: false },
     timeAttack: { isActive: false, title: "바닥 쓰레기 0개 만들기!", rewardRep: 100, endTime: null },
     shopItems: [], blackMarketItems: [], pendingShopItems: [], roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, 
@@ -220,7 +220,7 @@ export default function App() {
   const handleDonate = (sId, amount) => { const u = allStats.find(s => s.id == sId); if (!u || u.coins < amount) return alert("코인 부족!"); playSound('buy'); sync({ usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + amount }, donations: [{ id: Date.now(), name: u.name, amount }, ...safeArray(db.donations)].slice(0, 15), allTime: { ...db.allTime, donate: { ...db.allTime.donate, [sId]: (db.allTime.donate?.[sId] || 0) + amount } } }); alert("기부 완료! ✨"); };
   const handleFund = (fId, sId, amount) => { const u = allStats.find(s => s.id == sId); if (!u || u.coins < amount) return alert("코인 부족!"); playSound('buy'); sync({ usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + amount }, funding: safeArray(db.funding).map(f => f.id === fId ? { ...f, current: f.current + amount } : f), allTime: { ...db.allTime, fund: { ...db.allTime.fund, [sId]: (db.allTime.fund?.[sId] || 0) + amount } } }); alert("투자 완료!"); };
   
-  // 학급 공동 퀘스트
+  // 학급 공동 퀘스트 (이름 파라미터 추가)
   const addCoopScore = (points, title) => { playSound('jackpot'); sync({ manualRepOffset: (db.manualRepOffset || 0) + points }); alert(`🎉 [${title}] 달성! 평판 점수 +${points}점 획득!`); };
   const adjustGoodWeek = (delta) => { const next = Math.max(0, Math.min(5, (db.coopQuest.goodWeek || 0) + delta)); sync({ coopQuest: { ...db.coopQuest, goodWeek: next } }); if(delta > 0) playSound('good'); };
   const completeGoodWeek = () => { playSound('jackpot'); sync({ coopQuest: { ...db.coopQuest, goodWeek: 0 }, manualRepOffset: (db.manualRepOffset || 0) + (db.coopQuest.q4 || 100) }); alert(`🌟 사이 좋은 일주일 완성! +${db.coopQuest.q4 || 100}점!`); };
@@ -297,7 +297,7 @@ return (
         </div>
       </header>
 
-      {/* 2. 온기 마키 (흐르는 칭찬 텍스트) */}
+      {/* 온기 마키 */}
       <div className="bg-pink-100 text-pink-700 py-3 overflow-hidden shadow-sm border-b border-pink-200 relative z-20">
         <div className="whitespace-nowrap animate-[shimmer_30s_linear_infinite] flex gap-20 text-sm font-black">
           <span className="flex gap-4 items-center"><MessageSquare className="w-5 h-5 text-pink-500"/> 온기 우체통: {safeArray(db.approvedPraises).map(p => `[${SEL_OPTIONS.find(opt=>opt.name===p.tag)?.short||'칭찬'}] ${allStats.find(s=>s.id==p.toId)?.name||'나 자신'}: "${p.text}"`).join(' 🌸 ') || '서로에게 따뜻한 마음을 전해볼까요?'}</span>
@@ -307,68 +307,63 @@ return (
       <main className="max-w-7xl mx-auto p-4 md:p-8">
         
         {/* ========================================= */}
-        {/* 📄 PAGE 1: 현황판 (대시보드 메인)               */}
+        {/* 📄 PAGE 1: 현황판                           */}
         {/* ========================================= */}
         {activeTab === 'dashboard' && (
           <div className="space-y-12 animate-in fade-in duration-500">
             
-            {/* 🚨 타임어택 & 주간 릴레이 & 학급 공동 퀘스트 존 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 🚨 상단 3분할: 주간 릴레이 / 학급 공동 퀘스트 / 타임어택 (수정 완료) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
-              {/* 왼쪽: 주간 릴레이 & 공동 퀘스트(사이좋은 일주일) */}
-              <div className="space-y-6">
-                {db.weeklyRelay?.isActive && (
-                  <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-8 rounded-[40px] text-white shadow-xl border-4 border-purple-300 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
-                    <div className="relative z-10">
-                      <h3 className="text-sm font-black text-purple-200 mb-2 flex items-center gap-2"><Flag className="w-5 h-5"/> 🏃‍♂️ 주간 릴레이 미션</h3>
-                      <p className="text-2xl font-black mb-6">{db.weeklyRelay.title}</p>
-                      <div className="w-full h-5 bg-black/30 rounded-full overflow-hidden shadow-inner border border-white/20">
-                        <div className="h-full bg-yellow-400 transition-all duration-1000 shadow-[0_0_10px_rgba(250,204,21,0.8)]" style={{width: `${Math.min((db.weeklyRelay.current / db.weeklyRelay.target)*100, 100)}%`}}></div>
-                      </div>
-                      <div className="flex justify-between items-center mt-3 font-bold text-sm">
-                        <span className="text-purple-100">현재: {db.weeklyRelay.current} / 목표: {db.weeklyRelay.target}</span>
-                        {db.weeklyRelay.completed ? <span className="text-yellow-300 animate-pulse text-lg font-black">🎉 목표 달성! 보상 대기중</span> : <span className="text-purple-200 bg-black/20 px-3 py-1 rounded-lg">성공 시 전원 +{db.weeklyRelay.rewardCoin}🪙 배당!</span>}
-                      </div>
-                    </div>
+              {/* 1. 주간 릴레이 */}
+              {db.weeklyRelay?.isActive && (
+                <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-6 rounded-[30px] text-white shadow-sm border-2 border-purple-300 relative overflow-hidden flex flex-col justify-center">
+                  <h3 className="text-xs font-black text-purple-200 mb-2 flex items-center gap-1"><Flag className="w-4 h-4"/> 주간 릴레이</h3>
+                  <p className="text-lg font-black mb-3">{db.weeklyRelay.title}</p>
+                  <div className="w-full h-4 bg-black/30 rounded-full overflow-hidden shadow-inner mb-2">
+                    <div className="h-full bg-yellow-400 transition-all" style={{width: `${Math.min((db.weeklyRelay.current / (db.weeklyRelay.target||1))*100, 100)}%`}}></div>
                   </div>
-                )}
-                
-                <div className="bg-white p-8 rounded-[40px] border-4 border-blue-100 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
-                  <div>
-                    <h3 className="text-base font-black text-blue-600 mb-2 flex items-center gap-2"><Target className="w-5 h-5"/> 사이좋은 일주일</h3>
-                    <p className="font-bold text-slate-500 text-sm mb-4">5개의 별이 모두 모이면 학급 평판 +{db.coopQuest.q4 || 100}점!</p>
-                    <div className="flex gap-3">
-                      {[1,2,3,4,5].map(star => (
-                        <Star key={star} className={`w-10 h-10 transition-all duration-500 ${star <= (db.coopQuest.goodWeek || 0) ? 'fill-yellow-400 text-yellow-500 drop-shadow-md scale-110' : 'text-slate-200'}`} />
-                      ))}
-                    </div>
+                  <div className="flex justify-between items-center font-bold text-xs">
+                    <span className="text-purple-100">{db.weeklyRelay.current}/{db.weeklyRelay.target}</span>
+                    {db.weeklyRelay.completed ? <span className="text-yellow-300 animate-pulse">🎉 보상 대기</span> : <span className="text-purple-200 bg-black/20 px-2 py-1 rounded-md">성공시 +{db.weeklyRelay.rewardCoin}🪙</span>}
                   </div>
-                  {(db.coopQuest.goodWeek || 0) >= 5 && <div className="text-center font-black text-base text-yellow-700 bg-yellow-100 px-6 py-3 rounded-2xl animate-pulse border border-yellow-300 shadow-sm">선생님 최종 승인<br/>대기중!</div>}
-                </div>
-              </div>
-
-              {/* 오른쪽: 타임어택 (발동 시 렌더링) */}
-              {db.timeAttack?.isActive ? (
-                <div className="bg-gradient-to-br from-red-500 to-rose-600 text-white p-8 rounded-[40px] shadow-2xl border-4 border-red-300 relative overflow-hidden animate-pulse flex flex-col items-center justify-center min-h-[250px]">
-                  <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')] opacity-20"></div>
-                  <div className="relative z-10 flex flex-col items-center text-center w-full">
-                    <Timer className="w-16 h-16 text-yellow-300 mb-4 animate-bounce drop-shadow-lg"/>
-                    <h2 className="text-lg font-black text-red-200 mb-2 tracking-widest uppercase">⏱️ 돌발 타임어택 발동!</h2>
-                    <p className="text-3xl font-black mb-6 drop-shadow-md">{db.timeAttack.title}</p>
-                    <div className="bg-black/40 px-8 py-4 rounded-[30px] border-2 border-white/20 shadow-inner w-full max-w-sm">
-                      <span className="text-6xl font-black text-yellow-300 tracking-[0.2em] drop-shadow-[0_0_15px_rgba(250,204,21,0.5)] tabular-nums">{timeLeftString}</span>
-                    </div>
-                    <p className="mt-6 font-black text-red-100 text-base bg-white/20 px-6 py-2 rounded-full border border-white/30">성공 시 학급 평판 +{db.timeAttack.rewardRep}점!</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-slate-50/50 p-8 rounded-[40px] border-4 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-400 min-h-[250px] transition-colors hover:bg-slate-50">
-                  <Timer className="w-12 h-12 mb-4 opacity-30"/>
-                  <p className="font-black text-base opacity-70">현재 발동된 타임어택이 없습니다.</p>
-                  <p className="text-xs font-bold mt-2 opacity-50">긴급 상황 발생 시 선생님이 발동합니다.</p>
                 </div>
               )}
+              
+              {/* 2. 학급 공동 퀘스트 (버튼 탑재) */}
+              <div className="bg-white p-5 rounded-[30px] border-2 border-blue-100 shadow-sm flex flex-col justify-between">
+                <h3 className="text-[11px] font-black text-blue-600 mb-3 flex items-center gap-1"><Zap className="w-3 h-3"/> 학급 퀘스트 (터치하여 즉시 획득!)</h3>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                   <button onClick={()=>addCoopScore(db.coopQuest.q1 || 50, db.coopQuest.q1Name || "다 함께 바른 생활")} className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-2 rounded-xl font-black text-xs border border-indigo-200 transition-transform active:scale-95 shadow-sm truncate px-1">{db.coopQuest.q1Name || "바른 생활"} +{db.coopQuest.q1 || 50}</button>
+                   <button onClick={()=>addCoopScore(db.coopQuest.q2 || 20, db.coopQuest.q2Name || "환대와 응원")} className="bg-pink-50 hover:bg-pink-100 text-pink-700 py-2 rounded-xl font-black text-xs border border-pink-200 transition-transform active:scale-95 shadow-sm truncate px-1">{db.coopQuest.q2Name || "환대/응원"} +{db.coopQuest.q2 || 20}</button>
+                   <button onClick={()=>addCoopScore(db.coopQuest.q3 || 20, db.coopQuest.q3Name || "전담수업 태도 우수")} className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 py-2 rounded-xl font-black text-xs border border-emerald-200 transition-transform active:scale-95 col-span-2 shadow-sm truncate px-1">{db.coopQuest.q3Name || "전담수업 우수"} +{db.coopQuest.q3 || 20}</button>
+                </div>
+                <div className="flex items-center justify-between bg-yellow-50 p-2 rounded-xl border border-yellow-200">
+                   <span className="text-xs font-black text-yellow-800 truncate pr-2 flex-1">{db.coopQuest.q4Name || "사이좋은 일주일"}</span>
+                   <div className="flex items-center gap-2 shrink-0">
+                     <button onClick={()=>adjustGoodWeek(-1)} className="p-1 bg-white rounded-md text-red-500 border border-red-100"><Minus className="w-3 h-3"/></button>
+                     <span className="font-black text-sm text-yellow-600 w-6 text-center">{db.coopQuest.goodWeek || 0}/5</span>
+                     <button onClick={()=>adjustGoodWeek(1)} className="p-1 bg-white rounded-md text-green-500 border border-green-100"><Plus className="w-3 h-3"/></button>
+                   </div>
+                </div>
+                {(db.coopQuest.goodWeek || 0) >= 5 && <button onClick={completeGoodWeek} className="mt-2 w-full bg-yellow-400 text-yellow-900 shadow-md font-black py-2 rounded-xl text-xs animate-pulse">최종 승인 및 +{db.coopQuest.q4||100}p 획득!</button>}
+              </div>
+
+              {/* 3. 작아진 타임어택 */}
+              <div className={`p-6 rounded-[30px] border-2 flex flex-col items-center justify-center transition-colors min-h-[160px] ${db.timeAttack?.isActive ? 'bg-red-50 border-red-300 shadow-inner' : 'bg-slate-50 border-dashed border-slate-200'}`}>
+                {db.timeAttack?.isActive ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-2"><Timer className="w-5 h-5 text-red-500 animate-pulse"/><h2 className="text-xs font-black text-red-600">돌발 타임어택!</h2></div>
+                    <p className="text-base font-black text-slate-800 mb-3 text-center leading-tight">{db.timeAttack.title}</p>
+                    <div className="bg-red-500 text-white px-5 py-2 rounded-xl shadow-md"><span className="text-2xl font-black tracking-wider">{timeLeftString}</span></div>
+                  </>
+                ) : (
+                  <>
+                    <Timer className="w-8 h-8 mb-2 opacity-30 text-slate-400"/>
+                    <p className="font-black text-xs text-slate-400 opacity-70">발동된 타임어택 없음</p>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* 🏆 명예의 전당 (상단 3분할) */}
@@ -387,7 +382,7 @@ return (
               </div>
             </div>
 
-            {/* 테마 & 펀딩 */}
+            {/* 테마 & 펀딩 (NaN 오류 방지 완료) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="bg-white p-10 rounded-[50px] shadow-sm border-2 border-emerald-100 flex flex-col justify-center relative overflow-hidden">
                 <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-50 rounded-full blur-3xl"></div>
@@ -400,9 +395,9 @@ return (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-2">
                   {safeArray(db.funding).map(f => (
                     <div key={f.id} className="space-y-3">
-                      <div className="flex justify-between items-end font-black text-base text-slate-700"><span>{f.name}</span><span className="text-amber-500 text-xl">{Math.floor((f.current/f.target)*100)}%</span></div>
+                      <div className="flex justify-between items-end font-black text-base text-slate-700"><span>{f.name}</span><span className="text-amber-500 text-xl">{Math.floor((f.current/(f.target||1))*100)}%</span></div>
                       <div className="w-full h-5 bg-slate-100 rounded-full overflow-hidden border border-slate-200 shadow-inner">
-                        <div className="h-full bg-gradient-to-r from-yellow-300 to-amber-500 transition-all duration-1000" style={{width:`${Math.min((f.current/f.target)*100,100)}%`}}></div>
+                        <div className="h-full bg-gradient-to-r from-yellow-300 to-amber-500 transition-all duration-1000" style={{width:`${Math.min((f.current/(f.target||1))*100,100)}%`}}></div>
                       </div>
                       <p className="text-sm font-bold text-slate-400 text-right">{f.current} / {f.target} 🪙</p>
                     </div>
@@ -422,12 +417,11 @@ return (
               </button>
             </div>
             
-            {/* 개인 카드 영역 (시각적 무게중심 이동 & 🚨 위기 상태 고립 완벽 구현) */}
+            {/* 개인 카드 영역 (수정 2 반영: 이름 축소 및 한 줄 정렬) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {sortedDashboardStats.map(s => (
                 <div key={s.id} className={`p-6 rounded-[35px] border-4 shadow-sm transition-all relative flex flex-col bg-white hover:shadow-xl ${s.status === 'crisis' ? 'border-slate-300 bg-slate-100 opacity-60 grayscale' : (s.status === 'pending' ? 'border-orange-300 bg-orange-50' : 'border-white hover:border-amber-300')}`}>
                   
-                  {/* 상단 번호 및 코인 배치 */}
                   <div className="flex justify-between items-center mb-5 border-b-2 border-slate-100/50 pb-4">
                     <div className="flex items-center gap-3">
                       <span className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-xl shadow-inner ${s.status === 'crisis' ? 'bg-slate-200 text-slate-500' : 'bg-amber-100 text-amber-800'}`}>{s.id}</span>
@@ -438,18 +432,16 @@ return (
                     </div>
                   </div>
                   
-                  {/* 중앙 이름 및 역할 (무게중심 이동) */}
                   <div className="flex flex-col mb-6 gap-3">
-                    {/* 작고 연해진 모둠/역할 텍스트 */}
-                    <p className="text-xs font-bold text-slate-400 tracking-wide">{s.group}모둠 · {s.role}</p>
+                    <p className="text-xs font-bold text-slate-400 tracking-wide truncate">{s.group}모둠 · {s.role}</p>
                     
-                    {/* 크고 강조된 이름과 뱃지/횟수 */}
-                    <div className="flex justify-between items-end">
-                      <h3 className={`text-3xl font-black flex items-center gap-1.5 tracking-tight ${s.exp >= 20 && s.status !== 'crisis' ? 'text-amber-700 drop-shadow-sm' : 'text-slate-800'}`}>
-                        {s.name} {s.isLeader && <Crown className={`w-5 h-5 mb-2 ${s.status === 'crisis' ? 'text-slate-400 fill-slate-400' : 'text-amber-400 fill-amber-400'}`}/>}
+                    <div className="flex justify-between items-end gap-2">
+                      {/* 이름 텍스트 사이즈를 text-xl로 줄이고 whitespace-nowrap 추가 */}
+                      <h3 className={`text-xl font-black flex items-center gap-1 whitespace-nowrap tracking-tight truncate ${s.exp >= 20 && s.status !== 'crisis' ? 'text-amber-700 drop-shadow-sm' : 'text-slate-800'}`}>
+                        {s.name} {s.isLeader && <Crown className={`w-4 h-4 mb-1 shrink-0 ${s.status === 'crisis' ? 'text-slate-400 fill-slate-400' : 'text-amber-400 fill-amber-400'}`}/>}
                       </h3>
-                      <div className={`text-base font-black px-4 py-2 rounded-2xl border-2 ${s.status === 'crisis' ? 'bg-slate-200 border-slate-300 text-slate-500' : `${s.mastery.bg} ${s.mastery.color}`} text-center leading-tight transition-all shadow-sm`}>
-                        {s.mastery.label} <span className="text-xl ml-1">({s.exp})</span>
+                      <div className={`text-sm shrink-0 font-black px-3 py-1.5 rounded-2xl border-2 ${s.status === 'crisis' ? 'bg-slate-200 border-slate-300 text-slate-500' : `${s.mastery.bg} ${s.mastery.color}`} text-center leading-tight transition-all shadow-sm`}>
+                        {s.mastery.label} <span className="text-base ml-0.5">({s.exp})</span>
                       </div>
                     </div>
                   </div>
@@ -492,7 +484,6 @@ return (
                     </select>
                   </div>
 
-                  {/* 💖 따뜻한 위로 메시지 구역 */}
                   {refTarget && (
                     <div className="bg-gradient-to-r from-pink-50 to-rose-50 border-2 border-pink-200 p-8 rounded-[30px] text-pink-800 animate-in fade-in slide-in-from-top-4 shadow-sm">
                       <h4 className="text-lg font-black mb-4 flex items-center gap-2"><Heart className="w-6 h-6 fill-pink-400"/> 누구나 실수할 수 있어요. 중요한 건 다시 일어서는 용기입니다.</h4>
@@ -527,7 +518,6 @@ return (
         {/* ========================================= */}
         {activeTab === 'helproom' && (
           <div className="bg-white rounded-[50px] shadow-sm border-4 border-indigo-50 flex flex-col lg:flex-row min-h-[800px] animate-in slide-in-from-bottom duration-300 overflow-hidden">
-            {/* 좌측 메뉴바 */}
             <aside className="w-full lg:w-80 bg-indigo-50/50 p-10 border-r-2 border-white flex flex-col gap-5 shrink-0">
               <div className="text-center mb-8">
                 <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border-4 border-indigo-100"><Users className="w-12 h-12 text-indigo-500" /></div>
@@ -538,17 +528,14 @@ return (
               <button onClick={() => setHelpSubTab('shop')} className={`w-full p-6 rounded-3xl font-black text-left flex items-center gap-4 text-lg transition-all ${helpSubTab === 'shop' ? 'bg-amber-400 text-white shadow-xl translate-x-2' : 'bg-white text-amber-500 hover:bg-amber-100 hover:translate-x-1'}`}><ShoppingCart className="w-6 h-6"/> 학급 상점</button>
             </aside>
 
-            {/* 우측 콘텐츠 */}
             <section className="flex-1 p-8 lg:p-12 overflow-y-auto bg-slate-50/30">
               
-              {/* 명예의 기부처 (항상 표시) */}
               <div className="mb-12 bg-gradient-to-r from-yellow-100 to-amber-100 p-8 rounded-[40px] shadow-sm flex flex-col md:flex-row gap-8 items-center border-2 border-yellow-200">
                 <div className="md:w-1/3 text-center md:text-left">
                   <h4 className="text-2xl font-black text-amber-800 mb-2 flex items-center justify-center md:justify-start gap-2"><Coins className="w-8 h-8 text-yellow-500"/> 명예의 기부처</h4>
                   <p className="text-sm font-bold text-amber-700">나의 코인으로 우리 반의 명성을 높이세요!</p>
                 </div>
                 <div className="md:w-2/3 flex gap-4 w-full">
-                  {/* 🚨 위기 고립 적용: activeStudents 만 렌더링 */}
                   <select id="donate_who_main" className="flex-1 p-5 rounded-2xl bg-white border-2 border-white font-black outline-none shadow-sm focus:border-yellow-400 text-lg text-slate-700">
                     <option value="">누가 기부할까요?</option>
                     {activeStudents.map(s => <option key={s.id} value={s.id}>{s.name} (잔여: {s.coins}🪙)</option>)}
@@ -564,7 +551,6 @@ return (
               {helpSubTab === 'inspector' && (
                 <div className="space-y-10 animate-in fade-in">
                   <h3 className="text-3xl font-black text-slate-800 mb-8 flex items-center gap-3 bg-indigo-100 inline-block px-6 py-3 rounded-full border border-indigo-200"><Briefcase className="text-indigo-600 w-8 h-8"/> 감찰사 자치 본부</h3>
-                  
                   <div className="bg-white border-2 border-indigo-50 rounded-[40px] overflow-hidden shadow-sm">
                     <table className="w-full text-left">
                       <thead className="bg-indigo-50/50 text-sm font-black text-indigo-400 uppercase tracking-widest border-b border-indigo-100">
@@ -643,7 +629,7 @@ return (
                     <div className={`px-10 py-5 rounded-full font-black text-xl shadow-lg border-4 ${isShopOpen ? 'bg-green-500 text-white border-green-300 animate-pulse' : 'bg-slate-500 text-white border-slate-400'}`}>{isShopOpen ? "🔓 상점 영업 중" : "🔒 영업 종료 (목요일 개방)"}</div>
                   </div>
 
-                  {/* 장인의 공방 (특산품 기획소) */}
+                  {/* 장인의 공방 */}
                   <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-10 rounded-[40px] border-4 border-amber-200 shadow-sm relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-48 h-48 bg-amber-200 rounded-full blur-[60px] opacity-40"></div>
                     <h4 className="text-3xl font-black text-amber-900 mb-3 relative z-10 flex items-center gap-2"><Gavel className="w-8 h-8"/> 장인의 공방 (특산품 기획소)</h4>
@@ -659,7 +645,7 @@ return (
                     </div>
                   </div>
 
-                  {/* 물품 구매 및 펀딩 */}
+                  {/* 물품 구매 및 펀딩 (수정 4 반영: NaN 오류 완벽 차단) */}
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                     {safeArray(db.shopItems).map(item => (
                       <div key={item.id} className="bg-white p-10 rounded-[40px] shadow-sm border-2 border-slate-100 flex flex-col justify-between hover:border-amber-300 transition-colors">
@@ -671,7 +657,6 @@ return (
                            <h4 className="text-3xl font-black text-slate-800 mb-10">{item.name}</h4>
                          </div>
                          <div className="flex gap-4">
-                           {/* 🚨 위기 상태 고립: activeStudents 적용 */}
                            <select id={`buyer_${item.id}`} className="flex-1 p-5 rounded-2xl bg-slate-50 border border-slate-200 font-bold outline-none text-lg focus:border-amber-400 shadow-sm">
                              <option value="">누가 구매하나요?</option>
                              {activeStudents.map(s => <option key={s.id} value={s.id}>{s.name} (잔여: {s.coins}🪙)</option>)}
@@ -687,7 +672,7 @@ return (
                       </div>
                     ))}
                     
-                    {/* 크라우드 펀딩 카드 */}
+                    {/* 크라우드 펀딩 카드 (수정 4: NaN 오류 차단 f.target||1 적용) */}
                     {safeArray(db.funding).map(f => (
                       <div key={f.id} className="bg-gradient-to-br from-blue-500 to-indigo-600 p-10 rounded-[40px] shadow-xl text-white flex flex-col justify-between relative overflow-hidden border-4 border-blue-400">
                         <div className="absolute -top-10 -right-10 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl"></div>
@@ -696,11 +681,10 @@ return (
                            <p className="text-base font-bold text-blue-100 mb-10">십시일반 투자하여 다 함께 목표를 이뤄요!</p>
                            <div className="flex justify-between items-end text-xl font-black mb-4"><span>현재: {f.current}p</span><span className="text-blue-200">목표: {f.target}p</span></div>
                            <div className="w-full h-6 bg-black/30 rounded-full mb-10 overflow-hidden border border-white/20 shadow-inner">
-                             <div className="h-full bg-yellow-400 transition-all duration-1000 shadow-[0_0_15px_rgba(250,204,21,0.8)]" style={{width:`${(f.current/f.target)*100}%`}}></div>
+                             <div className="h-full bg-yellow-400 transition-all duration-1000 shadow-[0_0_15px_rgba(250,204,21,0.8)]" style={{width:`${(f.current/(f.target||1))*100}%`}}></div>
                            </div>
                         </div>
                         <div className="flex gap-4 relative z-10">
-                           {/* 🚨 위기 상태 고립 */}
                            <select id={`funder_${f.id}`} className="flex-1 p-5 rounded-2xl bg-white/20 border-none text-white font-bold outline-none text-lg backdrop-blur-sm focus:bg-white/30">
                              <option value="" className="text-slate-800">누가 투자할까요?</option>
                              {activeStudents.map(s => <option key={s.id} value={s.id} className="text-slate-800">{s.name} ({s.coins}🪙)</option>)}
@@ -721,12 +705,11 @@ return (
         )}
 
         {/* ========================================= */}
-        {/* 📄 PAGE 4: 통합 관리실 (교사 전용 마스터)      */}
+        {/* 📄 PAGE 4: 통합 관리실 (교사 전용)             */}
         {/* ========================================= */}
         {activeTab === 'admin' && isAuthenticated === 'teacher' && (
           <div className="bg-white rounded-[50px] shadow-sm border border-slate-100 flex flex-col lg:flex-row min-h-[850px] animate-in slide-in-from-right duration-300 overflow-hidden">
              
-             {/* 좌측 관리자 메뉴 */}
              <aside className="w-full lg:w-80 bg-slate-900 p-10 flex flex-col gap-4 shrink-0 border-r border-slate-800">
                 <div className="text-center mb-10">
                   <Lock className="w-16 h-16 text-blue-500 mx-auto mb-4" />
@@ -744,29 +727,31 @@ return (
 
              <section className="flex-1 p-8 lg:p-12 overflow-y-auto bg-slate-50/50">
                 
-                {/* 탭: 결재 및 퀘스트 관리 */}
                 {adminSubTab === 'mission' && (
                   <div className="space-y-10 animate-in fade-in">
                     
-                    {/* 🎮 학급 공동 퀘스트 컨트롤러 */}
+                    {/* 🎮 학급 공동 퀘스트 컨트롤러 (수정 3 반영: 텍스트 입력폼 변경) */}
                     <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-200">
-                      <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-5 mb-8 flex items-center gap-2"><Zap className="text-blue-500 w-8 h-8"/> 학급 공동 퀘스트 컨트롤러</h3>
+                      <h3 className="text-2xl font-black text-slate-800 border-l-8 border-blue-600 pl-4 mb-4 flex items-center gap-2"><Settings className="text-blue-500 w-6 h-6"/> 학급 공동 퀘스트 세팅</h3>
+                      <p className="text-sm font-bold text-slate-500 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100">이곳에서 미션 이름과 보상 점수를 변경하세요. (실제 점수 획득 버튼은 [명성 현황판] 상단에 배치되어 있습니다.)</p>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                        <button onClick={()=>addCoopScore(db.coopQuest.q1 || 50, "다 함께 바른 생활")} className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 p-8 rounded-[30px] font-black border border-indigo-200 flex flex-col items-center justify-center transition-all hover:-translate-y-1 shadow-sm"><span className="text-base mb-2">다 함께 바른 생활</span><span className="text-3xl">+{db.coopQuest.q1 || 50}p</span></button>
-                        <button onClick={()=>addCoopScore(db.coopQuest.q2 || 20, "환대와 응원")} className="bg-pink-50 hover:bg-pink-100 text-pink-700 p-8 rounded-[30px] font-black border border-pink-200 flex flex-col items-center justify-center transition-all hover:-translate-y-1 shadow-sm"><span className="text-base mb-2">환대와 응원</span><span className="text-3xl">+{db.coopQuest.q2 || 20}p</span></button>
-                        <button onClick={()=>addCoopScore(db.coopQuest.q3 || 20, "전담수업 태도 우수")} className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 p-8 rounded-[30px] font-black border border-emerald-200 flex flex-col items-center justify-center transition-all hover:-translate-y-1 shadow-sm"><span className="text-base mb-2">전담수업 우수</span><span className="text-3xl">+{db.coopQuest.q3 || 20}p</span></button>
-                        
-                        {/* 🌟 사이좋은 일주일 관리 */}
-                        <div className="bg-yellow-50 p-8 rounded-[30px] border border-yellow-200 flex flex-col items-center justify-center relative shadow-sm">
-                          <span className="text-base font-black text-yellow-800 mb-4">사이좋은 일주일 (+{db.coopQuest.q4||100}p)</span>
-                          <div className="flex items-center gap-4">
-                            <button onClick={()=>adjustGoodWeek(-1)} className="bg-white p-3 rounded-full text-red-500 shadow-md border border-red-100 hover:bg-red-50 active:scale-90 transition-transform"><Minus className="w-5 h-5"/></button>
-                            <span className="text-3xl font-black text-yellow-600 w-16 text-center">{db.coopQuest.goodWeek || 0} / 5</span>
-                            <button onClick={()=>adjustGoodWeek(1)} className="bg-white p-3 rounded-full text-green-500 shadow-md border border-green-100 hover:bg-green-50 active:scale-90 transition-transform"><Plus className="w-5 h-5"/></button>
-                          </div>
-                          {(db.coopQuest.goodWeek || 0) >= 5 && <button onClick={completeGoodWeek} className="absolute inset-0 bg-yellow-400 text-white font-black rounded-[30px] z-10 flex items-center justify-center text-xl animate-pulse shadow-lg hover:bg-yellow-500">최종 승인 및 +{db.coopQuest.q4||100}점</button>}
-                        </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                         <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 flex gap-3 shadow-sm">
+                           <input type="text" value={db.coopQuest.q1Name || "다 함께 바른 생활"} onChange={e=>sync({coopQuest: {...db.coopQuest, q1Name: e.target.value}})} className="flex-1 p-3 rounded-xl text-sm font-bold border-none outline-none shadow-sm"/>
+                           <input type="number" value={db.coopQuest.q1 || 50} onChange={e=>sync({coopQuest: {...db.coopQuest, q1: parseInt(e.target.value)}})} className="w-20 p-3 rounded-xl text-base font-black text-indigo-600 border-none outline-none text-center shadow-sm"/>
+                         </div>
+                         <div className="bg-pink-50 p-4 rounded-2xl border border-pink-100 flex gap-3 shadow-sm">
+                           <input type="text" value={db.coopQuest.q2Name || "환대와 응원"} onChange={e=>sync({coopQuest: {...db.coopQuest, q2Name: e.target.value}})} className="flex-1 p-3 rounded-xl text-sm font-bold border-none outline-none shadow-sm"/>
+                           <input type="number" value={db.coopQuest.q2 || 20} onChange={e=>sync({coopQuest: {...db.coopQuest, q2: parseInt(e.target.value)}})} className="w-20 p-3 rounded-xl text-base font-black text-pink-600 border-none outline-none text-center shadow-sm"/>
+                         </div>
+                         <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 flex gap-3 shadow-sm">
+                           <input type="text" value={db.coopQuest.q3Name || "전담수업 태도 우수"} onChange={e=>sync({coopQuest: {...db.coopQuest, q3Name: e.target.value}})} className="flex-1 p-3 rounded-xl text-sm font-bold border-none outline-none shadow-sm"/>
+                           <input type="number" value={db.coopQuest.q3 || 20} onChange={e=>sync({coopQuest: {...db.coopQuest, q3: parseInt(e.target.value)}})} className="w-20 p-3 rounded-xl text-base font-black text-emerald-600 border-none outline-none text-center shadow-sm"/>
+                         </div>
+                         <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-100 flex gap-3 shadow-sm">
+                           <input type="text" value={db.coopQuest.q4Name || "사이좋은 일주일"} onChange={e=>sync({coopQuest: {...db.coopQuest, q4Name: e.target.value}})} className="flex-1 p-3 rounded-xl text-sm font-bold border-none outline-none shadow-sm"/>
+                           <input type="number" value={db.coopQuest.q4 || 100} onChange={e=>sync({coopQuest: {...db.coopQuest, q4: parseInt(e.target.value)}})} className="w-20 p-3 rounded-xl text-base font-black text-yellow-600 border-none outline-none text-center shadow-sm"/>
+                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 border-t-2 border-slate-100 pt-8">
@@ -844,7 +829,7 @@ return (
                          
                          {/* 온기 우체통 서류 */}
                          {safeArray(db.pendingPraises).map(p => {
-                           const isCrisis = allStats.find(u => u.id == p.toId)?.status === 'crisis'; // 🚨 수신자 위기 상태 체크
+                           const isCrisis = allStats.find(u => u.id == p.toId)?.status === 'crisis';
                            return (
                            <div key={p.id} className="bg-pink-50 p-6 rounded-[24px] border-2 border-pink-200 text-left shadow-sm">
                              <div className="flex justify-between items-center mb-4 border-b border-pink-200/50 pb-3">
@@ -857,7 +842,7 @@ return (
                              <p className="text-base text-slate-700 font-bold mb-6 bg-white p-4 rounded-2xl border border-pink-100 shadow-inner">"{p.text}"</p>
                              <div className="flex gap-3">
                                <button onClick={() => { 
-                                 if (isCrisis) return alert("현재 위기 상태인 학생에게는 온기 코인을 지급할 수 없습니다. 성찰과 회복이 먼저입니다."); // 🚨 위기 시 결재 원천 차단
+                                 if (isCrisis) return alert("현재 위기 상태인 학생에게는 온기 코인을 지급할 수 없습니다. 성찰과 회복이 먼저입니다.");
                                  const next = db.pendingPraises.filter(pr => pr.id !== p.id); 
                                  const app = [p, ...safeArray(db.approvedPraises)].slice(0,20); 
                                  
@@ -870,7 +855,6 @@ return (
                                    updates.allTime = { ...db.allTime, exp: { ...db.allTime.exp, [p.toId]: (db.allTime.exp?.[p.toId]||0) + 1 } };
                                  }
                                  
-                                 // 주간 릴레이 연동
                                  if (db.weeklyRelay?.isActive && !db.weeklyRelay?.completed) {
                                     updates.weeklyRelay = { ...db.weeklyRelay, current: db.weeklyRelay.current + 1 };
                                     if (updates.weeklyRelay.current >= updates.weeklyRelay.target) updates.weeklyRelay.completed = true;
@@ -890,7 +874,6 @@ return (
                   </div>
                 )}
 
-                {/* 탭: SEL 리포트 (에니어그램 및 롤링페이퍼 포함) */}
                 {adminSubTab === 'report' && (
                   <div className="space-y-8 animate-in fade-in">
                     <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-6 mb-8">🌱 학생별 SEL 마음성장 리포트</h3>
@@ -919,7 +902,6 @@ return (
                                 <div className="text-right text-sm font-black text-slate-500 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-100">누적 위기 <span className="text-red-500">{s.atPen}회</span> | 기부 <span className="text-amber-500">{s.atDonate}🪙</span></div>
                               </div>
                               
-                              {/* 🧠 에니어그램 AI 힌트 구역 */}
                               {s.enneagram && ENNEAGRAM_DATA[s.enneagram] && (
                                 <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-200 mb-10 shadow-sm relative overflow-hidden">
                                   <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-100 rounded-full blur-2xl opacity-50"></div>
@@ -947,7 +929,6 @@ return (
                   </div>
                 )}
 
-                {/* 탭: 학생 명단 및 에니어그램 관리 */}
                 {adminSubTab === 'students' && (
                   <div className="space-y-8 animate-in fade-in">
                     <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-6 mb-8">👥 학생 명단 및 에니어그램 관리</h3>
@@ -978,13 +959,11 @@ return (
                   </div>
                 )}
 
-                {/* 탭: 환경 및 보안 세팅 */}
                 {adminSubTab === 'settings' && (
                   <div className="space-y-8 animate-in fade-in">
                     <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-6 mb-8">환경 및 보안 통제소</h3>
                     <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 space-y-10">
                        
-                       {/* 🔒 비밀번호 변경 구역 (힌트 삭제 완벽 적용) */}
                        <div className="bg-slate-50 p-10 rounded-[30px] border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-10">
                           <div>
                             <h4 className="font-black text-slate-700 mb-4 flex items-center gap-2 text-lg"><Lock className="w-6 h-6"/> 관리실 (선생님) 비밀번호 변경</h4>
@@ -1017,7 +996,6 @@ return (
                           </div>
                        </div>
                        
-                       {/* 만능 점수 밸런스 */}
                        <div className="pt-8 border-t-2 border-slate-100 bg-indigo-50/50 p-10 rounded-[40px] border border-indigo-100">
                           <h4 className="font-black text-2xl text-indigo-900 mb-6 flex items-center gap-3"><Settings className="w-6 h-6"/> 만능 점수 밸런스 및 수동 세팅</h4>
                           
@@ -1032,19 +1010,11 @@ return (
                             <div className="bg-white p-5 rounded-2xl shadow-sm"><label className="block text-sm font-black text-pink-500 mb-3">테마 일치 보너스(🪙)</label><input type="number" value={db.settings.pointConfig?.praiseBonus||15} onChange={e=>sync({settings: {...db.settings, pointConfig: {...db.settings.pointConfig, praiseBonus: parseInt(e.target.value)}}})} className="w-full p-4 rounded-xl border border-pink-200 font-black text-pink-600 text-lg outline-none"/></div>
                             <div className="bg-white p-5 rounded-2xl shadow-sm"><label className="block text-sm font-black text-red-500 mb-3">위기 지정 차감(p)</label><input type="number" value={db.settings.pointConfig?.penalty||20} onChange={e=>sync({settings: {...db.settings, pointConfig: {...db.settings.pointConfig, penalty: parseInt(e.target.value)}}})} className="w-full p-4 rounded-xl border border-red-200 font-black text-red-600 text-lg outline-none"/></div>
                           </div>
-                          
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 pt-6 border-t border-indigo-200/50">
-                            <div className="bg-indigo-100 p-5 rounded-2xl"><label className="block text-xs font-black text-indigo-800 mb-2">바른생활 점수</label><input type="number" value={db.coopQuest?.q1||50} onChange={e=>sync({coopQuest: {...db.coopQuest, q1: parseInt(e.target.value)}})} className="w-full p-3 rounded-xl border-none font-black text-center"/></div>
-                            <div className="bg-indigo-100 p-5 rounded-2xl"><label className="block text-xs font-black text-indigo-800 mb-2">환대응원 점수</label><input type="number" value={db.coopQuest?.q2||20} onChange={e=>sync({coopQuest: {...db.coopQuest, q2: parseInt(e.target.value)}})} className="w-full p-3 rounded-xl border-none font-black text-center"/></div>
-                            <div className="bg-indigo-100 p-5 rounded-2xl"><label className="block text-xs font-black text-indigo-800 mb-2">전담수업 점수</label><input type="number" value={db.coopQuest?.q3||20} onChange={e=>sync({coopQuest: {...db.coopQuest, q3: parseInt(e.target.value)}})} className="w-full p-3 rounded-xl border-none font-black text-center"/></div>
-                            <div className="bg-yellow-100 p-5 rounded-2xl"><label className="block text-xs font-black text-yellow-800 mb-2">일주일완성 점수</label><input type="number" value={db.coopQuest?.q4||100} onChange={e=>sync({coopQuest: {...db.coopQuest, q4: parseInt(e.target.value)}})} className="w-full p-3 rounded-xl border-none font-black text-center text-yellow-700"/></div>
-                          </div>
                        </div>
                     </div>
                   </div>
                 )}
 
-                {/* 탭: 초기화/마감 */}
                 {adminSubTab === 'reset' && (
                   <div className="animate-in fade-in space-y-8">
                      <h3 className="text-3xl font-black text-slate-800 border-l-8 border-red-500 pl-6 mb-8">데이터 초기화 및 1학기 마감</h3>
@@ -1080,7 +1050,6 @@ return (
               <select value={praiseTarget} onChange={(e)=>setPraiseTarget(e.target.value)} className="w-full p-6 rounded-3xl bg-slate-50 border-2 border-slate-200 font-black text-xl outline-none focus:border-pink-400 focus:bg-white shadow-sm">
                 <option value="">누구를 칭찬할까요?</option>
                 <option value="me" className="text-pink-600">🙋 나 자신 (스스로 대견할 때!)</option>
-                {/* 🚨 위기 상태 고립 완벽 적용 (명단에서 제외됨) */}
                 {activeStudents.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
               <select value={praiseTag} onChange={(e)=>setPraiseTag(e.target.value)} className="w-full p-6 rounded-3xl bg-slate-50 border-2 border-slate-200 font-black text-xl outline-none focus:border-pink-400 focus:bg-white shadow-sm">
@@ -1105,7 +1074,6 @@ return (
           <div className="bg-white rounded-[60px] p-16 w-full max-w-xl text-center shadow-2xl animate-in zoom-in-95 border-4 border-blue-100">
             <Lock className="w-20 h-20 text-blue-500 mx-auto mb-8" />
             <h3 className="text-4xl font-black text-center mb-10 text-blue-900">비밀번호를 입력하세요</h3>
-            {/* 🚨 하드코딩 힌트 완전 삭제 */}
             <input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key === 'Enter' && handleLogin()} className="w-full text-center text-7xl tracking-[20px] font-black p-8 border-4 border-slate-100 rounded-[40px] outline-none mb-12 bg-slate-50 focus:border-blue-400 focus:bg-white shadow-inner" autoFocus />
             <div className="flex gap-4">
               <button onClick={()=>setShowModal(null)} className="flex-1 py-6 rounded-[30px] font-black text-slate-500 text-2xl bg-slate-100 hover:bg-slate-200 transition-colors">취소</button>
