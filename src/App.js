@@ -134,7 +134,7 @@ export default function App() {
     },
     gachaConfig: { mode: 'normal', cost: 30, t1: {name:'😭 꽝!', prob:50, reward:0}, t2: {name:'🪙 페이백!', prob:30, reward:30}, t3: {name:'🍬 소소한 간식', prob:15, reward:50}, t4: {name:'🎰 잭팟!!', prob:5, reward:200} },
     coopQuest: { q1Name: "다 함께 바른 생활", q1: 50, q2Name: "환대와 응원", q2: 20, q3Name: "전담수업 태도 우수", q3: 20, q4Name: "사이좋은 일주일", q4: 100, goodWeek: 0 },
-    // 🚨 주간 릴레이 데이터 완벽 삭제 완료
+    // 🚨 주간 릴레이 완전 삭제
     timeAttack: { isActive: false, title: "바닥 쓰레기 0개 만들기!", rewardRep: 100, endTime: null, cleared: [] },
     shopItems: [], blackMarketItems: [], pendingShopItems: [], roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, 
     pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [], funding: [], manualRepOffset: 0, shieldPoints: 0, 
@@ -145,7 +145,7 @@ export default function App() {
   useEffect(() => {
     const fetchLive = async () => {
       try { 
-        const res = await fetch(`${DATABASE_URL}v77Data.json`); 
+        const res = await fetch(`${DATABASE_URL}v78Data.json`); 
         const data = await res.json(); 
         if (data) setDb(prev => ({...prev, ...data, settings: {...prev.settings, ...(data.settings||{})}, allTime: {...prev.allTime, ...(data.allTime||{})}, coopQuest: {...prev.coopQuest, ...(data.coopQuest||{})}, timeAttack: {...prev.timeAttack, ...(data.timeAttack||{})}})); 
       } catch (e) {}
@@ -168,7 +168,7 @@ export default function App() {
 
   const sync = async (updates) => {
     const nextDb = { ...db, ...updates }; setDb(nextDb);
-    try { await fetch(`${DATABASE_URL}v77Data.json`, { method: 'PATCH', body: JSON.stringify(updates) }); } catch (e) {}
+    try { await fetch(`${DATABASE_URL}v78Data.json`, { method: 'PATCH', body: JSON.stringify(updates) }); } catch (e) {}
   };
 
   // --- 데이터 정제 및 연산 로직 ---
@@ -185,7 +185,7 @@ export default function App() {
     });
   }, [safeStudents, db.roleExp, db.bonusCoins, db.usedCoins, db.studentStatus, db.allTime]);
 
-  const activeStudents = useMemo(() => allStats.filter(s => s.status !== 'crisis'), [allStats]); // 위기 고립용 명단
+  const activeStudents = useMemo(() => allStats.filter(s => s.status !== 'crisis'), [allStats]); // 위기 고립 명단
 
   const sortedDashboardStats = useMemo(() => {
     if (db.settings.showCumulativeStats) return [...allStats].sort((a, b) => a.id - b.id);
@@ -224,12 +224,11 @@ export default function App() {
   const adjustGoodWeek = (delta) => { const next = Math.max(0, Math.min(5, (db.coopQuest.goodWeek || 0) + delta)); sync({ coopQuest: { ...db.coopQuest, goodWeek: next } }); if(delta > 0) playSound('good'); };
   const completeGoodWeek = () => { playSound('jackpot'); sync({ coopQuest: { ...db.coopQuest, goodWeek: 0 }, manualRepOffset: (db.manualRepOffset || 0) + (db.coopQuest.q4 || 100) }); alert(`🌟 사이 좋은 일주일 완성! +${db.coopQuest.q4 || 100}점!`); };
 
-  // 타임어택 (클리어 토글 기능 추가)
+  // 타임어택 (발동 및 클리어 토글)
   const handleStartTimeAttack = () => { if(window.confirm("타임어택을 시작합니까?")) sync({ timeAttack: { isActive: true, title: taTitle, rewardRep: taReward, endTime: Date.now() + (taMins * 60 * 1000), cleared: [] } }); };
   const handleCompleteTimeAttack = () => { playSound('jackpot'); sync({ manualRepOffset: (db.manualRepOffset || 0) + (db.timeAttack.rewardRep || 0), timeAttack: { isActive: false, title: "", rewardRep: 0, endTime: null, cleared: [] } }); alert("🎉 타임어택 성공! 보상 지급 완료!"); };
   const handleFailTimeAttack = () => { sync({ timeAttack: { isActive: false, title: "", rewardRep: 0, endTime: null, cleared: [] } }); alert("타임어택 종료 (실패)"); };
   
-  // 개별 학생 타임어택 클리어 토글
   const toggleTimeAttackClear = (id) => {
     if (!db.timeAttack?.isActive) return;
     const clearedArray = safeArray(db.timeAttack.cleared);
@@ -256,7 +255,7 @@ export default function App() {
   const closeSemester = () => { if(window.prompt("마감하시겠습니까? '마감'을 입력하세요.") === "마감") { sync({ roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], donations: [] }); alert("학기 마감 완료! 🌱"); } };
   const factoryReset = () => { if(window.prompt("공장초기화하시겠습니까? '초기화'를 입력하세요") === "초기화") { sync({ roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [], pendingShopItems: [], funding: [], manualRepOffset: 0, shieldPoints: 0, allTime: { exp: {}, penalty: {}, donate: {}, fund: {} }, timeAttack: { isActive: false, title: "", rewardRep: 100, endTime: null, cleared: [] } }); alert("전체 리셋 완료."); } };
 
-  // 진화 애니메이션 렌더링 헬퍼
+  // 진화 애니메이션 렌더링
   const renderEvolution = (level) => {
     switch(level) {
       case 0: return <div className="flex items-center gap-2 text-emerald-400 animate-pulse"><Leaf className="w-8 h-8"/> <Sparkles className="w-5 h-5 text-yellow-300"/></div>;
@@ -318,7 +317,7 @@ return (
         {activeTab === 'dashboard' && (
           <div className="space-y-12 animate-in fade-in duration-500">
             
-            {/* 🚨 상단 2분할: 학급 공동 퀘스트 / 타임어택 (수정 완료) */}
+            {/* 🚨 상단 2분할: 학급 공동 퀘스트 / 타임어택 (수정 4: 주간 릴레이 삭제 완료) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               
               {/* 1. 학급 공동 퀘스트 (버튼 탑재) */}
@@ -374,7 +373,7 @@ return (
               </div>
             </div>
 
-            {/* 테마 & 펀딩 (NaN 오류 방지 완료) */}
+            {/* 테마 & 펀딩 */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="bg-white p-10 rounded-[50px] shadow-sm border-2 border-emerald-100 flex flex-col justify-center relative overflow-hidden">
                 <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-50 rounded-full blur-3xl"></div>
@@ -387,9 +386,10 @@ return (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-2">
                   {safeArray(db.funding).map(f => (
                     <div key={f.id} className="space-y-3">
-                      <div className="flex justify-between items-end font-black text-base text-slate-700"><span>{f.name}</span><span className="text-amber-500 text-xl">{Math.floor((f.current/(f.target||1))*100)}%</span></div>
+                      {/* 수정 1 적용 (NaN 완벽 차단 f.target||1) */}
+                      <div className="flex justify-between items-end font-black text-base text-slate-700"><span>{f.name}</span><span className="text-amber-500 text-xl">{Math.floor(((f.current||0)/(f.target||1))*100)}%</span></div>
                       <div className="w-full h-5 bg-slate-100 rounded-full overflow-hidden border border-slate-200 shadow-inner">
-                        <div className="h-full bg-gradient-to-r from-yellow-300 to-amber-500 transition-all duration-1000" style={{width:`${Math.min((f.current/(f.target||1))*100,100)}%`}}></div>
+                        <div className="h-full bg-gradient-to-r from-yellow-300 to-amber-500 transition-all duration-1000" style={{width:`${Math.min(((f.current||0)/(f.target||1))*100,100)}%`}}></div>
                       </div>
                       <p className="text-sm font-bold text-slate-400 text-right">{f.current} / {f.target} 🪙</p>
                     </div>
@@ -409,14 +409,14 @@ return (
               </button>
             </div>
             
-            {/* 개인 카드 영역 (수정 2: 이름 한줄 처리 / 타임어택 클리어 버튼 적용) */}
+            {/* 개인 카드 영역 (수정 3: 타임어택 클리어 토글 적용) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {sortedDashboardStats.map(s => {
                 const isTaCleared = safeArray(db.timeAttack?.cleared).includes(s.id);
                 return (
                 <div key={s.id} className={`p-6 rounded-[35px] border-4 shadow-sm transition-all relative flex flex-col bg-white hover:shadow-xl ${s.status === 'crisis' ? 'border-slate-300 bg-slate-100 opacity-60 grayscale' : (s.status === 'pending' ? 'border-orange-300 bg-orange-50' : 'border-white hover:border-amber-300')}`}>
                   
-                  {/* 타임어택 발동 시: 개인별 클리어 토글 버튼 */}
+                  {/* 타임어택 발동 시: 개인별 클리어 토글 버튼 (우측 상단) */}
                   {db.timeAttack?.isActive && s.status !== 'crisis' && (
                     <div className="absolute -top-4 -right-4 z-20">
                       <button onClick={() => toggleTimeAttackClear(s.id)} className={`flex items-center gap-1 px-3 py-1.5 rounded-full font-black text-xs shadow-md border-2 transition-all ${isTaCleared ? 'bg-green-500 text-white border-green-600 scale-110' : 'bg-white text-slate-400 border-slate-200 hover:border-red-300 hover:text-red-500'}`}>
@@ -439,7 +439,6 @@ return (
                     <p className="text-xs font-bold text-slate-400 tracking-wide truncate">{s.group}모둠 · {s.role}</p>
                     
                     <div className="flex justify-between items-end gap-2">
-                      {/* 이름 text-xl 축소 및 whitespace-nowrap */}
                       <h3 className={`text-xl font-black flex items-center gap-1 whitespace-nowrap tracking-tight truncate ${s.exp >= 20 && s.status !== 'crisis' ? 'text-amber-700 drop-shadow-sm' : 'text-slate-800'}`}>
                         {s.name} {s.isLeader && <Crown className={`w-4 h-4 mb-1 shrink-0 ${s.status === 'crisis' ? 'text-slate-400 fill-slate-400' : 'text-amber-400 fill-amber-400'}`}/>}
                       </h3>
@@ -648,7 +647,7 @@ return (
                     </div>
                   </div>
 
-                  {/* 물품 구매 및 펀딩 (수정 1: NaN 오류 완벽 차단) */}
+                  {/* 물품 구매 및 펀딩 (수정 1 반영: NaN 오류 완벽 차단) */}
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                     {safeArray(db.shopItems).map(item => (
                       <div key={item.id} className="bg-white p-10 rounded-[40px] shadow-sm border-2 border-slate-100 flex flex-col justify-between hover:border-amber-300 transition-colors">
@@ -758,7 +757,7 @@ return (
                       </div>
 
                       <div className="border-t-2 border-slate-100 pt-8">
-                         {/* 타임어택 세팅 (수정 2: 모바일 버튼 안보임 방지 완료) */}
+                         {/* 타임어택 세팅 (수정 2 반영: 모바일에서 버튼 분리되어 완벽히 표시됨) */}
                          <div className="bg-red-50 p-8 rounded-[30px] border-2 border-red-200">
                            <h4 className="text-xl font-black text-red-800 mb-6 flex items-center gap-2"><Timer className="w-6 h-6"/> 타임어택 발동기</h4>
                            {db.timeAttack?.isActive ? (
@@ -835,7 +834,7 @@ return (
                                    updates.bonusCoins = { ...db.bonusCoins, [p.toId]: (db.bonusCoins?.[p.toId] || 0) + earnedCoins };
                                    updates.allTime = { ...db.allTime, exp: { ...db.allTime.exp, [p.toId]: (db.allTime.exp?.[p.toId]||0) + 1 } };
                                  }
-                                 
+
                                  sync(updates); 
                                  alert(`온기 승인 완료! (+${earnedCoins}🪙)`); playSound('good'); 
                                }} className={`flex-1 py-4 rounded-xl font-black text-base shadow-md transition-all ${isCrisis ? 'bg-slate-300 text-slate-500 cursor-not-allowed border border-slate-400' : 'bg-pink-500 text-white hover:bg-pink-600 active:scale-95'}`}>온기 사연 승인</button>
@@ -991,6 +990,7 @@ return (
                   </div>
                 )}
 
+                {/* 탭: 초기화/마감 */}
                 {adminSubTab === 'reset' && (
                   <div className="animate-in fade-in space-y-8">
                      <h3 className="text-3xl font-black text-slate-800 border-l-8 border-red-500 pl-6 mb-8">데이터 초기화 및 1학기 마감</h3>
