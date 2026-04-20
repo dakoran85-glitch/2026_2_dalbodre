@@ -681,7 +681,7 @@ return (
                            <p className="text-base font-bold text-blue-100 mb-10">십시일반 투자하여 다 함께 목표를 이뤄요!</p>
                            <div className="flex justify-between items-end text-xl font-black mb-4"><span>현재: {f.current}p</span><span className="text-blue-200">목표: {f.target}p</span></div>
                            <div className="w-full h-6 bg-black/30 rounded-full mb-10 overflow-hidden border border-white/20 shadow-inner">
-                             <div className="h-full bg-yellow-400 transition-all duration-1000 shadow-[0_0_15px_rgba(250,204,21,0.8)]" style={{width:`${(f.current/(f.target||1))*100}%`}}></div>
+                             <div className="h-full bg-yellow-400 transition-all duration-1000 shadow-[0_0_15px_rgba(250,204,21,0.8)]" style={{width:`${Math.min(((f.current||0)/(f.target||1))*100, 100)}%`}}></div>
                            </div>
                         </div>
                         <div className="flex gap-4 relative z-10">
@@ -769,13 +769,13 @@ return (
                                </div>
                              </div>
                            ) : (
-                             <div className="space-y-4">
-                               <input type="text" placeholder="미션 내용 (예: 바닥 쓰레기 0개)" value={taTitle} onChange={e=>setTaTitle(e.target.value)} className="w-full p-4 rounded-2xl border border-red-200 font-bold text-base outline-none focus:border-red-400 shadow-sm"/>
-                               <div className="flex gap-3">
-                                 <input type="number" placeholder="분" value={taMins} onChange={e=>setTaMins(e.target.value)} className="w-24 p-4 rounded-2xl border border-red-200 font-bold text-base text-center outline-none shadow-sm"/>
-                                 <input type="number" placeholder="성공 보상 명성" value={taReward} onChange={e=>setTaReward(e.target.value)} className="flex-1 p-4 rounded-2xl border border-red-200 font-bold text-base outline-none shadow-sm"/>
-                                 <button onClick={handleStartTimeAttack} className="bg-red-500 text-white px-8 rounded-2xl font-black hover:bg-red-600 shadow-md text-lg active:scale-95 transition-transform">시작</button>
+                             <div className="flex flex-col sm:flex-row gap-3">
+                               <div className="flex gap-2 flex-1">
+                                 <input type="number" placeholder="시간(분)" value={taMins} onChange={e=>setTaMins(e.target.value)} className="w-1/3 p-4 rounded-2xl border border-red-300 font-black text-base text-center outline-none shadow-sm focus:border-red-500" title="제한시간(분)"/>
+                                 <input type="number" placeholder="보상 점수" value={taReward} onChange={e=>setTaReward(e.target.value)} className="w-2/3 p-4 rounded-2xl border border-red-300 font-black text-base outline-none shadow-sm focus:border-red-500" title="성공 시 보상 점수"/>
                                </div>
+                               <button onClick={handleStartTimeAttack} className="bg-red-600 text-white px-8 py-4 rounded-2xl font-black hover:bg-red-700 shadow-lg text-lg active:scale-95 transition-transform whitespace-nowrap">🚀 발동하기</button>
+                             </div>
                              </div>
                            )}
                          </div>
