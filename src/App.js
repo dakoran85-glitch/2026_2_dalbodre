@@ -5,7 +5,7 @@ import {
   Plus, Minus, AlertTriangle, Sparkles, Star, Target, Settings, 
   Trash2, ShoppingCart, CheckCircle2, BookOpen, UserCheck, Briefcase, 
   Zap, Crown, Gift, Coins, BarChart3, MessageSquare, Send, Gavel, 
-  Leaf, TreeDeciduous, Bird, Flame, Shield, Printer, Timer
+  Leaf, TreeDeciduous, Bird, Flame, Shield, Printer, Timer, Store
 } from 'lucide-react';
 
 // ==========================================
@@ -99,7 +99,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [helpSubTab, setHelpSubTab] = useState('inspector');
-  const [adminSubTab, setAdminSubTab] = useState('mission');
+  const [adminSubTab, setAdminSubTab] = useState('mission'); // 결재, 상점관리, 퀘스트 등 분리
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [showModal, setShowModal] = useState(null);
@@ -108,7 +108,7 @@ export default function App() {
   const [showPraiseModal, setShowPraiseModal] = useState(false); 
   const [praiseTarget, setPraiseTarget] = useState(""); const [praiseTag, setPraiseTag] = useState(""); const [praiseText, setPraiseText] = useState("");
   const [refTarget, setRefTarget] = useState(""); const [refTag, setRefTag] = useState(""); const [refText, setRefText] = useState("");
-  const [newRole, setNewRole] = useState(""); const [newItemName, setNewItemName] = useState(""); const [newItemPrice, setNewItemPrice] = useState(""); const [newItemType, setNewItemType] = useState("shop");
+  const [newItemName, setNewItemName] = useState(""); const [newItemPrice, setNewItemPrice] = useState(""); 
   const [artisanTarget, setArtisanTarget] = useState(""); const [artisanItemName, setArtisanItemName] = useState(""); const [artisanItemPrice, setArtisanItemPrice] = useState("");
   const [selectedReportStudent, setSelectedReportStudent] = useState("");
   
@@ -134,9 +134,9 @@ export default function App() {
     },
     coopQuest: { q1Name: "다 함께 바른 생활", q1: 50, q2Name: "환대와 응원", q2: 20, q3Name: "전담수업 태도 우수", q3: 20, q4Name: "사이좋은 일주일", q4: 100, goodWeek: 0 },
     timeAttack: { isActive: false, title: "바닥 쓰레기 0개 만들기!", rewardRep: 100, endTime: null, cleared: [] },
-    shopItems: [], blackMarketItems: [], pendingShopItems: [], roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, 
-    pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [], funding: [], manualRepOffset: 0, shieldPoints: 0, 
-    allTime: { exp: {}, penalty: {}, donate: {}, fund: {} }, activeMission: { isActive: false, participants: [] }
+    shopItems: [], pendingShopItems: [], funding: [], roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, 
+    pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [], manualRepOffset: 0, shieldPoints: 0, 
+    allTime: { exp: {}, penalty: {}, donate: {}, fund: {} }
   });
 
   // --- 실시간 DB 동기화 및 타임어택 타이머 ---
@@ -196,22 +196,22 @@ export default function App() {
   const { classReputation, shieldPoints, evolutionLevel, progressPercent } = useMemo(() => {
     const raw = allStats.reduce((sum, s) => sum + (s.exp * 10) + (db.bonusCoins?.[s.id] || 0) - ((db.penaltyCount[s.id] || 0) * (db.settings.pointConfig?.penalty || 20)), 0) + safeArray(db.donations).reduce((sum, d) => sum + d.amount, 0) + (db.manualRepOffset || 0);
     let r = Math.max(0, raw); let s = db.shieldPoints || 0;
-    if (raw > db.settings.targetScore) { r = db.settings.targetScore; s = raw - db.settings.targetScore; }
+    if (raw > (db.settings?.targetScore || 5000)) { r = db.settings.targetScore || 5000; s = raw - (db.settings?.targetScore || 5000); }
     
-    const target = db.settings.targetScore || 5000;
-    const levelStep = Math.max(1, target / 5); // 1단계당 필요한 점수 (예: 1000점)
+    const target = db.settings?.targetScore || 5000;
+    const levelStep = Math.max(1, target / 5); // 1단계당 필요한 점수
     const cLevel = Math.min(Math.floor(r / levelStep), 5);
     
     // 현재 단계에서의 진행률 (0~100%)
     const pPercent = cLevel >= 5 ? 100 : ((r % levelStep) / levelStep) * 100;
     
     return { classReputation: r, shieldPoints: s, evolutionLevel: cLevel, progressPercent: pPercent };
-  }, [allStats, db.penaltyCount, db.bonusCoins, db.donations, db.settings.targetScore, db.manualRepOffset, db.settings.pointConfig, db.shieldPoints]);
+  }, [allStats, db.penaltyCount, db.bonusCoins, db.donations, db.settings, db.manualRepOffset, db.shieldPoints]);
 
   const topExp = useMemo(() => [...allStats].sort((a,b) => b.atExp - a.atExp).filter(s => s.atExp > 0).slice(0,5), [allStats]);
   const topDonate = useMemo(() => [...allStats].sort((a,b) => b.atDonate - a.atDonate).filter(s => s.atDonate > 0).slice(0,5), [allStats]);
   const topFund = useMemo(() => [...allStats].sort((a,b) => b.atFund - a.atFund).filter(s => s.atFund > 0).slice(0,5), [allStats]);
-  const isShopOpen = useMemo(() => db.settings.forceShopOpen || new Date().getDay() === 4, [db.settings.forceShopOpen]);
+  const isShopOpen = useMemo(() => db.settings?.forceShopOpen || new Date().getDay() === 4, [db.settings]);
 
   const selectedRefStudentPraises = useMemo(() => {
     if (!refTarget) return []; return safeArray(db.approvedPraises).filter(p => p.toId == refTarget);
@@ -226,16 +226,16 @@ export default function App() {
   const handleFund = (fId, sId, amount) => { const u = allStats.find(s => s.id == sId); if (!u || u.coins < amount) return alert("코인 부족!"); playSound('buy'); sync({ usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + amount }, funding: safeArray(db.funding).map(f => f.id === fId ? { ...f, current: (Number(f.current)||0) + amount } : f), allTime: { ...db.allTime, fund: { ...db.allTime.fund, [sId]: (db.allTime.fund?.[sId] || 0) + amount } } }); alert("투자 완료!"); };
   
   const addCoopScore = (points, title) => { playSound('jackpot'); sync({ manualRepOffset: (db.manualRepOffset || 0) + points }); alert(`🎉 [${title}] 달성! 평판 점수 +${points}점 획득!`); };
-  const adjustGoodWeek = (delta) => { const next = Math.max(0, Math.min(5, (db.coopQuest.goodWeek || 0) + delta)); sync({ coopQuest: { ...db.coopQuest, goodWeek: next } }); if(delta > 0) playSound('good'); };
-  const completeGoodWeek = () => { playSound('jackpot'); sync({ coopQuest: { ...db.coopQuest, goodWeek: 0 }, manualRepOffset: (db.manualRepOffset || 0) + (db.coopQuest.q4 || 100) }); alert(`🌟 사이 좋은 일주일 완성! +${db.coopQuest.q4 || 100}점!`); };
+  const adjustGoodWeek = (delta) => { const next = Math.max(0, Math.min(5, (db.coopQuest?.goodWeek || 0) + delta)); sync({ coopQuest: { ...db.coopQuest, goodWeek: next } }); if(delta > 0) playSound('good'); };
+  const completeGoodWeek = () => { playSound('jackpot'); sync({ coopQuest: { ...db.coopQuest, goodWeek: 0 }, manualRepOffset: (db.manualRepOffset || 0) + (db.coopQuest?.q4 || 100) }); alert(`🌟 사이 좋은 일주일 완성! +${db.coopQuest?.q4 || 100}점!`); };
 
   const handleStartTimeAttack = () => { if(window.confirm("타임어택을 시작합니까?")) sync({ timeAttack: { isActive: true, title: taTitle, rewardRep: parseInt(taReward)||100, endTime: Date.now() + (parseInt(taMins)||10) * 60 * 1000, cleared: [] } }); };
-  const handleCompleteTimeAttack = () => { playSound('jackpot'); sync({ manualRepOffset: (db.manualRepOffset || 0) + (db.timeAttack.rewardRep || 0), timeAttack: { isActive: false, title: "", rewardRep: 0, endTime: null, cleared: [] } }); alert("🎉 타임어택 성공! 보상 지급 완료!"); };
+  const handleCompleteTimeAttack = () => { playSound('jackpot'); sync({ manualRepOffset: (db.manualRepOffset || 0) + (db.timeAttack?.rewardRep || 0), timeAttack: { isActive: false, title: "", rewardRep: 0, endTime: null, cleared: [] } }); alert("🎉 타임어택 성공! 보상 지급 완료!"); };
   const handleFailTimeAttack = () => { sync({ timeAttack: { isActive: false, title: "", rewardRep: 0, endTime: null, cleared: [] } }); alert("타임어택 종료 (실패)"); };
   
   const toggleTimeAttackClear = (id) => {
     if (!db.timeAttack?.isActive) return;
-    const clearedArray = safeArray(db.timeAttack.cleared);
+    const clearedArray = safeArray(db.timeAttack?.cleared);
     const isCleared = clearedArray.includes(id);
     const nextCleared = isCleared ? clearedArray.filter(cid => cid !== id) : [...clearedArray, id];
     sync({ timeAttack: { ...db.timeAttack, cleared: nextCleared } });
@@ -247,7 +247,7 @@ export default function App() {
   const submitReflection = () => { if (!refTarget || !refTag || !refText) return alert("빈칸 확인!"); sync({ pendingReflections: [{ id: Date.now(), sId: refTarget, tag: refTag, text: refText, date: new Date().toLocaleDateString() }, ...safeArray(db.pendingReflections)], studentStatus: { ...db.studentStatus, [refTarget]: 'pending' } }); setRefTarget(""); setRefText(""); setRefTag(""); alert("다짐 제출 완료! 📝"); };
   
   const handleLogin = () => { 
-    const isMaster = password === (db.settings.masterPw || "6505"); const isHelpRoom = password === (db.settings.helpRoomPw || "1111");
+    const isMaster = password === (db.settings?.masterPw || "6505"); const isHelpRoom = password === (db.settings?.helpRoomPw || "1111");
     if (isMaster) { setIsAuthenticated('teacher'); setActiveTab('admin'); setShowModal(null); setPassword(""); } 
     else if (isHelpRoom) { setIsAuthenticated('inspector'); setActiveTab('helproom'); setShowModal(null); setPassword(""); } 
     else { alert("비밀번호 오류 ❌"); playSound('bad'); } 
@@ -256,7 +256,6 @@ export default function App() {
   const handleStudentFieldChange = (id, field, value) => sync({ students: safeStudents.map(st => st.id === id ? {...st, [field]: value} : st) });
   const handleAddStudent = () => { if(!newStudentName) return; const nextId = safeStudents.length > 0 ? Math.max(...safeStudents.map(s=>s.id)) + 1 : 1; sync({ students: [...safeStudents, { id: nextId, name: newStudentName, role: newStudentRole || '향리', group: parseInt(newStudentGroup), isLeader: false, enneagram: newStudentEnneagram }] }); setNewStudentName(""); alert("전입 완료!"); };
   const handleRemoveStudent = (id) => { if(window.confirm("삭제할까요?")) sync({ students: safeStudents.filter(s => s.id !== id) }); };
-  const partialReset = (type) => { if(window.confirm(`초기화할까요?`)) { if(type === 'donations') sync({ donations: [] }); if(type === 'status') sync({ studentStatus: {}, penaltyCount: {} }); if(type === 'exp') sync({ roleExp: {} }); alert("초기화 완료!"); } };
   const closeSemester = () => { if(window.prompt("마감하시겠습니까? '마감'을 입력하세요.") === "마감") { sync({ roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], donations: [] }); alert("학기 마감 완료! 🌱"); } };
   const factoryReset = () => { if(window.prompt("공장초기화하시겠습니까? '초기화'를 입력하세요") === "초기화") { sync({ roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [], pendingShopItems: [], shopItems: [], funding: [], manualRepOffset: 0, shieldPoints: 0, allTime: { exp: {}, penalty: {}, donate: {}, fund: {} }, timeAttack: { isActive: false, title: "", rewardRep: 100, endTime: null, cleared: [] } }); alert("전체 리셋 완료."); } };
 
@@ -749,32 +748,32 @@ return (
                 {adminSubTab === 'mission' && (
                   <div className="space-y-10 animate-in fade-in">
                     
-                    {/* 🎮 학급 공동 퀘스트 컨트롤러 */}
+                    {/* 🎮 학급 공동 퀘스트 컨트롤러 (안전장치 ?. 적용 완료) */}
                     <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-200">
                       <h3 className="text-2xl font-black text-slate-800 border-l-8 border-blue-600 pl-4 mb-4 flex items-center gap-2"><Settings className="text-blue-500 w-6 h-6"/> 학급 공동 퀘스트 이름 및 점수 세팅</h3>
                       <p className="text-sm font-bold text-slate-500 mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-100">이곳에서 미션 이름과 보상 점수를 변경하세요. (실제 점수 획득 버튼은 [명성 현황판] 상단에 배치되어 있습니다.)</p>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
                          <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 flex gap-3 shadow-sm">
-                           <input type="text" value={db.coopQuest.q1Name || "다 함께 바른 생활"} onChange={e=>sync({coopQuest: {...db.coopQuest, q1Name: e.target.value}})} className="flex-1 p-3 rounded-xl text-sm font-bold border-none outline-none shadow-sm"/>
-                           <input type="number" value={db.coopQuest.q1 || 50} onChange={e=>sync({coopQuest: {...db.coopQuest, q1: parseInt(e.target.value)}})} className="w-20 p-3 rounded-xl text-base font-black text-indigo-600 border-none outline-none text-center shadow-sm"/>
+                           <input type="text" value={db.coopQuest?.q1Name || "다 함께 바른 생활"} onChange={e=>sync({coopQuest: {...db.coopQuest, q1Name: e.target.value}})} className="flex-1 p-3 rounded-xl text-sm font-bold border-none outline-none shadow-sm"/>
+                           <input type="number" value={db.coopQuest?.q1 || 50} onChange={e=>sync({coopQuest: {...db.coopQuest, q1: parseInt(e.target.value)}})} className="w-20 p-3 rounded-xl text-base font-black text-indigo-600 border-none outline-none text-center shadow-sm"/>
                          </div>
                          <div className="bg-pink-50 p-4 rounded-2xl border border-pink-100 flex gap-3 shadow-sm">
-                           <input type="text" value={db.coopQuest.q2Name || "환대와 응원"} onChange={e=>sync({coopQuest: {...db.coopQuest, q2Name: e.target.value}})} className="flex-1 p-3 rounded-xl text-sm font-bold border-none outline-none shadow-sm"/>
-                           <input type="number" value={db.coopQuest.q2 || 20} onChange={e=>sync({coopQuest: {...db.coopQuest, q2: parseInt(e.target.value)}})} className="w-20 p-3 rounded-xl text-base font-black text-pink-600 border-none outline-none text-center shadow-sm"/>
+                           <input type="text" value={db.coopQuest?.q2Name || "환대와 응원"} onChange={e=>sync({coopQuest: {...db.coopQuest, q2Name: e.target.value}})} className="flex-1 p-3 rounded-xl text-sm font-bold border-none outline-none shadow-sm"/>
+                           <input type="number" value={db.coopQuest?.q2 || 20} onChange={e=>sync({coopQuest: {...db.coopQuest, q2: parseInt(e.target.value)}})} className="w-20 p-3 rounded-xl text-base font-black text-pink-600 border-none outline-none text-center shadow-sm"/>
                          </div>
                          <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100 flex gap-3 shadow-sm">
-                           <input type="text" value={db.coopQuest.q3Name || "전담수업 태도 우수"} onChange={e=>sync({coopQuest: {...db.coopQuest, q3Name: e.target.value}})} className="flex-1 p-3 rounded-xl text-sm font-bold border-none outline-none shadow-sm"/>
-                           <input type="number" value={db.coopQuest.q3 || 20} onChange={e=>sync({coopQuest: {...db.coopQuest, q3: parseInt(e.target.value)}})} className="w-20 p-3 rounded-xl text-base font-black text-emerald-600 border-none outline-none text-center shadow-sm"/>
+                           <input type="text" value={db.coopQuest?.q3Name || "전담수업 태도 우수"} onChange={e=>sync({coopQuest: {...db.coopQuest, q3Name: e.target.value}})} className="flex-1 p-3 rounded-xl text-sm font-bold border-none outline-none shadow-sm"/>
+                           <input type="number" value={db.coopQuest?.q3 || 20} onChange={e=>sync({coopQuest: {...db.coopQuest, q3: parseInt(e.target.value)}})} className="w-20 p-3 rounded-xl text-base font-black text-emerald-600 border-none outline-none text-center shadow-sm"/>
                          </div>
                          <div className="bg-yellow-50 p-4 rounded-2xl border border-yellow-100 flex gap-3 shadow-sm">
-                           <input type="text" value={db.coopQuest.q4Name || "사이좋은 일주일"} onChange={e=>sync({coopQuest: {...db.coopQuest, q4Name: e.target.value}})} className="flex-1 p-3 rounded-xl text-sm font-bold border-none outline-none shadow-sm"/>
-                           <input type="number" value={db.coopQuest.q4 || 100} onChange={e=>sync({coopQuest: {...db.coopQuest, q4: parseInt(e.target.value)}})} className="w-20 p-3 rounded-xl text-base font-black text-yellow-600 border-none outline-none text-center shadow-sm"/>
+                           <input type="text" value={db.coopQuest?.q4Name || "사이좋은 일주일"} onChange={e=>sync({coopQuest: {...db.coopQuest, q4Name: e.target.value}})} className="flex-1 p-3 rounded-xl text-sm font-bold border-none outline-none shadow-sm"/>
+                           <input type="number" value={db.coopQuest?.q4 || 100} onChange={e=>sync({coopQuest: {...db.coopQuest, q4: parseInt(e.target.value)}})} className="w-20 p-3 rounded-xl text-base font-black text-yellow-600 border-none outline-none text-center shadow-sm"/>
                          </div>
                       </div>
 
                       <div className="border-t-2 border-slate-100 pt-8">
-                         {/* 타임어택 세팅 (가로 풀사이즈 버튼 적용) */}
+                         {/* 타임어택 세팅 */}
                          <div className="bg-red-50 p-8 rounded-[30px] border-2 border-red-200">
                            <h4 className="text-xl font-black text-red-800 mb-6 flex items-center gap-2"><Timer className="w-6 h-6"/> 타임어택 발동기</h4>
                            {db.timeAttack?.isActive ? (
@@ -791,38 +790,44 @@ return (
                              <div className="space-y-4">
                                <input type="text" placeholder="미션 내용 (예: 바닥 쓰레기 0개)" value={taTitle} onChange={e=>setTaTitle(e.target.value)} className="w-full p-4 rounded-2xl border border-red-200 font-bold text-base outline-none focus:border-red-400 shadow-sm"/>
                                
-                               <div className="flex gap-3">
-                                 <input type="number" placeholder="시간(분)" value={taMins} onChange={e=>setTaMins(e.target.value)} className="w-1/3 p-4 rounded-2xl border border-red-300 font-black text-base text-center outline-none shadow-sm focus:border-red-500" title="제한시간(분)"/>
-                                 <input type="number" placeholder="보상 점수" value={taReward} onChange={e=>setTaReward(e.target.value)} className="w-2/3 p-4 rounded-2xl border border-red-300 font-black text-base outline-none shadow-sm focus:border-red-500" title="성공 시 보상 점수"/>
+                               <div className="flex flex-col sm:flex-row gap-3">
+                                 <div className="flex gap-2 flex-1">
+                                   <input type="number" placeholder="시간(분)" value={taMins} onChange={e=>setTaMins(e.target.value)} className="w-1/3 p-4 rounded-2xl border border-red-300 font-black text-base text-center outline-none shadow-sm focus:border-red-500" title="제한시간(분)"/>
+                                   <input type="number" placeholder="보상 점수" value={taReward} onChange={e=>setTaReward(e.target.value)} className="w-2/3 p-4 rounded-2xl border border-red-300 font-black text-base outline-none shadow-sm focus:border-red-500" title="성공 시 보상 점수"/>
+                                 </div>
+                                 <button onClick={handleStartTimeAttack} className="w-full mt-2 bg-red-600 text-white py-4 rounded-2xl font-black hover:bg-red-700 shadow-lg text-xl active:scale-95 transition-transform whitespace-nowrap">🚀 타임어택 발동하기</button>
                                </div>
-                               <button onClick={handleStartTimeAttack} className="w-full mt-2 bg-red-600 text-white py-4 rounded-2xl font-black hover:bg-red-700 shadow-lg text-xl active:scale-95 transition-transform whitespace-nowrap">🚀 타임어택 발동하기</button>
                              </div>
                            )}
                          </div>
                       </div>
                     </div>
 
-                    {/* 서류 결재함 */}
+                    {/* 서류 결재함 (안전장치 대폭 추가) */}
                     <div className="bg-white p-10 rounded-[40px] shadow-sm border border-green-100">
                        <h4 className="text-3xl font-black mb-8 text-slate-800 border-l-8 border-green-500 pl-5">서류 결재함</h4>
                        <div className="w-full space-y-5 max-h-[500px] overflow-y-auto pr-4 custom-scrollbar">
                          
                          {/* 장인 결재 서류 */}
-                         {safeArray(db.pendingShopItems).map(item => (
+                         {safeArray(db.pendingShopItems).map(item => {
+                            if(!item || typeof item !== 'object' || !item.name) return null; // 🚨 깨진 데이터 차단
+                            return (
                             <div key={item.id} className="bg-amber-50 p-6 rounded-[24px] border-2 border-amber-200 text-left shadow-sm">
                               <div className="flex justify-between items-center mb-3">
                                 <span className="font-black text-amber-800 bg-amber-100 px-3 py-1 rounded-lg text-xs">장인 건의: {item.creator}</span><span className="text-sm font-black text-amber-600">{item.price}🪙</span>
                               </div>
                               <p className="text-lg text-slate-800 font-black mb-4">"{item.name}"</p>
                               <div className="flex gap-2">
-                                <button onClick={() => { const next = db.pendingShopItems.filter(i => i.id !== item.id); sync({ pendingShopItems: next, shopItems: [item, ...safeArray(db.shopItems)] }); alert("상점 등록 완료!"); playSound('good'); }} className="flex-1 bg-amber-500 text-white py-3 rounded-xl font-black text-sm hover:bg-amber-600 shadow-md">상점에 출시 허가</button>
-                                <button onClick={() => { const next = db.pendingShopItems.filter(i => i.id !== item.id); sync({ pendingShopItems: next }); alert("반려되었습니다."); }} className="px-4 bg-white text-slate-400 font-black rounded-xl border border-slate-200">반려</button>
+                                <button onClick={() => { const next = safeArray(db.pendingShopItems).filter(i => i.id !== item.id); sync({ pendingShopItems: next, shopItems: [item, ...safeArray(db.shopItems)] }); alert("상점 등록 완료!"); playSound('good'); }} className="flex-1 bg-amber-500 text-white py-3 rounded-xl font-black text-sm hover:bg-amber-600 shadow-md">상점에 출시 허가</button>
+                                <button onClick={() => { const next = safeArray(db.pendingShopItems).filter(i => i.id !== item.id); sync({ pendingShopItems: next }); alert("반려되었습니다."); }} className="px-4 bg-white text-slate-400 font-black rounded-xl border border-slate-200">반려</button>
                               </div>
                             </div>
-                         ))}
+                         )})}
 
                          {/* 성찰 제출 서류 */}
-                         {safeArray(db.pendingReflections).map(r => (
+                         {safeArray(db.pendingReflections).map(r => {
+                           if(!r || !r.sId) return null; // 🚨 깨진 데이터 차단
+                           return (
                            <div key={r.id} className="bg-red-50 p-6 rounded-[24px] border-2 border-red-200 text-left shadow-sm">
                              <div className="flex justify-between items-center mb-4 border-b border-red-200/50 pb-3">
                                <span className="font-black text-red-800 bg-red-100 px-4 py-1.5 rounded-xl text-sm flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> {allStats.find(s=>s.id==r.sId)?.name} (성찰 제출)</span>
@@ -830,14 +835,15 @@ return (
                              </div>
                              <p className="text-base text-slate-700 font-bold mb-6 whitespace-pre-wrap leading-relaxed bg-white p-4 rounded-2xl border border-red-100 shadow-inner">"{r.text}"</p>
                              <div className="flex gap-3">
-                               <button onClick={() => { const next = db.pendingReflections.filter(pr => pr.id !== r.id); sync({ pendingReflections: next, studentStatus: { ...db.studentStatus, [r.sId]: 'normal' } }); alert("위기 해제 승인 완료!"); playSound('good'); }} className="flex-1 bg-red-500 text-white py-4 rounded-xl font-black text-base hover:bg-red-600 shadow-md active:scale-95 transition-transform">위기 해제 및 복귀 승인</button>
-                               <button onClick={() => { const next = db.pendingReflections.filter(pr => pr.id !== r.id); sync({ pendingReflections: next, studentStatus: { ...db.studentStatus, [r.sId]: 'crisis' } }); alert("반려되었습니다."); }} className="px-6 bg-white text-slate-500 font-black rounded-xl border-2 border-slate-200 hover:bg-slate-50">다시 성찰하기 (반려)</button>
+                               <button onClick={() => { const next = safeArray(db.pendingReflections).filter(pr => pr.id !== r.id); sync({ pendingReflections: next, studentStatus: { ...db.studentStatus, [r.sId]: 'normal' } }); alert("위기 해제 승인 완료!"); playSound('good'); }} className="flex-1 bg-red-500 text-white py-4 rounded-xl font-black text-base hover:bg-red-600 shadow-md active:scale-95 transition-transform">위기 해제 및 복귀 승인</button>
+                               <button onClick={() => { const next = safeArray(db.pendingReflections).filter(pr => pr.id !== r.id); sync({ pendingReflections: next, studentStatus: { ...db.studentStatus, [r.sId]: 'crisis' } }); alert("반려되었습니다."); }} className="px-6 bg-white text-slate-500 font-black rounded-xl border-2 border-slate-200 hover:bg-slate-50">다시 성찰하기 (반려)</button>
                              </div>
                            </div>
-                         ))}
+                         )})}
                          
                          {/* 온기 우체통 서류 */}
                          {safeArray(db.pendingPraises).map(p => {
+                           if(!p || !p.toId) return null; // 🚨 깨진 데이터 차단
                            const isCrisis = allStats.find(u => u.id == p.toId)?.status === 'crisis';
                            return (
                            <div key={p.id} className="bg-pink-50 p-6 rounded-[24px] border-2 border-pink-200 text-left shadow-sm">
@@ -852,11 +858,11 @@ return (
                              <div className="flex gap-3">
                                <button onClick={() => { 
                                  if (isCrisis) return alert("현재 위기 상태인 학생에게는 온기 코인을 지급할 수 없습니다. 성찰과 회복이 먼저입니다.");
-                                 const next = db.pendingPraises.filter(pr => pr.id !== p.id); 
+                                 const next = safeArray(db.pendingPraises).filter(pr => pr.id !== p.id); 
                                  const app = [p, ...safeArray(db.approvedPraises)].slice(0,20); 
                                  
-                                 const isThemeMatch = p.tag === db.settings.weeklyTheme;
-                                 const earnedCoins = isThemeMatch ? (db.settings.pointConfig?.praiseBonus || 15) : (db.settings.pointConfig?.praiseBasic || 10);
+                                 const isThemeMatch = p.tag === db.settings?.weeklyTheme;
+                                 const earnedCoins = isThemeMatch ? (db.settings?.pointConfig?.praiseBonus || 15) : (db.settings?.pointConfig?.praiseBasic || 10);
                                  
                                  let updates = { pendingPraises: next, approvedPraises: app };
                                  if(p.toId !== 'me') { 
@@ -867,7 +873,7 @@ return (
                                  sync(updates); 
                                  alert(`온기 승인 완료! (+${earnedCoins}🪙)`); playSound('good'); 
                                }} className={`flex-1 py-4 rounded-xl font-black text-base shadow-md transition-all ${isCrisis ? 'bg-slate-300 text-slate-500 cursor-not-allowed border border-slate-400' : 'bg-pink-500 text-white hover:bg-pink-600 active:scale-95'}`}>온기 사연 승인</button>
-                               <button onClick={() => { const next = db.pendingPraises.filter(pr => pr.id !== p.id); sync({ pendingPraises: next }); alert("반려되었습니다."); }} className="px-6 bg-white text-slate-500 font-black rounded-xl border-2 border-slate-200 hover:bg-slate-50">반려</button>
+                               <button onClick={() => { const next = safeArray(db.pendingPraises).filter(pr => pr.id !== p.id); sync({ pendingPraises: next }); alert("반려되었습니다."); }} className="px-6 bg-white text-slate-500 font-black rounded-xl border-2 border-slate-200 hover:bg-slate-50">반려</button>
                              </div>
                            </div>
                          )})}
@@ -885,7 +891,7 @@ return (
                     <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 space-y-8">
                       
                       <div className="bg-slate-50 p-8 rounded-3xl border border-slate-200 shadow-sm">
-                        <button onClick={() => sync({ settings: { ...db.settings, forceShopOpen: !db.settings.forceShopOpen } })} className={`w-full py-5 rounded-2xl font-black text-xl transition-all shadow-md ${db.settings.forceShopOpen ? 'bg-amber-500 text-white' : 'bg-white text-slate-500 border-2 border-slate-300'}`}>정규 상점 개방: {db.settings.forceShopOpen ? 'ON (강제 개방 중)' : 'OFF (목요일에만 열림)'}</button>
+                        <button onClick={() => sync({ settings: { ...db.settings, forceShopOpen: !db.settings?.forceShopOpen } })} className={`w-full py-5 rounded-2xl font-black text-xl transition-all shadow-md ${db.settings?.forceShopOpen ? 'bg-amber-500 text-white' : 'bg-white text-slate-500 border-2 border-slate-300'}`}>정규 상점 개방: {db.settings?.forceShopOpen ? 'ON (강제 개방 중)' : 'OFF (목요일에만 열림)'}</button>
                       </div>
 
                       <div className="pt-6">
@@ -902,7 +908,7 @@ return (
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {safeArray(db.shopItems).map(item => {
-                            if(!item) return null;
+                            if(!item || !item.name) return null; // 🚨 안전장치
                             return (
                             <div key={item.id} className="bg-amber-50 p-4 rounded-2xl border border-amber-200 flex justify-between items-center shadow-sm">
                               <div><span className="text-[10px] text-slate-400 font-black bg-white px-2 py-1 rounded-md">{item.creator}</span><h4 className="font-black text-slate-800 mt-2">{item.name}</h4><p className="text-amber-600 font-black text-sm">{item.price} 🪙</p></div>
@@ -925,7 +931,7 @@ return (
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {safeArray(db.funding).map(f => {
-                            if(!f) return null;
+                            if(!f || !f.name) return null; // 🚨 안전장치
                             return (
                             <div key={f.id} className="bg-white p-5 rounded-2xl border border-blue-200 flex justify-between items-center shadow-sm">
                               <div><h4 className="font-black text-blue-900 text-lg">{f.name}</h4><p className="text-blue-500 font-bold text-sm mt-1">현재: {f.current} / 목표: {f.target}p</p></div>
@@ -939,6 +945,7 @@ return (
                   </div>
                 )}
 
+                {/* 🚨 탭: SEL 리포트 (유령 학생 방어막 적용 완료) */}
                 {adminSubTab === 'report' && (
                   <div className="space-y-8 animate-in fade-in">
                     <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-6 mb-8">🌱 학생별 SEL 마음성장 리포트</h3>
@@ -957,6 +964,8 @@ return (
                       <div className="w-full md:w-2/3 bg-slate-50 p-10 rounded-[40px] border border-slate-200">
                         {selectedReportStudent ? (() => {
                           const s = allStats.find(x => x.id == selectedReportStudent);
+                          if (!s) return <div className="h-full flex flex-col items-center justify-center text-slate-400 font-black"><AlertTriangle className="w-16 h-16 mb-4 opacity-30 text-red-500"/>선택하신 학생 데이터가 삭제되었습니다.</div>; // 🚨 유령 학생 렌더링 방어
+                          
                           const counts = {}; SEL_OPTIONS.forEach(o => counts[o.name] = 0);
                           safeArray(db.approvedPraises).forEach(p => { if(p.toId == s.id && counts[p.tag] !== undefined) counts[p.tag]++; });
                           const max = Math.max(...Object.values(counts), 5);
@@ -1024,6 +1033,7 @@ return (
                   </div>
                 )}
 
+                {/* 🚨 탭: 환경 세팅 (안전장치 옵셔널 체이닝 적용 완료) */}
                 {adminSubTab === 'settings' && (
                   <div className="space-y-8 animate-in fade-in">
                     <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-6 mb-8">환경 및 보안 통제소</h3>
@@ -1036,7 +1046,7 @@ return (
                               <input type="password" value={masterPwInput} onChange={e=>setMasterPwInput(e.target.value)} placeholder="새 비밀번호 입력" className="flex-1 p-4 rounded-2xl border border-slate-300 font-black outline-none focus:border-blue-400 shadow-sm text-lg"/>
                               <button onClick={()=>{ if(!masterPwInput) return alert('입력하세요.'); sync({settings: {...db.settings, masterPw: masterPwInput}}); alert('변경 완료!'); setMasterPwInput(''); }} className="bg-blue-600 text-white px-6 rounded-2xl font-black text-lg shadow-md hover:bg-blue-700">변경</button>
                             </div>
-                            <p className="text-sm font-bold text-slate-400 mt-3 bg-white inline-block px-3 py-1 rounded-lg border border-slate-200">현재 설정됨: {db.settings.masterPw || "기본(6505)"}</p>
+                            <p className="text-sm font-bold text-slate-400 mt-3 bg-white inline-block px-3 py-1 rounded-lg border border-slate-200">현재 설정됨: {db.settings?.masterPw || "기본(6505)"}</p>
                           </div>
                           <div>
                             <h4 className="font-black text-slate-700 mb-4 flex items-center gap-2 text-lg"><Lock className="w-6 h-6 text-indigo-500"/> 도움실 (감찰사) 비밀번호 변경</h4>
@@ -1044,18 +1054,18 @@ return (
                               <input type="password" value={helpPwInput} onChange={e=>setHelpPwInput(e.target.value)} placeholder="새 비밀번호 입력" className="flex-1 p-4 rounded-2xl border border-slate-300 font-black outline-none focus:border-indigo-400 shadow-sm text-lg"/>
                               <button onClick={()=>{ if(!helpPwInput) return alert('입력하세요.'); sync({settings: {...db.settings, helpRoomPw: helpPwInput}}); alert('변경 완료!'); setHelpPwInput(''); }} className="bg-indigo-500 text-white px-6 rounded-2xl font-black text-lg shadow-md hover:bg-indigo-600">변경</button>
                             </div>
-                            <p className="text-sm font-bold text-slate-400 mt-3 bg-white inline-block px-3 py-1 rounded-lg border border-slate-200">현재 설정됨: {db.settings.helpRoomPw || "기본(1111)"}</p>
+                            <p className="text-sm font-bold text-slate-400 mt-3 bg-white inline-block px-3 py-1 rounded-lg border border-slate-200">현재 설정됨: {db.settings?.helpRoomPw || "기본(1111)"}</p>
                           </div>
                        </div>
                        
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-8 border-t-2 border-slate-100">
                           <div>
                             <label className="block text-base font-black text-slate-600 mb-4">대시보드 메인 타이틀</label>
-                            <input type="text" value={db.settings.title} onChange={e=>sync({settings: {...db.settings, title: e.target.value}})} className="w-full p-6 rounded-3xl bg-slate-50 border border-slate-200 font-black text-xl outline-none focus:border-blue-400 shadow-sm"/>
+                            <input type="text" value={db.settings?.title || ""} onChange={e=>sync({settings: {...db.settings, title: e.target.value}})} className="w-full p-6 rounded-3xl bg-slate-50 border border-slate-200 font-black text-xl outline-none focus:border-blue-400 shadow-sm"/>
                           </div>
                           <div>
                             <label className="block text-base font-black text-slate-600 mb-4">이 주의 마음성장(SEL) 테마</label>
-                            <select value={db.settings.weeklyTheme} onChange={e=>sync({settings: {...db.settings, weeklyTheme: e.target.value}})} className="w-full p-6 rounded-3xl bg-slate-50 border border-slate-200 font-black text-xl outline-none focus:border-blue-400 shadow-sm">
+                            <select value={db.settings?.weeklyTheme || ""} onChange={e=>sync({settings: {...db.settings, weeklyTheme: e.target.value}})} className="w-full p-6 rounded-3xl bg-slate-50 border border-slate-200 font-black text-xl outline-none focus:border-blue-400 shadow-sm">
                               {SEL_OPTIONS.map(opt => <option key={opt.id} value={opt.name}>{opt.name}</option>)}
                             </select>
                           </div>
@@ -1070,10 +1080,10 @@ return (
                           </div>
                           
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <div className="bg-white p-5 rounded-2xl shadow-sm"><label className="block text-sm font-black text-indigo-600 mb-3">최고 목표 명성</label><input type="number" value={db.settings.targetScore} onChange={e=>sync({settings: {...db.settings, targetScore: parseInt(e.target.value)}})} className="w-full p-4 rounded-xl border border-slate-200 font-black text-lg outline-none"/></div>
-                            <div className="bg-white p-5 rounded-2xl shadow-sm"><label className="block text-sm font-black text-indigo-600 mb-3">기본 온기 코인(🪙)</label><input type="number" value={db.settings.pointConfig?.praiseBasic||10} onChange={e=>sync({settings: {...db.settings, pointConfig: {...db.settings.pointConfig, praiseBasic: parseInt(e.target.value)}}})} className="w-full p-4 rounded-xl border border-slate-200 font-black text-lg outline-none"/></div>
-                            <div className="bg-white p-5 rounded-2xl shadow-sm"><label className="block text-sm font-black text-pink-500 mb-3">테마 일치 보너스(🪙)</label><input type="number" value={db.settings.pointConfig?.praiseBonus||15} onChange={e=>sync({settings: {...db.settings, pointConfig: {...db.settings.pointConfig, praiseBonus: parseInt(e.target.value)}}})} className="w-full p-4 rounded-xl border border-pink-200 font-black text-pink-600 text-lg outline-none"/></div>
-                            <div className="bg-white p-5 rounded-2xl shadow-sm"><label className="block text-sm font-black text-red-500 mb-3">위기 지정 차감(p)</label><input type="number" value={db.settings.pointConfig?.penalty||20} onChange={e=>sync({settings: {...db.settings, pointConfig: {...db.settings.pointConfig, penalty: parseInt(e.target.value)}}})} className="w-full p-4 rounded-xl border border-red-200 font-black text-red-600 text-lg outline-none"/></div>
+                            <div className="bg-white p-5 rounded-2xl shadow-sm"><label className="block text-sm font-black text-indigo-600 mb-3">최고 목표 명성</label><input type="number" value={db.settings?.targetScore||5000} onChange={e=>sync({settings: {...db.settings, targetScore: parseInt(e.target.value)}})} className="w-full p-4 rounded-xl border border-slate-200 font-black text-lg outline-none"/></div>
+                            <div className="bg-white p-5 rounded-2xl shadow-sm"><label className="block text-sm font-black text-indigo-600 mb-3">기본 온기 코인(🪙)</label><input type="number" value={db.settings?.pointConfig?.praiseBasic||10} onChange={e=>sync({settings: {...db.settings, pointConfig: {...db.settings?.pointConfig, praiseBasic: parseInt(e.target.value)}}})} className="w-full p-4 rounded-xl border border-slate-200 font-black text-lg outline-none"/></div>
+                            <div className="bg-white p-5 rounded-2xl shadow-sm"><label className="block text-sm font-black text-pink-500 mb-3">테마 일치 보너스(🪙)</label><input type="number" value={db.settings?.pointConfig?.praiseBonus||15} onChange={e=>sync({settings: {...db.settings, pointConfig: {...db.settings?.pointConfig, praiseBonus: parseInt(e.target.value)}}})} className="w-full p-4 rounded-xl border border-pink-200 font-black text-pink-600 text-lg outline-none"/></div>
+                            <div className="bg-white p-5 rounded-2xl shadow-sm"><label className="block text-sm font-black text-red-500 mb-3">위기 지정 차감(p)</label><input type="number" value={db.settings?.pointConfig?.penalty||20} onChange={e=>sync({settings: {...db.settings, pointConfig: {...db.settings?.pointConfig, penalty: parseInt(e.target.value)}}})} className="w-full p-4 rounded-xl border border-red-200 font-black text-red-600 text-lg outline-none"/></div>
                           </div>
                        </div>
                     </div>
