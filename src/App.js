@@ -233,8 +233,6 @@ export default function App() {
     }
   };
 
-// === [1부 끝] === 
-// 🚨 이 다음 줄부터 [2부] 코드를 그대로 이어서 붙여넣어 주시면 됩니다! 🚨
 return (
     <div className="min-h-screen bg-amber-50/50 pb-32 font-sans text-slate-800 transition-all">
       
