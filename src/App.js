@@ -5,7 +5,7 @@ import {
   Plus, Minus, AlertTriangle, Sparkles, Star, Target, Settings, 
   Trash2, ShoppingCart, CheckCircle2, BookOpen, UserCheck, Briefcase, 
   Zap, Crown, Gift, Coins, BarChart3, MessageSquare, Send, Gavel, 
-  Leaf, TreeDeciduous, Bird, Flame, Shield, Printer, Timer
+  Leaf, TreeDeciduous, Bird, Flame, Shield, Printer, Timer, Store
 } from 'lucide-react';
 
 // ==========================================
@@ -80,6 +80,14 @@ const SEL_GUIDES = {
   "5단계: 책임 있는 의사결정 (Responsible decision-making)": "상황: 우리 반의 규칙이나 분위기를 흐릴 수 있었던 나의 선택은 무엇이었나요?\n다짐: 나뿐만 아니라 우리 모두를 위해 더 나은 세상을 만드는 바른 선택을 실천해보세요." 
 };
 
+const PRAISE_GUIDES = {
+  "1단계: 자기 인식 (Self-awareness)": "칭찬 예시: 스스로의 장점을 알고 자신감 있게 도전한 모습을 칭찬해요!",
+  "2단계: 자기 관리 (Self-management)": "칭찬 예시: 짜증 날 수 있는 상황에서도 감정을 잘 조절하고 끝까지 해낸 모습을 칭찬해요!",
+  "3단계: 사회적 인식 (Social awareness)": "칭찬 예시: 도움이 필요한 친구의 마음을 먼저 알아채고 공감해 준 모습을 칭찬해요!",
+  "4단계: 관계 기술 (Relationship skills)": "칭찬 예시: 친구의 말을 잘 경청하고, 배려하며 협동한 모습을 칭찬해요!",
+  "5단계: 책임 있는 의사결정 (Responsible decision-making)": "칭찬 예시: 학급을 위해 솔선수범하여 바른 선택을 하고 실천한 모습을 칭찬해요!"
+};
+
 const THEME_DESCRIPTIONS = {
   "1단계: 자기 인식 (Self-awareness)": "나의 감정과 강점을 발견하고 이해하는 한 주를 보내요! 🌱", "2단계: 자기 관리 (Self-management)": "감정을 조절하고 목표를 향해 끝까지 노력하는 한 주를 보내요! ⛵",
   "3단계: 사회적 인식 (Social awareness)": "친구의 마음에 공감하고 다름을 존중하는 한 주를 보내요! 🤝", "4단계: 관계 기술 (Relationship skills)": "서로 소통하고 배려하며 마법 같은 우정을 쌓는 한 주를 보내요! ✨",
@@ -91,7 +99,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [helpSubTab, setHelpSubTab] = useState('inspector');
-  const [adminSubTab, setAdminSubTab] = useState('mission');
+  const [adminSubTab, setAdminSubTab] = useState('quest'); // 결재, 상점관리, 퀘스트 등 분리
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [showModal, setShowModal] = useState(null);
@@ -100,7 +108,7 @@ export default function App() {
   const [showPraiseModal, setShowPraiseModal] = useState(false); 
   const [praiseTarget, setPraiseTarget] = useState(""); const [praiseTag, setPraiseTag] = useState(""); const [praiseText, setPraiseText] = useState("");
   const [refTarget, setRefTarget] = useState(""); const [refTag, setRefTag] = useState(""); const [refText, setRefText] = useState("");
-  const [newRole, setNewRole] = useState(""); const [newItemName, setNewItemName] = useState(""); const [newItemPrice, setNewItemPrice] = useState(""); const [newItemType, setNewItemType] = useState("shop");
+  const [newRole, setNewRole] = useState(""); const [newItemName, setNewItemName] = useState(""); const [newItemPrice, setNewItemPrice] = useState("");
   const [artisanTarget, setArtisanTarget] = useState(""); const [artisanItemName, setArtisanItemName] = useState(""); const [artisanItemPrice, setArtisanItemPrice] = useState("");
   const [selectedReportStudent, setSelectedReportStudent] = useState("");
   
@@ -126,9 +134,9 @@ export default function App() {
     },
     coopQuest: { q1Name: "다 함께 바른 생활", q1: 50, q2Name: "환대와 응원", q2: 20, q3Name: "전담수업 태도 우수", q3: 20, q4Name: "사이좋은 일주일", q4: 100, goodWeek: 0 },
     timeAttack: { isActive: false, title: "바닥 쓰레기 0개 만들기!", rewardRep: 100, endTime: null, cleared: [] },
-    shopItems: [], blackMarketItems: [], pendingShopItems: [], roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, 
-    pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [], funding: [], manualRepOffset: 0, shieldPoints: 0, 
-    allTime: { exp: {}, penalty: {}, donate: {}, fund: {} }, activeMission: { isActive: false, participants: [] }
+    shopItems: [], pendingShopItems: [], funding: [], roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, 
+    pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [], manualRepOffset: 0, shieldPoints: 0, 
+    allTime: { exp: {}, penalty: {}, donate: {}, fund: {} }
   });
 
   // --- 실시간 DB 동기화 및 타임어택 타이머 ---
@@ -149,7 +157,7 @@ export default function App() {
     if (db.timeAttack?.isActive && db.timeAttack?.endTime) {
       timer = setInterval(() => {
         const diff = Math.floor((db.timeAttack.endTime - Date.now()) / 1000);
-        if (diff <= 0) { setTimeLeftString("00:00 (종료/실패)"); clearInterval(timer); } 
+        if (diff <= 0) { setTimeLeftString("00:00 (종료)"); clearInterval(timer); } 
         else { setTimeLeftString(`${Math.floor(diff/60).toString().padStart(2,'0')}:${(diff%60).toString().padStart(2,'0')}`); }
       }, 1000);
     }
@@ -207,14 +215,14 @@ export default function App() {
   const handleGivePenalty = (id) => { if (!isAuthenticated) return setShowModal('password'); if (window.confirm("위기 지정할까요?")) { playSound('bad'); sync({ studentStatus: { ...db.studentStatus, [id]: 'crisis' }, penaltyCount: { ...db.penaltyCount, [id]: (db.penaltyCount[id] || 0) + 1 }, allTime: { ...db.allTime, penalty: { ...db.allTime.penalty, [id]: (db.allTime.penalty?.[id] || 0) + 1 } } }); } };
   
   const handleDonate = (sId, amount) => { const u = allStats.find(s => s.id == sId); if (!u || u.coins < amount) return alert("코인 부족!"); playSound('buy'); sync({ usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + amount }, donations: [{ id: Date.now(), name: u.name, amount }, ...safeArray(db.donations)].slice(0, 15), allTime: { ...db.allTime, donate: { ...db.allTime.donate, [sId]: (db.allTime.donate?.[sId] || 0) + amount } } }); alert("기부 완료! ✨"); };
-  const handleFund = (fId, sId, amount) => { const u = allStats.find(s => s.id == sId); if (!u || u.coins < amount) return alert("코인 부족!"); playSound('buy'); sync({ usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + amount }, funding: safeArray(db.funding).map(f => f.id === fId ? { ...f, current: f.current + amount } : f), allTime: { ...db.allTime, fund: { ...db.allTime.fund, [sId]: (db.allTime.fund?.[sId] || 0) + amount } } }); alert("투자 완료!"); };
+  const handleFund = (fId, sId, amount) => { const u = allStats.find(s => s.id == sId); if (!u || u.coins < amount) return alert("코인 부족!"); playSound('buy'); sync({ usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + amount }, funding: safeArray(db.funding).map(f => f.id === fId ? { ...f, current: (Number(f.current)||0) + amount } : f), allTime: { ...db.allTime, fund: { ...db.allTime.fund, [sId]: (db.allTime.fund?.[sId] || 0) + amount } } }); alert("투자 완료!"); };
   
   // 학급 공동 퀘스트 
   const addCoopScore = (points, title) => { playSound('jackpot'); sync({ manualRepOffset: (db.manualRepOffset || 0) + points }); alert(`🎉 [${title}] 달성! 평판 점수 +${points}점 획득!`); };
   const adjustGoodWeek = (delta) => { const next = Math.max(0, Math.min(5, (db.coopQuest.goodWeek || 0) + delta)); sync({ coopQuest: { ...db.coopQuest, goodWeek: next } }); if(delta > 0) playSound('good'); };
   const completeGoodWeek = () => { playSound('jackpot'); sync({ coopQuest: { ...db.coopQuest, goodWeek: 0 }, manualRepOffset: (db.manualRepOffset || 0) + (db.coopQuest.q4 || 100) }); alert(`🌟 사이 좋은 일주일 완성! +${db.coopQuest.q4 || 100}점!`); };
 
-  // 타임어택 (발동 및 개인 클리어 토글)
+  // 타임어택 
   const handleStartTimeAttack = () => { if(window.confirm("타임어택을 시작합니까?")) sync({ timeAttack: { isActive: true, title: taTitle, rewardRep: parseInt(taReward)||100, endTime: Date.now() + (parseInt(taMins)||10) * 60 * 1000, cleared: [] } }); };
   const handleCompleteTimeAttack = () => { playSound('jackpot'); sync({ manualRepOffset: (db.manualRepOffset || 0) + (db.timeAttack.rewardRep || 0), timeAttack: { isActive: false, title: "", rewardRep: 0, endTime: null, cleared: [] } }); alert("🎉 타임어택 성공! 보상 지급 완료!"); };
   const handleFailTimeAttack = () => { sync({ timeAttack: { isActive: false, title: "", rewardRep: 0, endTime: null, cleared: [] } }); alert("타임어택 종료 (실패)"); };
@@ -228,6 +236,7 @@ export default function App() {
     if (!isCleared) playSound('good');
   };
 
+  const submitArtisanItem = () => { if(!artisanTarget || !artisanItemName || !artisanItemPrice) return alert("입력 오류"); const artisan = allStats.find(s => s.id == artisanTarget); if(!artisan || artisan.exp < 20) return alert("장인만 가능"); sync({ pendingShopItems: [{ id: Date.now(), name: artisanItemName, price: parseInt(artisanItemPrice), creator: artisan.name }, ...safeArray(db.pendingShopItems)] }); setArtisanTarget(""); setArtisanItemName(""); setArtisanItemPrice(""); alert("공방 아이템 결재 올림! 🛠️"); };
   const submitPraise = () => { if (!praiseTarget || !praiseTag || !praiseText) return alert("빈칸 확인!"); sync({ pendingPraises: [{ id: Date.now(), toId: praiseTarget, tag: praiseTag, text: praiseText, date: new Date().toLocaleDateString() }, ...safeArray(db.pendingPraises)] }); setShowPraiseModal(false); setPraiseTarget(""); setPraiseText(""); setPraiseTag(""); alert("온기 배달 완료! 💌"); };
   const submitReflection = () => { if (!refTarget || !refTag || !refText) return alert("빈칸 확인!"); sync({ pendingReflections: [{ id: Date.now(), sId: refTarget, tag: refTag, text: refText, date: new Date().toLocaleDateString() }, ...safeArray(db.pendingReflections)], studentStatus: { ...db.studentStatus, [refTarget]: 'pending' } }); setRefTarget(""); setRefText(""); setRefTag(""); alert("다짐 제출 완료! 📝"); };
   
@@ -243,7 +252,7 @@ export default function App() {
   const handleRemoveStudent = (id) => { if(window.confirm("삭제할까요?")) sync({ students: safeStudents.filter(s => s.id !== id) }); };
   const partialReset = (type) => { if(window.confirm(`초기화할까요?`)) { if(type === 'donations') sync({ donations: [] }); if(type === 'status') sync({ studentStatus: {}, penaltyCount: {} }); if(type === 'exp') sync({ roleExp: {} }); alert("초기화 완료!"); } };
   const closeSemester = () => { if(window.prompt("마감하시겠습니까? '마감'을 입력하세요.") === "마감") { sync({ roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], donations: [] }); alert("학기 마감 완료! 🌱"); } };
-  const factoryReset = () => { if(window.prompt("공장초기화하시겠습니까? '초기화'를 입력하세요") === "초기화") { sync({ roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [], pendingShopItems: [], funding: [], manualRepOffset: 0, shieldPoints: 0, allTime: { exp: {}, penalty: {}, donate: {}, fund: {} }, timeAttack: { isActive: false, title: "", rewardRep: 100, endTime: null, cleared: [] } }); alert("전체 리셋 완료."); } };
+  const factoryReset = () => { if(window.prompt("공장초기화하시겠습니까? '초기화'를 입력하세요") === "초기화") { sync({ roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [], pendingShopItems: [], shopItems: [], funding: [], manualRepOffset: 0, shieldPoints: 0, allTime: { exp: {}, penalty: {}, donate: {}, fund: {} }, timeAttack: { isActive: false, title: "", rewardRep: 100, endTime: null, cleared: [] } }); alert("전체 리셋 완료."); } };
 
   // 진화 애니메이션 렌더링
   const renderEvolution = (level) => {
@@ -257,7 +266,9 @@ export default function App() {
       default: return null;
     }
   };
-  return (
+
+// =========== [1부 코드의 끝] ===========
+return (
     <div className="min-h-screen bg-amber-50/50 pb-32 font-sans text-slate-800 transition-all">
       
       {/* 1. 아기자기한 명성 전광판 (세계수와 불사조 애니메이션 탑재) */}
@@ -305,10 +316,10 @@ export default function App() {
         {activeTab === 'dashboard' && (
           <div className="space-y-12 animate-in fade-in duration-500">
             
-            {/* 🚨 상단 2분할: 학급 공동 퀘스트 / 타임어택 (주간 릴레이 삭제됨) */}
+            {/* 🚨 상단 2분할: 학급 공동 퀘스트 / 타임어택 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               
-              {/* 1. 학급 공동 퀘스트 (버튼 탑재) */}
+              {/* 1. 학급 공동 퀘스트 */}
               <div className="bg-white p-6 rounded-[30px] border-2 border-blue-100 shadow-sm flex flex-col justify-between">
                 <h3 className="text-[13px] font-black text-blue-600 mb-4 flex items-center gap-2"><Zap className="w-4 h-4"/> 학급 공동 퀘스트 (터치하여 즉시 점수 획득!)</h3>
                 <div className="grid grid-cols-2 gap-3 mb-4">
@@ -327,7 +338,7 @@ export default function App() {
                 {(db.coopQuest.goodWeek || 0) >= 5 && <button onClick={completeGoodWeek} className="mt-3 w-full bg-yellow-400 text-yellow-900 shadow-md font-black py-3 rounded-2xl text-sm animate-pulse hover:bg-yellow-500">최종 승인 및 +{db.coopQuest.q4||100}p 획득!</button>}
               </div>
 
-              {/* 2. 작아진 타임어택 */}
+              {/* 2. 타임어택 */}
               <div className={`p-6 rounded-[30px] border-2 flex flex-col items-center justify-center transition-colors min-h-[180px] ${db.timeAttack?.isActive ? 'bg-red-50 border-red-300 shadow-inner' : 'bg-slate-50 border-dashed border-slate-200'}`}>
                 {db.timeAttack?.isActive ? (
                   <>
@@ -373,10 +384,9 @@ export default function App() {
                 <h3 className="text-base font-black text-amber-700 mb-6 flex items-center gap-2 bg-amber-50 inline-block px-5 py-2.5 rounded-full w-max"><Target className="w-5 h-5"/> 다 함께 크라우드 펀딩</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-2">
                   {safeArray(db.funding).map(f => {
-                    if (!f) return null; // 🚨 깨진 데이터 방어 1차
+                    if (!f) return null; // 🚨 안전장치
                     return (
                     <div key={f.id} className="space-y-3">
-                      {/* 🚨 NaN 오류 완벽 차단 f.target||1 */}
                       <div className="flex justify-between items-end font-black text-base text-slate-700"><span>{f.name}</span><span className="text-amber-500 text-xl">{Math.floor(((f.current||0)/(f.target||1))*100)}%</span></div>
                       <div className="w-full h-5 bg-slate-100 rounded-full overflow-hidden border border-slate-200 shadow-inner">
                         <div className="h-full bg-gradient-to-r from-yellow-300 to-amber-500 transition-all duration-1000" style={{width:`${Math.min(((f.current||0)/(f.target||1))*100,100)}%`}}></div>
@@ -399,14 +409,14 @@ export default function App() {
               </button>
             </div>
             
-            {/* 개인 카드 영역 (타임어택 클리어 토글 버튼 추가) */}
+            {/* 개인 카드 영역 (타임어택 클리어 토글 적용 완료) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {sortedDashboardStats.map(s => {
                 const isTaCleared = safeArray(db.timeAttack?.cleared).includes(s.id);
                 return (
                 <div key={s.id} className={`p-6 rounded-[35px] border-4 shadow-sm transition-all relative flex flex-col bg-white hover:shadow-xl ${s.status === 'crisis' ? 'border-slate-300 bg-slate-100 opacity-60 grayscale' : (s.status === 'pending' ? 'border-orange-300 bg-orange-50' : 'border-white hover:border-amber-300')}`}>
                   
-                  {/* 타임어택 발동 시: 개인별 클리어 토글 버튼 (우측 상단) */}
+                  {/* 타임어택 발동 시: 개인별 클리어 토글 버튼 */}
                   {db.timeAttack?.isActive && s.status !== 'crisis' && (
                     <div className="absolute -top-4 -right-4 z-20">
                       <button onClick={() => toggleTimeAttackClear(s.id)} className={`flex items-center gap-1 px-3 py-1.5 rounded-full font-black text-xs shadow-md border-2 transition-all ${isTaCleared ? 'bg-green-500 text-white border-green-600 scale-110' : 'bg-white text-slate-400 border-slate-200 hover:border-red-300 hover:text-red-500'}`}>
@@ -637,18 +647,18 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* 물품 구매 및 펀딩 */}
+                  {/* 물품 구매 및 펀딩 (🚨 에러 완벽 차단 로직) */}
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                     {safeArray(db.shopItems).map(item => {
-                      if (!item) return null; // 🚨 안전장치
+                      if (!item || typeof item !== 'object' || !item.name) return null; // 🚨 안전장치 1 (깨진 객체 차단)
                       return (
                       <div key={item.id} className="bg-white p-10 rounded-[40px] shadow-sm border-2 border-slate-100 flex flex-col justify-between hover:border-amber-300 transition-colors">
                          <div>
                            <div className="flex justify-between items-start mb-6">
-                             <span className="text-sm font-black bg-slate-100 text-slate-500 px-4 py-2 rounded-xl border border-slate-200 shadow-sm">{item.creator} 제작</span>
-                             <p className="text-4xl font-black text-amber-500">{item.price} 🪙</p>
+                             <span className="text-sm font-black bg-slate-100 text-slate-500 px-4 py-2 rounded-xl border border-slate-200 shadow-sm">{String(item.creator)} 제작</span>
+                             <p className="text-4xl font-black text-amber-500">{Number(item.price)||0} 🪙</p>
                            </div>
-                           <h4 className="text-3xl font-black text-slate-800 mb-10">{item.name}</h4>
+                           <h4 className="text-3xl font-black text-slate-800 mb-10">{String(item.name)}</h4>
                          </div>
                          <div className="flex gap-4">
                            <select id={`buyer_${item.id}`} className="flex-1 p-5 rounded-2xl bg-slate-50 border border-slate-200 font-bold outline-none text-lg focus:border-amber-400 shadow-sm">
@@ -659,25 +669,25 @@ export default function App() {
                              if(!isShopOpen) return alert("오늘은 상점 운영일이 아닙니다!");
                              const sid = document.getElementById(`buyer_${item.id}`).value;
                              if(!sid) return alert("구매할 사람을 선택하세요."); const user = activeStudents.find(u => u.id == sid);
-                             if(user.coins < item.price) return alert("코인이 부족합니다.");
-                             if(window.confirm(`${user.name}의 개인 코인을 차감할까요?`)) { sync({ usedCoins: { ...db.usedCoins, [sid]: (db.usedCoins[sid] || 0) + item.price } }); alert("결제 승인 완료!"); playSound('buy'); }
+                             if(user.coins < (Number(item.price)||0)) return alert("코인이 부족합니다.");
+                             if(window.confirm(`${user.name}의 개인 코인을 차감할까요?`)) { sync({ usedCoins: { ...db.usedCoins, [sid]: (db.usedCoins[sid] || 0) + (Number(item.price)||0) } }); alert("결제 승인 완료!"); playSound('buy'); }
                            }} className="bg-amber-500 text-white px-10 rounded-2xl font-black text-xl shadow-lg hover:bg-amber-600 active:scale-95 transition-all">구매</button>
                          </div>
                       </div>
                     )})}
                     
-                    {/* 크라우드 펀딩 카드 (🚨 NaN 오류 차단 f.target||1 적용) */}
+                    {/* 크라우드 펀딩 카드 (🚨 NaN 차단 f.target||1 적용) */}
                     {safeArray(db.funding).map(f => {
-                      if (!f) return null; // 🚨 안전장치
+                      if (!f || typeof f !== 'object' || !f.name) return null; // 🚨 안전장치 2 (깨진 펀딩 객체 차단)
                       return (
                       <div key={f.id} className="bg-gradient-to-br from-blue-500 to-indigo-600 p-10 rounded-[40px] shadow-xl text-white flex flex-col justify-between relative overflow-hidden border-4 border-blue-400">
                         <div className="absolute -top-10 -right-10 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl"></div>
                         <div className="relative z-10">
-                           <h4 className="text-3xl font-black mb-3 flex items-center gap-3"><Target className="w-8 h-8 text-yellow-300"/> {f.name}</h4>
+                           <h4 className="text-3xl font-black mb-3 flex items-center gap-3"><Target className="w-8 h-8 text-yellow-300"/> {String(f.name)}</h4>
                            <p className="text-base font-bold text-blue-100 mb-10">십시일반 투자하여 다 함께 목표를 이뤄요!</p>
-                           <div className="flex justify-between items-end text-xl font-black mb-4"><span>현재: {f.current}p</span><span className="text-blue-200">목표: {f.target}p</span></div>
+                           <div className="flex justify-between items-end text-xl font-black mb-4"><span>현재: {Number(f.current)||0}p</span><span className="text-blue-200">목표: {Number(f.target)||1}p</span></div>
                            <div className="w-full h-6 bg-black/30 rounded-full mb-10 overflow-hidden border border-white/20 shadow-inner">
-                             <div className="h-full bg-yellow-400 transition-all duration-1000 shadow-[0_0_15px_rgba(250,204,21,0.8)]" style={{width:`${Math.min(((f.current||0)/(f.target||1))*100, 100)}%`}}></div>
+                             <div className="h-full bg-yellow-400 transition-all duration-1000 shadow-[0_0_15px_rgba(250,204,21,0.8)]" style={{width:`${Math.min(((Number(f.current)||0)/(Number(f.target)||1))*100, 100)}%`}}></div>
                            </div>
                         </div>
                         <div className="flex gap-4 relative z-10">
@@ -713,6 +723,8 @@ export default function App() {
                   <p className="text-slate-400 text-xs font-bold mt-2 tracking-widest">MASTER MODE</p>
                 </div>
                 <button onClick={() => setAdminSubTab('mission')} className={`w-full p-5 rounded-2xl font-black text-left flex items-center gap-4 text-lg transition-all ${adminSubTab === 'mission' ? 'bg-blue-600 text-white shadow-lg translate-x-2' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:translate-x-1'}`}><Zap className="w-6 h-6"/> 결재 및 퀘스트</button>
+                {/* 🚨 상점/펀딩 관리 탭 신설 */}
+                <button onClick={() => setAdminSubTab('shopAdmin')} className={`w-full p-5 rounded-2xl font-black text-left flex items-center gap-4 text-lg transition-all ${adminSubTab === 'shopAdmin' ? 'bg-blue-600 text-white shadow-lg translate-x-2' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:translate-x-1'}`}><Store className="w-6 h-6"/> 상점 및 펀딩 관리</button>
                 <button onClick={() => setAdminSubTab('report')} className={`w-full p-5 rounded-2xl font-black text-left flex items-center gap-4 text-lg transition-all ${adminSubTab === 'report' ? 'bg-blue-600 text-white shadow-lg translate-x-2' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:translate-x-1'}`}><BarChart3 className="w-6 h-6"/> SEL 리포트</button>
                 <button onClick={() => setAdminSubTab('students')} className={`w-full p-5 rounded-2xl font-black text-left flex items-center gap-4 text-lg transition-all ${adminSubTab === 'students' ? 'bg-blue-600 text-white shadow-lg translate-x-2' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:translate-x-1'}`}><Users className="w-6 h-6"/> 명단 관리</button>
                 <button onClick={() => setAdminSubTab('settings')} className={`w-full p-5 rounded-2xl font-black text-left flex items-center gap-4 text-lg transition-all ${adminSubTab === 'settings' ? 'bg-blue-600 text-white shadow-lg translate-x-2' : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:translate-x-1'}`}><Settings className="w-6 h-6"/> 환경 및 점수 세팅</button>
@@ -751,7 +763,7 @@ export default function App() {
                       </div>
 
                       <div className="border-t-2 border-slate-100 pt-8">
-                         {/* 타임어택 세팅 (수정 2 반영: 꽉 찬 버튼) */}
+                         {/* 타임어택 세팅 (🚨 가로 풀사이즈 버튼 적용 완료) */}
                          <div className="bg-red-50 p-8 rounded-[30px] border-2 border-red-200">
                            <h4 className="text-xl font-black text-red-800 mb-6 flex items-center gap-2"><Timer className="w-6 h-6"/> 타임어택 발동기</h4>
                            {db.timeAttack?.isActive ? (
@@ -784,6 +796,20 @@ export default function App() {
                        <h4 className="text-3xl font-black mb-8 text-slate-800 border-l-8 border-green-500 pl-5">서류 결재함</h4>
                        <div className="w-full space-y-5 max-h-[500px] overflow-y-auto pr-4 custom-scrollbar">
                          
+                         {/* 장인 결재 서류 */}
+                         {safeArray(db.pendingShopItems).map(item => (
+                            <div key={item.id} className="bg-amber-50 p-6 rounded-[24px] border-2 border-amber-200 text-left shadow-sm">
+                              <div className="flex justify-between items-center mb-3">
+                                <span className="font-black text-amber-800 bg-amber-100 px-3 py-1 rounded-lg text-xs">장인 건의: {item.creator}</span><span className="text-sm font-black text-amber-600">{item.price}🪙</span>
+                              </div>
+                              <p className="text-lg text-slate-800 font-black mb-4">"{item.name}"</p>
+                              <div className="flex gap-2">
+                                <button onClick={() => { const next = db.pendingShopItems.filter(i => i.id !== item.id); sync({ pendingShopItems: next, shopItems: [item, ...safeArray(db.shopItems)] }); alert("상점 등록 완료!"); playSound('good'); }} className="flex-1 bg-amber-500 text-white py-3 rounded-xl font-black text-sm hover:bg-amber-600 shadow-md">상점에 출시 허가</button>
+                                <button onClick={() => { const next = db.pendingShopItems.filter(i => i.id !== item.id); sync({ pendingShopItems: next }); alert("반려되었습니다."); }} className="px-4 bg-white text-slate-400 font-black rounded-xl border border-slate-200">반려</button>
+                              </div>
+                            </div>
+                         ))}
+
                          {/* 성찰 제출 서류 */}
                          {safeArray(db.pendingReflections).map(r => (
                            <div key={r.id} className="bg-red-50 p-6 rounded-[24px] border-2 border-red-200 text-left shadow-sm">
@@ -835,8 +861,69 @@ export default function App() {
                            </div>
                          )})}
                          
-                         {safeArray(db.pendingReflections).length === 0 && safeArray(db.pendingPraises).length === 0 && <div className="text-slate-400 font-black py-16 border-4 border-dashed border-slate-200 rounded-[30px] flex flex-col items-center"><CheckCircle2 className="w-12 h-12 mb-4 opacity-50"/>결재 대기열이 깨끗합니다.</div>}
+                         {safeArray(db.pendingReflections).length === 0 && safeArray(db.pendingPraises).length === 0 && safeArray(db.pendingShopItems).length === 0 && <div className="text-slate-400 font-black py-16 border-4 border-dashed border-slate-200 rounded-[30px] flex flex-col items-center"><CheckCircle2 className="w-12 h-12 mb-4 opacity-50"/>결재 대기열이 깨끗합니다.</div>}
                        </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 🚨 탭: 상점 및 펀딩 관리 (신규 부활) */}
+                {adminSubTab === 'shopAdmin' && (
+                  <div className="space-y-8 animate-in fade-in">
+                    <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-6 mb-8">상점 및 펀딩 관리</h3>
+                    <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 space-y-8">
+                      
+                      <div className="bg-slate-50 p-8 rounded-3xl border border-slate-200 shadow-sm">
+                        <button onClick={() => sync({ settings: { ...db.settings, forceShopOpen: !db.settings.forceShopOpen } })} className={`w-full py-5 rounded-2xl font-black text-xl transition-all shadow-md ${db.settings.forceShopOpen ? 'bg-amber-500 text-white' : 'bg-white text-slate-500 border-2 border-slate-300'}`}>정규 상점 개방: {db.settings.forceShopOpen ? 'ON (강제 개방 중)' : 'OFF (목요일에만 열림)'}</button>
+                      </div>
+
+                      <div className="pt-6">
+                        <h4 className="font-black text-xl text-slate-700 mb-6 flex items-center gap-2"><ShoppingCart className="w-5 h-5 text-amber-500"/> 상점 물품 관리</h4>
+                        <div className="flex gap-3 mb-6">
+                          <input type="text" placeholder="새로운 물품 이름" value={newItemName} onChange={e=>setNewItemName(e.target.value)} className="flex-1 p-4 rounded-xl border border-slate-300 font-bold outline-none"/>
+                          <input type="number" placeholder="가격" value={newItemPrice} onChange={e=>setNewItemPrice(e.target.value)} className="w-32 p-4 rounded-xl border border-slate-300 font-bold outline-none text-center"/>
+                          <button onClick={() => {
+                            if(!newItemName || !newItemPrice) return alert("입력 오류");
+                            sync({ shopItems: [...safeArray(db.shopItems), { id: Date.now(), name: newItemName, price: parseInt(newItemPrice), creator: '선생님' }] });
+                            setNewItemName(""); setNewItemPrice("");
+                          }} className="bg-blue-600 text-white px-8 rounded-xl font-black shadow-md hover:bg-blue-700">물품 추가</button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {safeArray(db.shopItems).map(item => {
+                            if(!item) return null;
+                            return (
+                            <div key={item.id} className="bg-amber-50 p-4 rounded-2xl border border-amber-200 flex justify-between items-center shadow-sm">
+                              <div><span className="text-[10px] text-slate-400 font-black bg-white px-2 py-1 rounded-md">{item.creator}</span><h4 className="font-black text-slate-800 mt-2">{item.name}</h4><p className="text-amber-600 font-black text-sm">{item.price} 🪙</p></div>
+                              <button onClick={() => { if(window.confirm("삭제할까요?")) sync({ shopItems: safeArray(db.shopItems).filter(i => i.id !== item.id) }); }} className="p-3 bg-white text-red-500 rounded-xl hover:bg-red-50 shadow-sm"><Trash2 className="w-5 h-5"/></button>
+                            </div>
+                          )})}
+                        </div>
+                      </div>
+
+                      <div className="pt-8 border-t border-slate-200 mt-8">
+                        <h4 className="font-black text-xl text-blue-800 mb-6 flex items-center gap-2"><Target className="w-5 h-5"/> 크라우드 펀딩 관리</h4>
+                        <div className="flex gap-3 mb-6 bg-blue-50 p-6 rounded-3xl border border-blue-100">
+                          <input type="text" placeholder="새로운 펀딩 목표 (예: 피자 파티)" value={newFundName} onChange={e=>setNewFundName(e.target.value)} className="flex-1 p-4 rounded-xl border border-blue-200 font-bold outline-none focus:border-blue-400"/>
+                          <input type="number" placeholder="목표 점수" value={newFundTarget} onChange={e=>setNewFundTarget(e.target.value)} className="w-32 p-4 rounded-xl border border-blue-200 font-bold outline-none focus:border-blue-400 text-center"/>
+                          <button onClick={() => {
+                            if(!newFundName || !newFundTarget || parseInt(newFundTarget)===0) return alert("올바른 값을 입력하세요.");
+                            sync({ funding: [...safeArray(db.funding), { id: Date.now(), name: newFundName, target: parseInt(newFundTarget), current: 0 }] });
+                            setNewFundName(""); setNewFundTarget("");
+                          }} className="bg-blue-600 text-white px-8 rounded-xl font-black shadow-md hover:bg-blue-700">펀딩 개설</button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {safeArray(db.funding).map(f => {
+                            if(!f) return null;
+                            return (
+                            <div key={f.id} className="bg-white p-5 rounded-2xl border border-blue-200 flex justify-between items-center shadow-sm">
+                              <div><h4 className="font-black text-blue-900 text-lg">{f.name}</h4><p className="text-blue-500 font-bold text-sm mt-1">현재: {f.current} / 목표: {f.target}p</p></div>
+                              <button onClick={() => { if(window.confirm("이 펀딩을 삭제할까요?")) sync({ funding: safeArray(db.funding).filter(x => x.id !== f.id) }); }} className="p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 shadow-sm"><Trash2 className="w-5 h-5"/></button>
+                            </div>
+                          )})}
+                        </div>
+                      </div>
+
                     </div>
                   </div>
                 )}
