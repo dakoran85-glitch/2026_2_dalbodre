@@ -15,8 +15,8 @@ const DATABASE_URL = "https://dalbodre-db-default-rtdb.asia-southeast1.firebased
 const DB_PATH = "v10Data";
 const POLL_INTERVAL_MS = 5000;
 const AUTH_KEY = "dalbodre_auth_v10";
-const ATTENDANCE_DEADLINE = { hour: 8, minute: 30 }; // 08:30 마감
-const DEFAULT_BREAK_MS = 10 * 60 * 1000; // 쉬는시간 기본 10분
+const ATTENDANCE_DEADLINE = { hour: 8, minute: 30 };
+const DEFAULT_BREAK_MS = 10 * 60 * 1000;
 
 // ══════════════════════════════════════════════════════════════
 // 🧰 UTILS
@@ -34,7 +34,6 @@ const toInt = (v, fallback = 0) => {
 
 const pad2 = (n) => String(n).padStart(2, '0');
 
-// 📅 주(Week) 키 생성 (ISO 기준)
 const getWeekKey = (d = new Date()) => {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
   const day = date.getUTCDay() || 7;
@@ -96,38 +95,15 @@ const playSound = (type) => {
     };
 
     switch (type) {
-      case 'good':
-        tone(600, 0.1);
-        tone(1200, 0.2, 0.1);
-        break;
-      case 'bad':
-        tone(300, 0.15, 0, 'sawtooth');
-        tone(100, 0.2, 0.15, 'sawtooth');
-        break;
-      case 'buy':
-        tone(500, 0.15, 0, 'square');
-        tone(900, 0.15, 0.1, 'square');
-        break;
-      case 'jackpot':
-        [440, 554.37, 659.25, 880].forEach((f, i) => tone(f, 0.2, i * 0.1, 'triangle', 0.2));
-        break;
-      case 'chime':
-        [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, 0.6, i * 0.12, 'sine', 0.18));
-        break;
-      case 'softChime':
-        [659.25, 830.61].forEach((f, i) => tone(f, 0.5, i * 0.18, 'sine', 0.15));
-        break;
-      case 'beep':
-        tone(880, 0.12, 0, 'square', 0.2);
-        tone(880, 0.12, 0.2, 'square', 0.2);
-        tone(880, 0.12, 0.4, 'square', 0.2);
-        break;
-      case 'attend':
-        tone(783.99, 0.1, 0, 'sine', 0.12);
-        tone(1046.5, 0.2, 0.08, 'sine', 0.12);
-        break;
-      default:
-        tone(600, 0.1);
+      case 'good': tone(600, 0.1); tone(1200, 0.2, 0.1); break;
+      case 'bad': tone(300, 0.15, 0, 'sawtooth'); tone(100, 0.2, 0.15, 'sawtooth'); break;
+      case 'buy': tone(500, 0.15, 0, 'square'); tone(900, 0.15, 0.1, 'square'); break;
+      case 'jackpot': [440, 554.37, 659.25, 880].forEach((f, i) => tone(f, 0.2, i * 0.1, 'triangle', 0.2)); break;
+      case 'chime': [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, 0.6, i * 0.12, 'sine', 0.18)); break;
+      case 'softChime': [659.25, 830.61].forEach((f, i) => tone(f, 0.5, i * 0.18, 'sine', 0.15)); break;
+      case 'beep': tone(880, 0.12, 0, 'square', 0.2); tone(880, 0.12, 0.2, 'square', 0.2); tone(880, 0.12, 0.4, 'square', 0.2); break;
+      case 'attend': tone(783.99, 0.1, 0, 'sine', 0.12); tone(1046.5, 0.2, 0.08, 'sine', 0.12); break;
+      default: tone(600, 0.1);
     }
   } catch (_) {}
 };
@@ -136,45 +112,23 @@ const playSound = (type) => {
 // 🔐 AUTH (localStorage)
 // ══════════════════════════════════════════════════════════════
 const saveAuth = (role) => {
-  const data = {
-    role,
-    issuedAt: Date.now(),
-    expires: role === 'teacher' ? null : Date.now() + 24 * 60 * 60 * 1000
-  };
-  try {
-    localStorage.setItem(AUTH_KEY, JSON.stringify(data));
-  } catch (_) {}
+  const data = { role, issuedAt: Date.now(), expires: role === 'teacher' ? null : Date.now() + 24 * 60 * 60 * 1000 };
+  try { localStorage.setItem(AUTH_KEY, JSON.stringify(data)); } catch (_) {}
 };
 
 const loadAuth = (revokedAt) => {
   try {
     const raw = localStorage.getItem(AUTH_KEY);
     if (!raw) return false;
-    
     const data = JSON.parse(raw);
     if (!data) return false;
-    
-    if (data.expires !== null && Date.now() > data.expires) {
-      localStorage.removeItem(AUTH_KEY);
-      return false;
-    }
-    
-    if (revokedAt && data.issuedAt < revokedAt) {
-      localStorage.removeItem(AUTH_KEY);
-      return false;
-    }
-    
+    if (data.expires !== null && Date.now() > data.expires) { localStorage.removeItem(AUTH_KEY); return false; }
+    if (revokedAt && data.issuedAt < revokedAt) { localStorage.removeItem(AUTH_KEY); return false; }
     return data.role;
-  } catch (_) {
-    return false;
-  }
+  } catch (_) { return false; }
 };
 
-const clearAuth = () => {
-  try {
-    localStorage.removeItem(AUTH_KEY);
-  } catch (_) {}
-};
+const clearAuth = () => { try { localStorage.removeItem(AUTH_KEY); } catch (_) {} };
 
 // ══════════════════════════════════════════════════════════════
 // 📚 STATIC DATA & GUIDES
@@ -244,7 +198,6 @@ const PRAISE_GUIDES = {
   "5단계: 책임 있는 의사결정 (Responsible decision-making)": "칭찬 예시: 학급을 위해 솔선수범하여 바른 선택을 한 모습을 칭찬해요!"
 };
 
-// 🔥 V10 진화 칭호 배열 (Level 0 ~ Level 5)
 const EVOLUTION_TITLES = [
   "🌱 희망의 씨앗이 움터요",
   "🌿 어린 나무가 자라나요",
@@ -254,7 +207,6 @@ const EVOLUTION_TITLES = [
   "🌟 전설의 세계수 완성!"
 ];
 
-// 🚨 초월보호막(shieldPoints) 제거 및 초기 데이터 세팅
 const INITIAL_DB = {
   students: DEFAULT_STUDENTS,
   rolesList: ['학급문고 정리', '우유 배달', '다툼 중재자', '현령', '감찰사'],
@@ -271,18 +223,13 @@ const INITIAL_DB = {
     pointConfig: { praiseBasic: 10, praiseBonus: 15, penalty: 20 },
     authRevokedAt: 0
   },
-  coopQuest: { 
-    q1Name: "다 함께 바른 생활", q1: 50, 
-    q2Name: "환대와 응원", q2: 20, 
-    q3Name: "전담수업 태도 우수", q3: 20, 
-    q4Name: "사이좋은 일주일", q4: 100, 
-    goodWeek: 0 
-  },
+  coopQuest: { q1Name: "다 함께 바른 생활", q1: 50, q2Name: "환대와 응원", q2: 20, q3Name: "전담수업 태도 우수", q3: 20, q4Name: "사이좋은 일주일", q4: 100, goodWeek: 0 },
   timeAttack: { isActive: false, title: "", rewardRep: 100, endTime: null, cleared: [] },
   timer: { mode: 'idle', startedAt: null, endTime: null, duration: null, isRunning: false, pausedElapsed: null, pausedRemaining: null },
   shopItems: [],
   pendingShopItems: [],
   funding: [],
+  purchaseHistory: [],
   roleExp: {},
   bonusCoins: {},
   usedCoins: {},
@@ -300,8 +247,9 @@ const INITIAL_DB = {
   notes: {},
   extraAttendDays: 0
 };
+
 // ══════════════════════════════════════════════════════════════
-// 🎨 VISUAL HELPER (세계수 렌더링 - 겹침 방지 절대 크기 적용)
+// 🎨 VISUAL HELPER (세계수 렌더링 - 겹침 방지 사이즈)
 // ══════════════════════════════════════════════════════════════
 const renderEvolution = (level) => {
   switch (level) {
@@ -321,6 +269,7 @@ const renderEvolution = (level) => {
   }
 };
 // =========== [1부 코드의 끝] ===========
+
 // ══════════════════════════════════════════════════════════════
 // 🧩 MAIN APP COMPONENT
 // ══════════════════════════════════════════════════════════════
@@ -427,7 +376,7 @@ export default function App() {
     return () => { alive = false; clearInterval(interval); };
   }, []);
 
-  // ── 주간 출석 자동 정리 ─────────────────────────────────────
+  // ⭐ V10.4 핵심: 매주 월요일, 이전 주간의 출석 데이터를 깔끔하게 지워주는 자동 초기화 로직
   useEffect(() => {
     if (isLoading) return;
     
@@ -438,6 +387,7 @@ export default function App() {
     
     if (oldKeys.length === 0) return;
 
+    // 지난 주 5일을 채우지 못한 학생들은 누적 개근(streak)을 0으로 초기화
     const newStreaks = { ...(currentDb.streakWeeks || {}) };
     const students = safeArray(currentDb.students);
     
@@ -449,6 +399,7 @@ export default function App() {
       });
     });
 
+    // 오직 이번 주(currentWeek) 데이터만 남기고 싹 비움
     const cleanedAttendance = { [currentWeek]: attendance[currentWeek] || {} };
     const cleanedBonus = { [currentWeek]: (currentDb.attendanceBonus || {})[currentWeek] || {} };
     
@@ -560,14 +511,16 @@ export default function App() {
 
     const weekKey = getWeekKey();
     const attendedDays = safeArray(db.attendance?.[weekKey]?.[s.id]);
-    const weeklyCount = attendedDays.length;
+    
+    // ⭐ V10.4 변경점: 공휴일 보정을 받으면 이름표의 0/5 출석 표시도 즉시 1/5 로 올라가도록 시각적 피드백 제공
+    const weeklyCount = Math.min(5, attendedDays.length + (db.extraAttendDays || 0));
+    
     const streak = db.streakWeeks?.[s.id] || 0;
     const todayIdx = getTodayWeekdayIdx();
     const attendedToday = todayIdx >= 0 && attendedDays.includes(todayIdx);
 
     return {
-      ...s, exp, coins, mastery, 
-      status: db.studentStatus[s.id] || 'normal',
+      ...s, exp, coins, mastery, status: db.studentStatus[s.id] || 'normal',
       atExp: db.allTime?.exp?.[s.id] || 0, 
       atDonate: db.allTime?.donate?.[s.id] || 0,
       atFund: db.allTime?.fund?.[s.id] || 0, 
@@ -575,11 +528,10 @@ export default function App() {
       weeklyCount, streak, attendedToday, 
       notes: safeArray(db.notes?.[s.id])
     };
-  }), [safeStudents, db.roleExp, db.bonusCoins, db.usedCoins, db.studentStatus, db.allTime, db.attendance, db.streakWeeks, db.notes]);
+  }), [safeStudents, db.roleExp, db.bonusCoins, db.usedCoins, db.studentStatus, db.allTime, db.attendance, db.streakWeeks, db.notes, db.extraAttendDays]);
 
   const activeStudents = useMemo(() => allStats.filter(s => s.status !== 'crisis'), [allStats]);
 
-  // 🔥 세계수 진화 연산 로직 (초월 보호막 영구 제거)
   const { classReputation, evolutionLevel, progressPercent } = useMemo(() => {
     const target = db.settings?.targetScore || 5000;
     const penaltyUnit = db.settings?.pointConfig?.penalty || 20;
@@ -614,400 +566,6 @@ export default function App() {
   const selectedRefStudentPraises = useMemo(() => !refTarget ? [] : safeArray(db.approvedPraises).filter(p => p.toId == refTarget), [refTarget, db.approvedPraises]);
   const randomPraise = selectedRefStudentPraises.length ? selectedRefStudentPraises[Math.floor(Math.random() * selectedRefStudentPraises.length)] : null;
 
-  // ══════════════════════════════════════════════════════════════
-  // 🎮 핸들러 (HANDLERS)
-  // ══════════════════════════════════════════════════════════════
-
-  const toggleAttendance = (sId) => {
-    const todayIdx = getTodayWeekdayIdx();
-    if (todayIdx < 0) return alert("주말에는 출석 체크를 할 수 없어요.");
-    
-    const weekKey = getWeekKey();
-    const currentDb = dbRef.current;
-    const weekData = currentDb.attendance?.[weekKey] || {};
-    const days = safeArray(weekData[sId]);
-    const alreadyToday = days.includes(todayIdx);
-
-    if (!alreadyToday && !isAttendanceOpen()) return alert("출석 시간이 지났어요. (08:30 마감)");
-
-    const newDays = alreadyToday ? days.filter(d => d !== todayIdx) : [...days, todayIdx].sort();
-    const newWeekData = { ...weekData, [sId]: newDays };
-    
-    const updates = { 
-      attendance: { ...currentDb.attendance, [weekKey]: newWeekData },
-      manualRepOffset: (currentDb.manualRepOffset || 0) + (alreadyToday ? -1 : 1)
-    };
-
-    if (!alreadyToday) {
-      playSound('attend');
-      setAttendAnim({ id: sId, ts: Date.now() });
-      setTimeout(() => setAttendAnim(null), 1400);
-      
-      const totalDays = newDays.length + (currentDb.extraAttendDays || 0);
-      const alreadyBonus = currentDb.attendanceBonus?.[weekKey]?.[sId];
-      
-      if (totalDays >= 5 && !alreadyBonus) {
-        updates.bonusCoins = { ...currentDb.bonusCoins, [sId]: (currentDb.bonusCoins?.[sId] || 0) + 3 };
-        updates.attendanceBonus = { ...currentDb.attendanceBonus, [weekKey]: { ...(currentDb.attendanceBonus?.[weekKey] || {}), [sId]: true } };
-        updates.streakWeeks = { ...currentDb.streakWeeks, [sId]: (currentDb.streakWeeks?.[sId] || 0) + 1 };
-        setTimeout(() => playSound('jackpot'), 600);
-        setTimeout(() => alert(`🎉 ${allStats.find(x=>x.id===sId)?.name} 개근 달성! 🪙3 보너스!`), 900);
-      }
-    }
-    sync(updates);
-  };
-
-  const teacherAddHoliday = () => {
-    if (!window.confirm("공휴일/재량휴업일로 간주하여 모든 학생의 이번 주 출석일수에 +1을 반영할까요?")) return;
-    
-    const currentDb = dbRef.current;
-    const next = (currentDb.extraAttendDays || 0) + 1;
-    const weekKey = getWeekKey();
-    const updates = { extraAttendDays: next };
-    const weekData = currentDb.attendance?.[weekKey] || {};
-    
-    let newBonus = { ...(currentDb.attendanceBonus?.[weekKey] || {}) };
-    let newStreaks = { ...(currentDb.streakWeeks || {}) };
-    let newCoins = { ...(currentDb.bonusCoins || {}) };
-    let bonusCount = 0;
-    
-    safeArray(currentDb.students).forEach(s => {
-      const days = safeArray(weekData[s.id]);
-      const total = days.length + next;
-      if (total >= 5 && !newBonus[s.id]) {
-        newBonus[s.id] = true;
-        newStreaks[s.id] = (newStreaks[s.id] || 0) + 1;
-        newCoins[s.id] = (newCoins[s.id] || 0) + 3;
-        bonusCount++;
-      }
-    });
-    
-    updates.attendanceBonus = { ...currentDb.attendanceBonus, [weekKey]: newBonus };
-    updates.streakWeeks = newStreaks;
-    updates.bonusCoins = newCoins;
-    
-    sync(updates);
-    alert(`📅 전체 출석일수 +1 반영 완료 (현재 보정: +${next}일, 추가 개근 달성 ${bonusCount}명)`);
-  };
-
-  const openNoteModal = (sId) => {
-    if (isAuthenticated !== 'teacher') return setShowModal('password');
-    setShowNoteModal(sId);
-    setNoteText("");
-  };
-
-  const submitNote = () => {
-    if (!noteText.trim()) return alert("내용을 입력하세요.");
-    const sId = showNoteModal;
-    const note = { id: Date.now(), date: formatDate(), text: noteText.trim() };
-    sync({ notes: { ...db.notes, [sId]: [...safeArray(db.notes?.[sId]), note] } });
-    setShowNoteModal(null);
-    setNoteText("");
-    alert("📝 누가기록 저장 완료!");
-  };
-
-  const deleteNote = (sId, noteId) => {
-    if (!window.confirm("삭제할까요?")) return;
-    sync({ notes: { ...db.notes, [sId]: safeArray(db.notes?.[sId]).filter(n => n.id !== noteId) } });
-  };
-
-  const buildStudentReport = (s) => {
-    const praises = safeArray(db.approvedPraises).filter(p => p.toId == s.id);
-    const reflections = safeArray(db.pendingReflections).filter(r => r.sId == s.id);
-    const notes = safeArray(db.notes?.[s.id]);
-    
-    let md = `## ${s.name} (${s.group}모둠 · ${s.role}${s.isLeader ? ' · 모둠장' : ''})\n`;
-    if (s.enneagram && ENNEAGRAM_DATA[s.enneagram]) md += `- 에니어그램: ${ENNEAGRAM_DATA[s.enneagram].name}\n`;
-    md += `- 누적 완수: ${s.atExp}회 / 기부: ${s.atDonate}🪙 / 펀딩: ${s.atFund}🪙 / 위기: ${s.atPen}회\n`;
-    md += `- 이번 주 출석: ${s.weeklyCount}/5 · 누적 개근: ${s.streak}주\n`;
-    md += `- 숙련도: ${s.mastery.label} (${s.exp})\n\n`;
-    
-    md += `### 받은 칭찬 (${praises.length}건)\n`;
-    if (praises.length) praises.forEach(p => { md += `- [${p.date}] ${SEL_OPTIONS.find(o=>o.name===p.tag)?.short||'-'}: "${p.text}"\n`; });
-    else md += `- (없음)\n`;
-    
-    md += `\n### 제출한 성찰 (${reflections.length}건)\n`;
-    if (reflections.length) reflections.forEach(r => { md += `- [${r.date}] ${SEL_OPTIONS.find(o=>o.name===r.tag)?.short||'-'}: "${r.text}"\n`; });
-    else md += `- (없음)\n`;
-    
-    md += `\n### 누가기록 (${notes.length}건)\n`;
-    if (notes.length) notes.forEach(n => { md += `- [${n.date}] ${n.text}\n`; });
-    else md += `- (없음)\n`;
-    
-    return md;
-  };
-
-  const exportStudent = (sId) => {
-    const s = allStats.find(x => x.id == sId);
-    if (!s) return;
-    downloadOrCopy(`# 달보드레 학생 리포트\n생성일: ${formatDate()}\n\n${buildStudentReport(s)}`, `report_${s.name}_${formatDate()}.md`);
-  };
-
-  const exportAll = () => {
-    let md = `# 달보드레 학급 전체 리포트\n생성일: ${formatDate()}\n총 ${allStats.length}명 · 명성: ${classReputation}p\n\n---\n\n`;
-    allStats.forEach(s => { md += buildStudentReport(s) + "\n---\n\n"; });
-    downloadOrCopy(md, `class_report_${formatDate()}.md`);
-  };
-
-  const downloadOrCopy = (text, filename) => {
-    try { navigator.clipboard.writeText(text); } catch(_) {}
-    try {
-      const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = filename;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-      alert(`📋 텍스트가 복사되었고, 마크다운 파일로도 다운로드되었습니다!`);
-    } catch (e) { alert("다운로드 실패. 클립보드에는 복사되었습니다."); }
-  };
-
-  const startStopwatch = () => sync({ timer: { mode: 'class_sw', startedAt: Date.now(), endTime: null, duration: null, isRunning: true, pausedElapsed: 0, pausedRemaining: null } });
-  const startCountdown = (minutes) => { const ms = minutes * 60 * 1000; sync({ timer: { mode: 'class_cd', startedAt: null, endTime: Date.now() + ms, duration: ms, isRunning: true, pausedElapsed: null, pausedRemaining: ms } }); };
-  
-  const pauseTimer = () => {
-    const t = db.timer || {}; if (!t.isRunning) return;
-    if (t.mode === 'class_sw') sync({ timer: { ...t, isRunning: false, pausedElapsed: Date.now() - t.startedAt } });
-    else if (t.mode === 'class_cd' || t.mode === 'break') sync({ timer: { ...t, isRunning: false, pausedRemaining: Math.max(0, t.endTime - Date.now()) } });
-  };
-  
-  const resumeTimer = () => {
-    const t = db.timer || {}; if (t.isRunning) return;
-    if (t.mode === 'class_sw') sync({ timer: { ...t, isRunning: true, startedAt: Date.now() - (t.pausedElapsed || 0) } });
-    else if (t.mode === 'class_cd' || t.mode === 'break') sync({ timer: { ...t, isRunning: true, endTime: Date.now() + (t.pausedRemaining || 0) } });
-  };
-  
-  const resetTimer = () => sync({ timer: { mode: 'idle', startedAt: null, endTime: null, duration: null, isRunning: false, pausedElapsed: null, pausedRemaining: null } });
-  
-  const startBreak = (minutes) => {
-    const ms = minutes * 60 * 1000;
-    lastNotifiedRef.current = {};
-    sync({ timer: { mode: 'break', startedAt: null, endTime: Date.now() + ms, duration: ms, isRunning: true, pausedElapsed: null, pausedRemaining: ms } });
-  };
-
-  const handleExpAdjust = (id, delta) => {
-    if (delta > 0) playSound('good');
-    sync({ 
-      roleExp: { ...db.roleExp, [id]: Math.max(0, (db.roleExp[id]||0) + delta) }, 
-      allTime: { ...db.allTime, exp: { ...db.allTime.exp, [id]: Math.max(0, (db.allTime.exp?.[id]||0) + delta) } } 
-    });
-  };
-
-  const handleGivePenalty = (id) => {
-    if (!isAuthenticated) return setShowModal('password');
-    if (!window.confirm("위기 지정할까요?")) return;
-    playSound('bad');
-    sync({ 
-      studentStatus: { ...db.studentStatus, [id]: 'crisis' }, 
-      penaltyCount: { ...db.penaltyCount, [id]: (db.penaltyCount[id] || 0) + 1 }, 
-      allTime: { ...db.allTime, penalty: { ...db.allTime.penalty, [id]: (db.allTime.penalty?.[id] || 0) + 1 } } 
-    });
-  };
-
-  const handleDonate = (sId, amount) => {
-    const u = allStats.find(s => s.id == sId);
-    if (!u || u.coins < amount) return alert("코인 부족!");
-    playSound('buy');
-    sync({ 
-      usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + amount }, 
-      donations: [{ id: Date.now(), name: u.name, amount }, ...safeArray(db.donations)].slice(0, 15), 
-      allTime: { ...db.allTime, donate: { ...db.allTime.donate, [sId]: (db.allTime.donate?.[sId] || 0) + amount } } 
-    });
-    alert("기부 완료! ✨");
-  };
-
-  const handleFund = (fId, sId, amount) => {
-    const u = allStats.find(s => s.id == sId);
-    if (!u || u.coins < amount) return alert("코인 부족!");
-    playSound('buy');
-    sync({ 
-      usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + amount }, 
-      funding: safeArray(db.funding).map(f => f.id === fId ? { ...f, current: (Number(f.current)||0) + amount } : f), 
-      allTime: { ...db.allTime, fund: { ...db.allTime.fund, [sId]: (db.allTime.fund?.[sId] || 0) + amount } } 
-    });
-    alert("투자 완료!");
-  };
-
-  const addCoopScore = (points, title) => {
-    playSound('jackpot');
-    sync({ manualRepOffset: (db.manualRepOffset || 0) + points });
-    alert(`🎉 [${title}] 달성! +${points}점!`);
-  };
-
-  const adjustGoodWeek = (delta) => {
-    const next = Math.max(0, Math.min(5, (db.coopQuest?.goodWeek || 0) + delta));
-    sync({ coopQuest: { ...db.coopQuest, goodWeek: next } });
-    if (delta > 0) playSound('good');
-  };
-
-  const completeGoodWeek = () => {
-    playSound('jackpot');
-    const reward = db.coopQuest?.q4 || 100;
-    sync({ coopQuest: { ...db.coopQuest, goodWeek: 0 }, manualRepOffset: (db.manualRepOffset || 0) + reward });
-    alert(`🌟 사이 좋은 일주일! +${reward}점!`);
-  };
-
-  const handleStartTimeAttack = () => {
-    const mins = toInt(taMins, 10);
-    const reward = toInt(taReward, 100);
-    const title = taTitle.trim() || "미션";
-    if (mins <= 0 || reward <= 0) return alert("값을 확인하세요.");
-    if (!window.confirm(`${mins}분 / ${reward}p로 타임어택을 시작할까요?`)) return;
-    sync({ timeAttack: { isActive: true, title, rewardRep: reward, endTime: Date.now() + mins*60*1000, cleared: [] } });
-  };
-
-  const handleCompleteTimeAttack = () => {
-    playSound('jackpot');
-    sync({ 
-      manualRepOffset: (db.manualRepOffset || 0) + (db.timeAttack?.rewardRep || 0), 
-      timeAttack: { isActive: false, title: "", rewardRep: 0, endTime: null, cleared: [] } 
-    });
-    alert("🎉 타임어택 미션 성공!");
-  };
-
-  const handleFailTimeAttack = () => {
-    sync({ timeAttack: { isActive: false, title: "", rewardRep: 0, endTime: null, cleared: [] } });
-  };
-
-  const toggleTimeAttackClear = (id) => {
-    if (!db.timeAttack?.isActive) return;
-    const cleared = safeArray(db.timeAttack.cleared).map(Number);
-    const isDone = cleared.includes(Number(id));
-    const next = isDone ? cleared.filter(c => c !== Number(id)) : [...cleared, Number(id)];
-    sync({ timeAttack: { ...db.timeAttack, cleared: next } });
-    if (!isDone) playSound('good');
-  };
-
-  // ⭐ V10.3 핵심: 장인 아이템 결재 시 creatorId 함께 저장
-  const submitArtisanItem = () => {
-    if (!artisanTarget || !artisanItemName || !artisanItemPrice) return alert("입력 오류");
-    const artisan = allStats.find(s => s.id == artisanTarget);
-    if (!artisan || artisan.exp < 20) return alert("장인만 가능");
-    
-    sync({ 
-      pendingShopItems: [
-        { 
-          id: Date.now(), 
-          name: artisanItemName, 
-          price: toInt(artisanItemPrice), 
-          creator: artisan.name, 
-          creatorId: artisan.id // 로열티 지급을 위한 고유 ID 저장
-        }, 
-        ...safeArray(db.pendingShopItems)
-      ] 
-    });
-    
-    setArtisanTarget(""); 
-    setArtisanItemName(""); 
-    setArtisanItemPrice(""); 
-    alert("결재를 올렸습니다!");
-  };
-
-  const submitPraise = () => {
-    if (!praiseTarget || !praiseTag || !praiseText) return alert("빈칸 확인!");
-    sync({ pendingPraises: [{ id: Date.now(), toId: praiseTarget, tag: praiseTag, text: praiseText, date: formatDate() }, ...safeArray(db.pendingPraises)] });
-    setShowPraiseModal(false); setPraiseTarget(""); setPraiseText(""); setPraiseTag("");
-    alert("온기 배달 완료!");
-  };
-
-  const submitReflection = () => {
-    if (!refTarget || !refTag || !refText) return alert("빈칸 확인!");
-    sync({ 
-      pendingReflections: [{ id: Date.now(), sId: refTarget, tag: refTag, text: refText, date: formatDate() }, ...safeArray(db.pendingReflections)], 
-      studentStatus: { ...db.studentStatus, [refTarget]: 'pending' } 
-    });
-    setRefTarget(""); setRefText(""); setRefTag("");
-    alert("다짐 제출 완료!");
-  };
-
-  const approvePraise = (p) => {
-    const target = allStats.find(u => u.id == p.toId);
-    if (target?.status === 'crisis') return alert("위기 학생에게는 지급 불가. 성찰이 먼저입니다.");
-    
-    const next = safeArray(db.pendingPraises).filter(pr => pr.id !== p.id);
-    const app = [p, ...safeArray(db.approvedPraises)].slice(0, 20);
-    const themeMatch = p.tag === db.settings?.weeklyTheme;
-    const earned = themeMatch ? (db.settings?.pointConfig?.praiseBonus || 15) : (db.settings?.pointConfig?.praiseBasic || 10);
-    const updates = { pendingPraises: next, approvedPraises: app };
-    
-    if (p.toId !== 'me') {
-      updates.bonusCoins = { ...db.bonusCoins, [p.toId]: (db.bonusCoins?.[p.toId] || 0) + earned };
-      updates.allTime = { ...db.allTime, exp: { ...db.allTime.exp, [p.toId]: (db.allTime.exp?.[p.toId] || 0) + 1 } };
-    }
-    sync(updates);
-    alert(`온기 승인 완료! (+${earned}🪙)`);
-    playSound('good');
-  };
-
-  const handleLogin = () => {
-    const isMaster = password === (db.settings?.masterPw || "6505");
-    const isHelp = password === (db.settings?.helpRoomPw || "1111");
-    if (isMaster) {
-      setIsAuthenticated('teacher'); saveAuth('teacher');
-      setActiveTab('admin'); setShowModal(null); setPassword("");
-    } else if (isHelp) {
-      setIsAuthenticated('inspector'); saveAuth('inspector');
-      setActiveTab('helproom'); setShowModal(null); setPassword("");
-    } else {
-      alert("비밀번호 오류 ❌"); playSound('bad');
-    }
-  };
-
-  const handleLogout = () => {
-    clearAuth(); setIsAuthenticated(false); setActiveTab('dashboard');
-  };
-
-  const revokeAllSessions = () => {
-    if (!window.confirm("모든 기기에서 강제 로그아웃합니다. 본 기기도 로그아웃됩니다.")) return;
-    sync({ settings: { ...db.settings, authRevokedAt: Date.now() } });
-    clearAuth(); setIsAuthenticated(false); setActiveTab('dashboard');
-    alert("모든 세션을 무효화했습니다.");
-  };
-
-  const handleStudentFieldChange = (id, field, value) => {
-    sync({ students: safeStudents.map(st => st.id === id ? { ...st, [field]: value } : st) });
-  };
-
-  const handleAddStudent = () => {
-    if (!newStudentName) return;
-    const nextId = safeStudents.length ? Math.max(...safeStudents.map(s => s.id)) + 1 : 1;
-    sync({ 
-      students: [...safeStudents, { id: nextId, name: newStudentName, role: '향리', group: toInt(newStudentGroup, 1), isLeader: false, enneagram: newStudentEnneagram }] 
-    });
-    setNewStudentName("");
-    alert("전입생 추가 완료!");
-  };
-
-  const handleRemoveStudent = (id) => {
-    if (window.confirm("학생을 삭제하시겠습니까?")) sync({ students: safeStudents.filter(s => s.id !== id) });
-  };
-
-  const closeSemester = () => {
-    if (window.prompt("마감하시겠습니까? '마감'을 입력하세요.") !== "마감") return;
-    sync({ 
-      roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, 
-      pendingReflections: [], pendingPraises: [], donations: [], attendance: {}, 
-      attendanceBonus: {}, streakWeeks: {}, notes: {} 
-    });
-    alert("학기 마감이 완료되었습니다.");
-  };
-
-  const factoryReset = () => {
-    if (window.prompt("공장 초기화를 진행하시겠습니까? '초기화'를 입력하세요.") !== "초기화") return;
-    sync({
-      roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {},
-      pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [],
-      pendingShopItems: [], shopItems: [], funding: [],
-      manualRepOffset: 0, shieldPoints: 0,
-      allTime: { exp: {}, penalty: {}, donate: {}, fund: {} },
-      timeAttack: { isActive: false, title: "", rewardRep: 100, endTime: null, cleared: [] },
-      attendance: {}, attendanceBonus: {}, streakWeeks: {}, notes: {}, extraAttendDays: 0
-    });
-    alert("전체 데이터가 초기화되었습니다.");
-  };
-
-  const toggleCumulativeStats = () => {
-    sync({ settings: { ...db.settings, showCumulativeStats: !db.settings?.showCumulativeStats } });
-  };
-
 // =========== [2부 코드의 끝] ===========
 // ══════════════════════════════════════════════════════════════
 // 🖼️ 화면 렌더링 (JSX RETURN)
@@ -1015,69 +573,72 @@ export default function App() {
   return (
     <div className="min-h-screen bg-amber-50/50 pb-32 font-sans text-slate-800 transition-all">
 
-{/* ═══ HEADER: 완벽한 5:5 2분할 레이아웃 ═══ */}
-      <header className="bg-[#FFF5E1] p-6 md:p-12 relative overflow-hidden border-b-4 border-white flex flex-col gap-6">
+      {/* ═══ HEADER: 스케치 디자인 완벽 반영 (좌/우 5:5 2분할 레이아웃) ═══ */}
+      <header className="bg-[#FFF5E1] p-6 md:p-12 relative overflow-hidden border-b-4 border-white flex flex-col gap-8">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white rounded-full blur-[120px] opacity-70 pointer-events-none"></div>
         
-        {/* 상단 타이틀 (목표 달성 글씨 완전 삭제) */}
-        <div className="max-w-[1400px] w-full mx-auto relative z-10 flex items-center">
-          <h1 className="text-amber-800 font-black text-2xl flex items-center gap-3">
-            <Sparkles className="text-amber-500 w-8 h-8"/> {db.settings?.title}
+        {/* 상단 타이틀 */}
+        <div className="max-w-[1400px] w-full mx-auto relative z-10 flex items-center justify-between">
+          <h1 className="text-amber-800 font-black text-xl flex items-center gap-2">
+            <Sparkles className="text-amber-500 w-6 h-6"/> {db.settings?.title}
           </h1>
+          <div className="bg-white/60 px-4 py-1.5 rounded-full border-2 border-white shadow-sm backdrop-blur-sm flex items-center gap-2">
+             <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">목표 달성까지</span>
+             <span className="text-base font-black text-amber-900">{Math.max(0, (db.settings?.targetScore || 5000) - classReputation)}p</span>
+          </div>
         </div>
 
-        {/* 5:5 메인 분할 (좌: 점수/세계수/게이지 | 우: 타임워치) */}
-        <div className="max-w-[1400px] w-full mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        {/* 메인 2분할 레이아웃 (좌측: 점수+세계수+게이지 / 우측: 타임워치) */}
+        <div className="max-w-[1400px] w-full mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-end">
           
-          {/* 📍 좌측 영역 (화면의 딱 50% 차지) */}
-          <div className="flex flex-col justify-center gap-10 w-full">
+          {/* 📍 좌측 영역 (50%) */}
+          <div className="lg:col-span-7 flex flex-col gap-10 w-full justify-between py-2">
             
-            {/* 1층: 초대형 점수 & 세계수 (gap-12로 겹침 원천 차단) */}
-            <div className="flex flex-row items-center justify-center lg:justify-start gap-12 pl-2">
+            {/* 1층: 점수 & 세계수 (나란히 크게 배치) */}
+            <div className="flex flex-row items-center justify-start gap-12 pl-2">
+              {/* 초대형 점수 */}
               <div className="flex items-baseline">
-                <span className="text-[130px] md:text-[180px] font-black text-[#6B4423] drop-shadow-md tracking-tighter leading-none">
+                <span className="text-[140px] md:text-[180px] font-black text-[#6B4423] drop-shadow-md tracking-tighter leading-[0.85]">
                   {classReputation}
                 </span>
-                <span className="text-6xl md:text-7xl font-black text-amber-500 ml-2">p</span>
+                <span className="text-6xl md:text-7xl font-black text-amber-500 ml-3">p</span>
               </div>
               
-              {/* 확대경(scale) 속성을 빼서 주변을 밀어내게 만듦 */}
-              <div className="relative flex items-center justify-center">
+              {/* 초대형 세계수 */}
+              <div className="scale-[2.0] md:scale-[2.5] transform-origin-left drop-shadow-2xl relative">
                 <div className="absolute inset-0 bg-yellow-200 blur-3xl opacity-40 rounded-full"></div>
-                <div className="relative z-10 drop-shadow-2xl">
-                  {renderEvolution(evolutionLevel)}
-                </div>
+                {renderEvolution(evolutionLevel)}
               </div>
             </div>
 
-            {/* 2층: 게이지 & 기부바 (좌측 50% 박스 안에 예쁘게 갇힘) */}
-            <div className="w-full space-y-4 px-2">
-              <div className="w-full h-16 bg-white/80 rounded-full overflow-hidden shadow-inner border-4 border-amber-200 relative">
+            {/* 2층: 5단계 진화 게이지 & 기부 마키 */}
+            <div className="w-full space-y-4">
+              <div className="w-full h-14 bg-white/70 rounded-full overflow-hidden shadow-inner border-4 border-amber-200 relative">
                 <div 
                   className={`h-full transition-all duration-1000 ${evolutionLevel >= 5 ? 'bg-gradient-to-r from-yellow-300 via-amber-400 to-red-500 animate-pulse' : 'bg-gradient-to-r from-yellow-300 to-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)]'}`} 
                   style={{ width: `${progressPercent}%` }}
                 ></div>
-                <div className="absolute inset-0 flex items-center justify-center font-black text-amber-900 text-xl tracking-widest drop-shadow-md">
-                  {EVOLUTION_TITLES[evolutionLevel]} <span className="text-base ml-3 opacity-70">({evolutionLevel}/5)</span>
+                <div className="absolute inset-0 flex items-center justify-center font-black text-amber-900 text-lg md:text-xl tracking-widest drop-shadow-md">
+                  {EVOLUTION_TITLES[evolutionLevel]} <span className="text-sm ml-3 opacity-70">({evolutionLevel}/5)</span>
                 </div>
               </div>
               
               <div className="flex items-center gap-3">
-                <div className="flex-1 overflow-hidden whitespace-nowrap text-base font-bold text-amber-700 bg-white/60 px-6 py-4 rounded-full border border-amber-200 flex items-center shadow-sm">
+                <div className="flex-1 overflow-hidden whitespace-nowrap text-sm font-bold text-amber-700 bg-white/60 px-5 py-3 rounded-full border border-amber-200 flex items-center shadow-sm">
                   <Sparkles className="w-5 h-5 text-amber-500 mr-2 shrink-0"/>
                   <span className="animate-[shimmer_25s_linear_infinite] inline-block w-full">
                      기부 명예의 전당: {safeArray(db.donations).map(d => `${String(d.name)}(${d.amount}p)`).join(' 🌸 ') || '따뜻한 마음을 기다려요!'}
                   </span>
                 </div>
-                <span className="text-sm font-black text-orange-600 bg-white px-6 py-4 rounded-full shadow-sm border border-orange-200 shrink-0">
+                <span className="text-sm font-black text-orange-600 bg-white px-6 py-3 rounded-full shadow-sm border border-orange-200 shrink-0">
                   최종 목표: {db.settings?.targetScore || 5000}p
                 </span>
               </div>
             </div>
           </div>
 
-          {/* 📍 우측 영역 (화면의 딱 50% 차지): 선생님이 만드신 타임워치 위젯 */}
-          <div className="w-full h-full">
+          {/* 📍 우측 영역 (50%): 타임워치 위젯 */}
+          <div className="lg:col-span-5 h-full pb-4">
             <TimerWidget 
               status={timerStatus} 
               display={timerDisplay} 
@@ -1126,14 +687,24 @@ export default function App() {
                   <button onClick={() => addCoopScore(db.coopQuest?.q2 || 20, db.coopQuest?.q2Name || "환대")} className="bg-pink-50 hover:bg-pink-100 text-pink-700 py-4 rounded-2xl font-black text-base border border-pink-200 active:scale-95 truncate px-3">{db.coopQuest?.q2Name || "환대"} +{db.coopQuest?.q2 || 20}</button>
                   <button onClick={() => addCoopScore(db.coopQuest?.q3 || 20, db.coopQuest?.q3Name || "전담 우수")} className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 py-4 rounded-2xl font-black text-base border border-emerald-200 active:scale-95 col-span-2 shadow-sm truncate px-3">{db.coopQuest?.q3Name || "전담 우수"} +{db.coopQuest?.q3 || 20}</button>
                 </div>
+                
+                {/* ⭐ V10.4: 사이좋은 일주일 5칸 시각적 게이지 반영 */}
                 <div className="flex items-center justify-between bg-yellow-50 p-5 rounded-2xl border border-yellow-200">
-                  <span className="text-base font-black text-yellow-800 truncate pr-2 flex-1">{db.coopQuest?.q4Name || "사이좋은 일주일"}</span>
+                  <div className="flex flex-col gap-2 flex-1 pr-5">
+                    <span className="text-base font-black text-yellow-800 truncate">{db.coopQuest?.q4Name || "사이좋은 일주일"}</span>
+                    <div className="flex gap-1.5 w-full max-w-[150px]">
+                      {[1, 2, 3, 4, 5].map(step => (
+                        <div key={step} className={`h-2.5 flex-1 rounded-full transition-all duration-300 ${step <= (db.coopQuest?.goodWeek || 0) ? 'bg-yellow-400 shadow-sm' : 'bg-yellow-200/50'}`}></div>
+                      ))}
+                    </div>
+                  </div>
                   <div className="flex items-center gap-4 shrink-0">
                     <button onClick={() => adjustGoodWeek(-1)} className="p-3 bg-white rounded-xl text-red-500 border border-red-100 shadow-sm hover:bg-red-50"><Minus className="w-5 h-5"/></button>
-                    <span className="font-black text-2xl text-yellow-600 w-14 text-center">{db.coopQuest?.goodWeek || 0}/5</span>
+                    <span className="font-black text-2xl text-yellow-600 w-10 text-center">{db.coopQuest?.goodWeek || 0}</span>
                     <button onClick={() => adjustGoodWeek(1)} className="p-3 bg-white rounded-xl text-green-500 border border-green-100 shadow-sm hover:bg-green-50"><Plus className="w-5 h-5"/></button>
                   </div>
                 </div>
+                
                 {(db.coopQuest?.goodWeek || 0) >= 5 && (
                   <button onClick={completeGoodWeek} className="mt-4 w-full bg-yellow-400 text-yellow-900 shadow-md font-black py-5 rounded-2xl text-lg animate-pulse hover:bg-yellow-500">🌟 최종 승인 및 명성 획득!</button>
                 )}
@@ -1532,7 +1103,6 @@ export default function App() {
                             {activeStudents.map(s => <option key={s.id} value={s.id}>{s.name} (잔여: {s.coins}🪙)</option>)}
                           </select>
                           
-                          {/* ⭐ V10.3 구매 및 로열티 지급 로직 */}
                           <button onClick={() => {
                             if (!isShopOpen) return alert("오늘은 상점 운영일이 아닙니다!");
                             
@@ -1548,7 +1118,20 @@ export default function App() {
                             const repBonus = Math.ceil(price * 0.10); // 10% 명성
                             const coinBonus = Math.ceil(price * 0.05); // 5% 장인 로열티
                             
-                            let updates = { usedCoins: { ...db.usedCoins, [sid]: (db.usedCoins[sid] || 0) + price } };
+                            // ⭐ V10.4: 상점 구매 기록 생성
+                            const newHistory = {
+                              id: Date.now(),
+                              date: formatDate(),
+                              itemName: String(item.name),
+                              buyerName: user.name,
+                              price: price
+                            };
+
+                            let updates = { 
+                              usedCoins: { ...db.usedCoins, [sid]: (db.usedCoins[sid] || 0) + price },
+                              purchaseHistory: [newHistory, ...safeArray(db.purchaseHistory)].slice(0, 50) // 최신 50개만 유지
+                            };
+                            
                             let alertMsg = "결제 승인 완료!";
 
                             if (item.creatorId) {
@@ -1600,16 +1183,42 @@ export default function App() {
                       </div>
                     ))}
                   </div>
+
+                  {/* ⭐ V10.4 추가: 상점 구매 기록 (최근 내역 공개) */}
+                  <div className="mt-12 bg-white p-8 rounded-[40px] shadow-sm border-2 border-slate-100">
+                    <h4 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3">
+                      <History className="w-6 h-6 text-slate-400"/> 상점 이용 기록 (최근 50건)
+                    </h4>
+                    <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-4">
+                      {safeArray(db.purchaseHistory).length === 0 ? (
+                        <p className="text-center py-10 text-slate-400 font-bold">아직 상점 구매 기록이 없습니다.</p>
+                      ) : (
+                        safeArray(db.purchaseHistory).map(h => (
+                          <div key={h.id} className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-sm">
+                            <div className="flex items-center gap-4">
+                              <span className="text-xs font-bold text-slate-400 bg-white px-3 py-1 rounded-lg shadow-sm border">{h.date}</span>
+                              <span className="font-black text-slate-700 text-lg">{h.buyerName}</span>
+                              <span className="text-sm font-bold text-slate-500">친구가</span>
+                              <span className="font-black text-amber-600 text-lg">"{h.itemName}"</span>
+                              <span className="text-sm font-bold text-slate-500">물품을 구매했습니다.</span>
+                            </div>
+                            <span className="font-black text-amber-500 text-lg">-{h.price}🪙</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </section>
           </div>
         )}
-
+// =========== [3부 코드의 끝] ===========
 {/* ═══ PAGE 4: 관리실 ═══ */}
         {activeTab === 'admin' && isAuthenticated === 'teacher' && (
           <div className="bg-white rounded-[50px] shadow-sm border border-slate-100 flex flex-col lg:flex-row min-h-[850px] animate-in fade-in overflow-hidden">
             
+            {/* 관리실 사이드바 */}
             <aside className="w-full lg:w-80 bg-slate-900 p-10 flex flex-col gap-4 shrink-0 border-r border-slate-800">
               <div className="text-center mb-10">
                 <Lock className="w-16 h-16 text-blue-500 mx-auto mb-4" />
@@ -1621,7 +1230,7 @@ export default function App() {
                 { key: 'mission',    icon: <Zap className="w-6 h-6"/>,          label: '결재 및 퀘스트', danger: false },
                 { key: 'shopAdmin',  icon: <Store className="w-6 h-6"/>,         label: '상점/펀딩 관리',   danger: false },
                 { key: 'report',     icon: <BarChart3 className="w-6 h-6"/>,     label: 'SEL 리포트',  danger: false },
-                { key: 'students',   icon: <Users className="w-6 h-6"/>,          label: '명단 및 성향',   danger: false },
+                { key: 'students',   icon: <Users className="w-6 h-6"/>,          label: '명단 및 직업',   danger: false },
                 { key: 'attendAdmin',icon: <CheckCircle2 className="w-6 h-6"/>,  label: '출석 보정',   danger: false },
                 { key: 'settings',   icon: <Settings className="w-6 h-6"/>,      label: '환경 및 점수',   danger: false },
                 { key: 'reset',      icon: <History className="w-6 h-6"/>,       label: '초기화/마감', danger: true  }
@@ -1643,6 +1252,7 @@ export default function App() {
               </button>
             </aside>
 
+            {/* 관리실 메인 콘텐츠 */}
             <section className="flex-1 p-8 lg:p-12 overflow-y-auto bg-slate-50/50">
 
               {/* 4-1: 결재/퀘스트/타임어택 */}
@@ -1750,141 +1360,6 @@ export default function App() {
                       )}
                     </div>
                   </div>
-
-                  {/* 결재함 */}
-                  <div className="bg-white p-10 rounded-[40px] shadow-sm border border-green-100">
-                    <h4 className="text-3xl font-black mb-8 text-slate-800 border-l-8 border-green-500 pl-5">서류 결재함</h4>
-                    <div className="w-full space-y-5 max-h-[500px] overflow-y-auto pr-4 custom-scrollbar">
-                      
-                      {/* 장인 아이템 결재 */}
-                      {safeArray(db.pendingShopItems).filter(i => i && i.name).map(item => (
-                        <div key={item.id} className="bg-amber-50 p-6 rounded-[24px] border-2 border-amber-200 text-left shadow-sm">
-                          <div className="flex justify-between items-center mb-3">
-                            <span className="font-black text-amber-800 bg-amber-100 px-3 py-1 rounded-lg text-xs">장인 건의: {item.creator}</span>
-                            <span className="text-sm font-black text-amber-600">{item.price}🪙</span>
-                          </div>
-                          <p className="text-lg text-slate-800 font-black mb-4">"{item.name}"</p>
-                          <div className="flex gap-2">
-                            <button 
-                              onClick={() => { 
-                                sync({ 
-                                  pendingShopItems: safeArray(db.pendingShopItems).filter(i => i.id !== item.id), 
-                                  shopItems: [item, ...safeArray(db.shopItems)] // creatorId 보존됨
-                                }); 
-                                alert("상점 등록 완료!"); 
-                                playSound('good'); 
-                              }} 
-                              className="flex-1 bg-amber-500 text-white py-3 rounded-xl font-black text-sm hover:bg-amber-600 shadow-md"
-                            >
-                              상점에 출시 허가
-                            </button>
-                            <button 
-                              onClick={() => { sync({ pendingShopItems: safeArray(db.pendingShopItems).filter(i => i.id !== item.id) }); alert("반려"); }} 
-                              className="px-4 bg-white text-slate-400 font-black rounded-xl border border-slate-200"
-                            >
-                              반려
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-
-                      {/* 위기 학생 성찰 결재 */}
-                      {safeArray(db.pendingReflections).filter(r => r && r.sId).map(r => (
-                        <div key={r.id} className="bg-red-50 p-6 rounded-[24px] border-2 border-red-200 text-left shadow-sm">
-                          <div className="flex justify-between items-center mb-4 border-b border-red-200/50 pb-3">
-                            <span className="font-black text-red-800 bg-red-100 px-4 py-1.5 rounded-xl text-sm flex items-center gap-2">
-                              <AlertTriangle className="w-4 h-4"/> {allStats.find(s=>s.id==r.sId)?.name} (성찰 제출)
-                            </span>
-                            <span className="text-xs font-black text-red-400 bg-white px-3 py-1 rounded-full border border-red-100">
-                              {SEL_OPTIONS.find(o=>o.name===r.tag)?.short}
-                            </span>
-                          </div>
-                          <p className="text-base text-slate-700 font-bold mb-6 whitespace-pre-wrap leading-relaxed bg-white p-4 rounded-2xl border border-red-100 shadow-inner">
-                            "{r.text}"
-                          </p>
-                          <div className="flex gap-3">
-                            <button 
-                              onClick={() => { 
-                                sync({ 
-                                  pendingReflections: safeArray(db.pendingReflections).filter(pr => pr.id !== r.id), 
-                                  studentStatus: { ...db.studentStatus, [r.sId]: 'normal' } 
-                                }); 
-                                alert("위기 해제 승인 완료!"); 
-                                playSound('good'); 
-                              }} 
-                              className="flex-1 bg-red-500 text-white py-4 rounded-xl font-black text-base hover:bg-red-600 shadow-md active:scale-95 transition-transform"
-                            >
-                              위기 해제 및 복귀 승인
-                            </button>
-                            <button 
-                              onClick={() => { 
-                                sync({ 
-                                  pendingReflections: safeArray(db.pendingReflections).filter(pr => pr.id !== r.id), 
-                                  studentStatus: { ...db.studentStatus, [r.sId]: 'crisis' } 
-                                }); 
-                                alert("반려"); 
-                              }} 
-                              className="px-6 bg-white text-slate-500 font-black rounded-xl border-2 border-slate-200 hover:bg-slate-50"
-                            >
-                              다시 성찰하기 (반려)
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-
-                      {/* 온기 칭찬 결재 */}
-                      {safeArray(db.pendingPraises).filter(p => p && p.toId).map(p => {
-                        const target = allStats.find(u => u.id == p.toId); 
-                        const isCrisis = target?.status === 'crisis';
-                        return (
-                          <div key={p.id} className="bg-pink-50 p-6 rounded-[24px] border-2 border-pink-200 text-left shadow-sm">
-                            <div className="flex justify-between items-center mb-4 border-b border-pink-200/50 pb-3">
-                              <div className="flex items-center gap-3">
-                                <span className="font-black text-pink-800 bg-pink-100 px-4 py-1.5 rounded-xl text-sm flex items-center gap-2">
-                                  <Heart className="w-4 h-4 fill-pink-500"/> To. {target?.name || '나 자신'}
-                                </span>
-                                {isCrisis && (
-                                  <span className="bg-red-500 text-white text-xs px-3 py-1 rounded-full font-black animate-pulse shadow-sm border border-red-600">
-                                    🚨 현재 위기 상태
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-xs font-black text-pink-500 bg-white px-3 py-1 rounded-full border border-pink-100">
-                                {SEL_OPTIONS.find(o=>o.name===p.tag)?.short}
-                              </span>
-                            </div>
-                            <p className="text-base text-slate-700 font-bold mb-6 bg-white p-4 rounded-2xl border border-pink-100 shadow-inner">
-                              "{p.text}"
-                            </p>
-                            <div className="flex gap-3">
-                              <button 
-                                onClick={() => approvePraise(p)} 
-                                className={`flex-1 py-4 rounded-xl font-black text-base shadow-md transition-all ${isCrisis ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-pink-500 text-white hover:bg-pink-600 active:scale-95'}`}
-                              >
-                                온기 사연 승인
-                              </button>
-                              <button 
-                                onClick={() => { 
-                                  sync({ pendingPraises: safeArray(db.pendingPraises).filter(pr => pr.id !== p.id) }); 
-                                  alert("반려되었습니다."); 
-                                }} 
-                                className="px-6 bg-white text-slate-500 font-black rounded-xl border-2 border-slate-200 hover:bg-slate-50"
-                              >
-                                반려
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                      
-                      {safeArray(db.pendingShopItems).length === 0 && safeArray(db.pendingReflections).length === 0 && safeArray(db.pendingPraises).length === 0 && (
-                        <div className="text-slate-400 font-black py-16 border-4 border-dashed border-slate-200 rounded-[30px] flex flex-col items-center">
-                          <CheckCircle2 className="w-12 h-12 mb-4 opacity-50"/>
-                          결재 대기열이 깨끗합니다.
-                        </div>
-                      )}
-                    </div>
-                  </div>
                 </div>
               )}
 
@@ -1909,28 +1384,25 @@ export default function App() {
                       </h4>
                       <div className="flex gap-3 mb-6">
                         <input 
+                          id="new_item_name_input"
                           type="text" 
                           placeholder="새로운 물품 이름" 
-                          value={newItemName} 
-                          onChange={e=>setNewItemName(e.target.value)} 
-                          onFocus={lockEditing} 
-                          onBlur={unlockEditing} 
                           className="flex-1 p-4 rounded-xl border border-slate-300 font-bold outline-none"
                         />
                         <input 
+                          id="new_item_price_input"
                           type="number" 
                           placeholder="가격" 
-                          value={newItemPrice} 
-                          onChange={e=>setNewItemPrice(e.target.value)} 
-                          onFocus={lockEditing} 
-                          onBlur={unlockEditing} 
                           className="w-32 p-4 rounded-xl border border-slate-300 font-bold outline-none text-center"
                         />
                         <button 
                           onClick={() => {
-                            if (!newItemName || !newItemPrice) return alert("입력 오류");
-                            sync({ shopItems: [...safeArray(db.shopItems), { id: Date.now(), name: newItemName, price: toInt(newItemPrice), creator: '선생님' }] });
-                            setNewItemName(""); setNewItemPrice("");
+                            const nameVal = document.getElementById('new_item_name_input').value;
+                            const priceVal = document.getElementById('new_item_price_input').value;
+                            if (!nameVal || !priceVal) return alert("입력 오류");
+                            sync({ shopItems: [...safeArray(db.shopItems), { id: Date.now(), name: nameVal, price: toInt(priceVal), creator: '선생님' }] });
+                            document.getElementById('new_item_name_input').value = "";
+                            document.getElementById('new_item_price_input').value = "";
                           }} 
                           className="bg-blue-600 text-white px-8 rounded-xl font-black shadow-md hover:bg-blue-700"
                         >
@@ -1962,28 +1434,25 @@ export default function App() {
                       </h4>
                       <div className="flex gap-3 mb-6 bg-blue-50 p-6 rounded-3xl border border-blue-100">
                         <input 
+                          id="new_fund_name_input"
                           type="text" 
                           placeholder="새로운 펀딩 목표 (예: 피자 파티)" 
-                          value={newFundName} 
-                          onChange={e=>setNewFundName(e.target.value)} 
-                          onFocus={lockEditing} 
-                          onBlur={unlockEditing} 
                           className="flex-1 p-4 rounded-xl border border-blue-200 font-bold outline-none focus:border-blue-400"
                         />
                         <input 
+                          id="new_fund_target_input"
                           type="number" 
                           placeholder="목표 점수" 
-                          value={newFundTarget} 
-                          onChange={e=>setNewFundTarget(e.target.value)} 
-                          onFocus={lockEditing} 
-                          onBlur={unlockEditing} 
                           className="w-32 p-4 rounded-xl border border-blue-200 font-bold outline-none focus:border-blue-400 text-center"
                         />
                         <button 
                           onClick={() => {
-                            if (!newFundName || !newFundTarget || toInt(newFundTarget)===0) return alert("올바른 값을 입력하세요.");
-                            sync({ funding: [...safeArray(db.funding), { id: Date.now(), name: newFundName, target: toInt(newFundTarget), current: 0 }] });
-                            setNewFundName(""); setNewFundTarget("");
+                            const nameVal = document.getElementById('new_fund_name_input').value;
+                            const targetVal = document.getElementById('new_fund_target_input').value;
+                            if (!nameVal || !targetVal || toInt(targetVal)===0) return alert("올바른 값을 입력하세요.");
+                            sync({ funding: [...safeArray(db.funding), { id: Date.now(), name: nameVal, target: toInt(targetVal), current: 0 }] });
+                            document.getElementById('new_fund_name_input').value = "";
+                            document.getElementById('new_fund_target_input').value = "";
                           }} 
                           className="bg-blue-600 text-white px-8 rounded-xl font-black shadow-md hover:bg-blue-700"
                         >
@@ -2138,11 +1607,43 @@ export default function App() {
                 </div>
               )}
 
-              {/* 4-4: 명단 관리 */}
+              {/* 4-4: 명단 및 직업 관리 (⭐ V10.4: 직업 메뉴 추가/삭제 로직 구현) */}
               {adminSubTab === 'students' && (
                 <div className="space-y-8 animate-in fade-in">
-                  <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-6 mb-8">👥 학생 명단 및 성향 관리</h3>
+                  <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-6 mb-8">👥 명단 및 직업 관리</h3>
+                  
+                  <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100 mb-8">
+                    <h4 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3"><Briefcase className="w-6 h-6 text-indigo-500"/> 학급 직업(1인 1역) 목록 관리</h4>
+                    <div className="flex gap-3 mb-6 bg-indigo-50 p-6 rounded-3xl border border-indigo-100">
+                      <input id="new_role_input" type="text" placeholder="새로운 직업 이름 입력" className="flex-1 p-4 rounded-xl border border-indigo-200 font-bold outline-none text-lg focus:border-indigo-400 shadow-sm"/>
+                      <button onClick={() => {
+                        const val = document.getElementById('new_role_input').value.trim();
+                        if (!val) return alert("직업 이름을 입력하세요.");
+                        if (safeArray(db.rolesList).includes(val)) return alert("이미 존재하는 직업입니다.");
+                        sync({ rolesList: [...safeArray(db.rolesList), val] });
+                        document.getElementById('new_role_input').value = "";
+                      }} className="bg-indigo-600 text-white px-10 rounded-xl font-black text-lg shadow-md hover:bg-indigo-700 active:scale-95 transition-transform">
+                        목록에 추가
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {safeArray(db.rolesList).map((r, idx) => (
+                        <div key={idx} className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border-2 border-indigo-100 shadow-sm hover:border-indigo-300 transition-colors">
+                          <span className="font-black text-indigo-900 text-lg">{r}</span>
+                          <button onClick={() => {
+                            if (window.confirm(`'${r}' 직업을 삭제하시겠습니까?\n(이미 이 직업을 가진 학생의 정보가 자동으로 변경되지는 않습니다.)`)) {
+                              sync({ rolesList: safeArray(db.rolesList).filter(role => role !== r) });
+                            }
+                          }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                            <Trash2 className="w-5 h-5"/>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="bg-white p-10 rounded-[40px] shadow-sm border border-slate-100">
+                    <h4 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3"><Users className="w-6 h-6 text-blue-500"/> 학생 전입 및 삭제</h4>
                     <div className="flex flex-wrap gap-4 mb-10 bg-slate-50 p-8 rounded-[30px] border border-slate-200 shadow-sm">
                       <input 
                         type="text" 
@@ -2213,7 +1714,7 @@ export default function App() {
                         전체 학생의 출석일수 +1일 반영하기
                       </button>
                       <p className="text-xs font-bold text-amber-500 mt-4 leading-relaxed bg-white/50 p-4 rounded-xl border border-amber-100">
-                        💡 이 버튼을 누르면 모든 학생의 이번 주 출석일수에 +1이 더해집니다. 보정 결과로 이번 주 5일을 채우게 된 학생들에게는 즉시 🪙3 코인의 개근 보너스가 자동으로 지급됩니다.
+                        💡 이 버튼을 누르면 모든 학생의 이번 주 출석일수에 +1이 더해집니다. 보정 결과로 이번 주 5일을 채우게 된 학생들에게는 즉시 🪙3 코인의 개근 보너스가 자동으로 지급되며, 이름표의 0/5 숫자도 즉각적으로 올라갑니다.
                       </p>
                     </div>
                     
@@ -2239,7 +1740,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* 4-6: 환경/점수 세팅 */}
+              {/* 4-6: 환경/점수 세팅 (⭐ V10.4: 개별 학생 코인 강제 조정 기능 추가) */}
               {adminSubTab === 'settings' && (
                 <div className="space-y-8 animate-in fade-in">
                   <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-600 pl-6 mb-8">환경 및 보안 통제소</h3>
@@ -2333,30 +1834,58 @@ export default function App() {
                       <p className="text-sm font-bold text-slate-400 mt-3 text-center">ON으로 설정 시, 학생 카드에 누적 완수/기부/펀딩/위기 횟수가 표시됩니다.</p>
                     </div>
 
+                    {/* ⭐ V10.4: 개별 코인 강제 조정 기능 */}
+                    <div className="pt-8 border-t-2 border-slate-100 bg-amber-50/50 p-10 rounded-[40px] border border-amber-100 mt-8">
+                      <h4 className="font-black text-2xl text-amber-900 mb-6 flex items-center gap-3"><Coins className="w-7 h-7 text-amber-500"/> 개별 학생 코인 강제 조정</h4>
+                      <div className="flex flex-col md:flex-row gap-4 bg-white p-6 rounded-3xl shadow-sm border border-amber-200">
+                        <select id="coin_adjust_student" className="flex-1 p-4 rounded-2xl border border-slate-200 font-black outline-none text-lg focus:border-amber-400">
+                          <option value="">코인을 조절할 학생 선택</option>
+                          {allStats.map(s => <option key={s.id} value={s.id}>{s.name} (현재 보유량: {s.coins}🪙)</option>)}
+                        </select>
+                        <input id="coin_adjust_amount" type="number" placeholder="증감할 코인량 (예: 10 또는 -5)" className="w-64 p-4 rounded-2xl border border-slate-200 font-black outline-none text-base focus:border-amber-400 text-center"/>
+                        <button onClick={() => {
+                          const sid = document.getElementById('coin_adjust_student').value;
+                          const amt = toInt(document.getElementById('coin_adjust_amount').value);
+                          if (!sid || !amt) return alert("학생과 증감할 코인 금액을 모두 입력하세요.");
+                          const user = allStats.find(u => u.id == sid);
+                          if (window.confirm(`[${user.name}] 학생의 지갑에 ${amt > 0 ? '+'+amt : amt} 코인을 강제 적용할까요?`)) {
+                            sync({ bonusCoins: { ...db.bonusCoins, [sid]: (db.bonusCoins?.[sid] || 0) + amt } });
+                            document.getElementById('coin_adjust_amount').value = "";
+                            alert("적용 완료!");
+                            playSound('good');
+                          }
+                        }} className="bg-amber-500 text-white px-10 rounded-2xl font-black text-lg shadow-md hover:bg-amber-600 active:scale-95 transition-transform">
+                          강제 적용
+                        </button>
+                      </div>
+                      <p className="text-sm font-bold text-amber-700 mt-4 ml-2">💡 이벤트 보상이나 오류 수정 시 코인을 직접 넣어주거나 뺄 수 있습니다.</p>
+                    </div>
+
                     <div className="pt-8 border-t-2 border-slate-100 bg-indigo-50/50 p-10 rounded-[40px] border border-indigo-100">
-                      <h4 className="font-black text-2xl text-indigo-900 mb-6 flex items-center gap-3"><Settings className="w-6 h-6"/> 만능 점수 밸런스 및 수동 세팅</h4>
-                      <div className="flex flex-col md:flex-row gap-4 mb-10 bg-white p-6 rounded-3xl shadow-sm border border-indigo-50">
+                      <h4 className="font-black text-2xl text-indigo-900 mb-6 flex items-center gap-3"><Settings className="w-7 h-7 text-indigo-500"/> 학급 명성 강제 조정 및 점수 밸런스</h4>
+                      <div className="flex flex-col md:flex-row gap-4 mb-10 bg-white p-6 rounded-3xl shadow-sm border border-indigo-200">
                         <input 
                           type="number" 
                           value={manualScoreInput} 
                           onChange={e=>setManualScoreInput(e.target.value)} 
                           onFocus={lockEditing} 
                           onBlur={unlockEditing} 
-                          placeholder="명성 점수 강제 추가/차감 (예: +50 또는 -20)" 
-                          className="flex-1 p-4 rounded-2xl border border-slate-200 font-black outline-none text-base focus:border-indigo-400"
+                          placeholder="학급 명성 강제 추가/차감 (예: 50 또는 -20)" 
+                          className="flex-1 p-4 rounded-2xl border border-slate-200 font-black outline-none text-lg focus:border-indigo-400"
                         />
                         <button 
                           onClick={() => { 
                             const v = toInt(manualScoreInput); 
                             if (!v) return; 
-                            if (window.confirm(`${v}점 적용?`)) { 
+                            if (window.confirm(`${v > 0 ? '+'+v : v}점의 명성을 즉시 적용할까요?`)) { 
                               sync({ manualRepOffset: (db.manualRepOffset||0) + v }); 
                               setManualScoreInput(""); 
+                              playSound('good');
                             } 
                           }} 
                           className="bg-indigo-600 text-white px-10 rounded-2xl font-black text-lg shadow-md hover:bg-indigo-700 active:scale-95 transition-transform"
                         >
-                          즉시 적용
+                          명성 적용
                         </button>
                       </div>
                       
@@ -2381,43 +1910,70 @@ export default function App() {
                               }}
                               onFocus={lockEditing} 
                               onBlur={unlockEditing} 
-                              className={`w-full p-4 rounded-xl border border-${f.color}-200 font-black text-lg text-${f.color}-600 outline-none focus:border-${f.color}-400`}
+                              className={`w-full p-4 rounded-xl border border-${f.color}-200 font-black text-xl text-${f.color}-600 outline-none focus:border-${f.color}-400`}
                             />
                           </div>
                         ))}
                       </div>
                     </div>
+
                   </div>
                 </div>
               )}
 
-              {/* 4-7: 리셋/마감 */}
+              {/* 4-7: 리셋/마감 (⭐ V10.4: 직업 점수만 초기화 버튼 추가) */}
               {adminSubTab === 'reset' && (
                 <div className="animate-in fade-in space-y-8">
                   <h3 className="text-3xl font-black text-slate-800 border-l-8 border-red-500 pl-6 mb-8">데이터 초기화 및 1학기 마감</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                    <div className="bg-blue-50 border-4 border-blue-200 p-12 rounded-[50px] text-center shadow-lg">
-                      <History className="w-20 h-20 text-blue-500 mx-auto mb-6" />
-                      <h3 className="text-4xl font-black mb-6 text-blue-800">1학기 최종 마감</h3>
-                      <p className="font-bold text-blue-600 mb-10 text-lg">코인과 직업 숙련도를 리셋하고, 누적 데이터는 보존합니다.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    
+                    <div className="bg-blue-50 border-4 border-blue-200 p-10 rounded-[40px] text-center shadow-lg flex flex-col justify-between">
+                      <div>
+                        <History className="w-16 h-16 text-blue-500 mx-auto mb-5" />
+                        <h3 className="text-3xl font-black mb-4 text-blue-800">1학기 최종 마감</h3>
+                        <p className="font-bold text-blue-600 mb-8 text-base">코인, 직업 점수, 출석, 성찰 등을 리셋하지만, 평생 기록(누적 데이터)은 보존합니다.</p>
+                      </div>
                       <button 
                         onClick={closeSemester} 
-                        className="bg-blue-600 text-white px-12 py-6 rounded-[35px] font-black text-2xl shadow-xl hover:bg-blue-700 active:scale-95 transition-all"
+                        className="w-full bg-blue-600 text-white py-5 rounded-[24px] font-black text-xl shadow-xl hover:bg-blue-700 active:scale-95 transition-all"
                       >
                         학기 마감 실행
                       </button>
                     </div>
-                    <div className="bg-red-50 border-4 border-red-200 p-12 rounded-[50px] text-center shadow-lg">
-                      <Trash2 className="w-20 h-20 text-red-500 mx-auto mb-6" />
-                      <h3 className="text-4xl font-black mb-6 text-red-800">시스템 공장 초기화</h3>
-                      <p className="font-bold text-red-600 mb-10 text-lg">명단과 세팅을 제외한 모든 데이터를 영구적으로 삭제합니다.</p>
+
+                    <div className="bg-emerald-50 border-4 border-emerald-200 p-10 rounded-[40px] text-center shadow-lg flex flex-col justify-between">
+                      <div>
+                        <Briefcase className="w-16 h-16 text-emerald-500 mx-auto mb-5" />
+                        <h3 className="text-3xl font-black mb-4 text-emerald-800">직업 점수만 초기화</h3>
+                        <p className="font-bold text-emerald-600 mb-8 text-base">이 주의 직업 활동이 끝났을 때, 학생들의 '현재 직업 숙련도 점수'만 0으로 리셋합니다.</p>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          if (window.prompt("학생들의 현재 직업 숙련도를 모두 0으로 만드시겠습니까? 실행하려면 '직업초기화'라고 입력하세요.") === "직업초기화") {
+                            sync({ roleExp: {} });
+                            alert("직업 점수가 모두 0으로 초기화되었습니다.");
+                          }
+                        }} 
+                        className="w-full bg-emerald-600 text-white py-5 rounded-[24px] font-black text-xl shadow-xl hover:bg-emerald-700 active:scale-95 transition-all"
+                      >
+                        직업 초기화 실행
+                      </button>
+                    </div>
+
+                    <div className="bg-red-50 border-4 border-red-200 p-10 rounded-[40px] text-center shadow-lg flex flex-col justify-between">
+                      <div>
+                        <Trash2 className="w-16 h-16 text-red-500 mx-auto mb-5" />
+                        <h3 className="text-3xl font-black mb-4 text-red-800">시스템 공장 초기화</h3>
+                        <p className="font-bold text-red-600 mb-8 text-base">명단과 세팅을 제외한 '모든 데이터(누적 포함)'를 영구적으로 완전 삭제합니다.</p>
+                      </div>
                       <button 
                         onClick={factoryReset} 
-                        className="bg-red-600 text-white px-12 py-6 rounded-[35px] font-black text-2xl shadow-xl hover:bg-red-700 active:scale-95 transition-all"
+                        className="w-full bg-red-600 text-white py-5 rounded-[24px] font-black text-xl shadow-xl hover:bg-red-700 active:scale-95 transition-all"
                       >
                         공장 초기화 실행
                       </button>
                     </div>
+
                   </div>
                 </div>
               )}
@@ -2428,18 +1984,27 @@ export default function App() {
 
       {/* ═══ 모달 영역 ═══ */}
       
-      {/* 1. 온기 우체통 팝업 */}
+      {/* 1. 온기 우체통 팝업 (⭐ V10.4: SEL 테마 표시 강조) */}
       {showPraiseModal && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-[5001] p-4">
-          <div className="bg-white p-12 rounded-[50px] w-full max-w-xl shadow-2xl animate-in zoom-in-95 border-4 border-pink-100">
-            <h3 className="text-4xl font-black text-pink-600 mb-10 flex items-center justify-center gap-3">
+          <div className="bg-white p-12 rounded-[50px] w-full max-w-xl shadow-2xl animate-in zoom-in-95 border-4 border-pink-100 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-pink-100 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+            <h3 className="text-4xl font-black text-pink-600 mb-3 flex items-center justify-center gap-3 relative z-10">
               <Heart className="w-10 h-10 fill-pink-500"/> 따뜻한 온기 제보
             </h3>
-            <div className="space-y-6 mb-10">
+            
+            <div className="bg-pink-50 border border-pink-200 p-4 rounded-2xl mb-8 text-center relative z-10 shadow-sm">
+              <p className="text-sm font-bold text-pink-700">
+                <Sparkles className="w-4 h-4 inline-block mb-1 text-pink-500"/> 이 주의 집중 SEL 테마: <span className="font-black bg-white px-2 py-1 rounded-md text-pink-900">{db.settings?.weeklyTheme || "없음"}</span>
+              </p>
+              <p className="text-xs font-bold text-pink-500 mt-2">이 테마의 역량으로 칭찬을 보내면 보너스 코인(+15🪙)이 지급됩니다!</p>
+            </div>
+
+            <div className="space-y-6 mb-10 relative z-10">
               <select 
                 value={praiseTarget} 
                 onChange={e=>setPraiseTarget(e.target.value)} 
-                className="w-full p-6 rounded-3xl bg-slate-50 border-2 font-black text-xl outline-none focus:border-pink-400 shadow-sm"
+                className="w-full p-6 rounded-3xl bg-white border-2 border-slate-200 font-black text-xl outline-none focus:border-pink-400 shadow-sm"
               >
                 <option value="">누구를 칭찬할까요?</option>
                 <option value="me" className="text-pink-600">🙋 나 자신 (스스로 대견할 때!)</option>
@@ -2448,7 +2013,7 @@ export default function App() {
               <select 
                 value={praiseTag} 
                 onChange={e=>setPraiseTag(e.target.value)} 
-                className="w-full p-6 rounded-3xl bg-slate-50 border-2 font-black text-xl outline-none focus:border-pink-400 shadow-sm"
+                className="w-full p-6 rounded-3xl bg-white border-2 border-slate-200 font-black text-xl outline-none focus:border-pink-400 shadow-sm"
               >
                 <option value="">어떤 역량인가요?</option>
                 {SEL_OPTIONS.map(opt => <option key={opt.name} value={opt.name}>{opt.name}</option>)}
@@ -2458,10 +2023,10 @@ export default function App() {
                 onChange={e=>setPraiseText(e.target.value)} 
                 rows="5" 
                 placeholder={praiseTag ? PRAISE_GUIDES[praiseTag] : "위에서 역량을 먼저 선택해 주세요! 💌"} 
-                className="w-full p-6 rounded-[30px] bg-pink-50 border-2 border-pink-100 font-black text-lg outline-none focus:border-pink-400 text-pink-900 shadow-inner resize-none placeholder:text-pink-300"
+                className="w-full p-6 rounded-[30px] bg-pink-50/50 border-2 border-pink-200 font-black text-lg outline-none focus:border-pink-400 text-pink-900 shadow-inner resize-none placeholder:text-pink-300"
               />
             </div>
-            <div className="flex gap-4">
+            <div className="flex gap-4 relative z-10">
               <button 
                 onClick={() => setShowPraiseModal(false)} 
                 className="flex-1 py-6 bg-slate-100 text-slate-500 rounded-[30px] font-black text-xl hover:bg-slate-200 transition-colors"
@@ -2684,7 +2249,6 @@ function TimerWidget({
     <div className={`p-6 md:p-8 rounded-[40px] border-4 shadow-2xl backdrop-blur-md ${bgClass} ${flashClass} flex flex-col h-full min-h-[340px]`}>
       
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-4 border-b border-black/5 pb-4">
-        
         <div className="flex items-center gap-2">
           {isBreak ? <Coffee className="w-6 h-6 text-emerald-600"/> : <Timer className="w-6 h-6 text-slate-600"/>}
           <span className="text-lg font-black uppercase tracking-widest text-slate-700">
@@ -2712,7 +2276,6 @@ function TimerWidget({
               >
                 <Play className="w-3 h-3 fill-white"/> 스톱워치
               </button>
-              
               <div className="flex gap-1 ml-1 bg-emerald-50 p-1 rounded-lg border border-emerald-100">
                 <input 
                   type="number" 
@@ -2747,7 +2310,6 @@ function TimerWidget({
             </div>
           )}
         </div>
-
       </div>
 
       <div className="flex-1 flex items-center justify-center py-4">
