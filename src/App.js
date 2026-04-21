@@ -15,77 +15,29 @@ const DATABASE_URL = "https://dalbodre-db-default-rtdb.asia-southeast1.firebased
 const DB_PATH = "v10Data";
 const POLL_INTERVAL_MS = 5000;
 const AUTH_KEY = "dalbodre_auth_v10";
-const ATTENDANCE_DEADLINE = { hour: 8, minute: 30 }; // 08:30
-const DEFAULT_BREAK_MS = 10 * 60 * 1000; // 쉬는시간 기본 10분
+const ATTENDANCE_DEADLINE = { hour: 8, minute: 30 };
+const DEFAULT_BREAK_MS = 10 * 60 * 1000;
 
 // ══════════════════════════════════════════════════════════════
 // 🧰 UTILS
 // ══════════════════════════════════════════════════════════════
-const safeArray = (val) =>
-  Array.isArray(val) ? val.filter(Boolean)
-  : (typeof val === 'object' && val ? Object.values(val).filter(Boolean) : []);
-
-const toInt = (v, fallback = 0) => {
-  const n = parseInt(v, 10);
-  return Number.isFinite(n) ? n : fallback;
-};
-
+const safeArray = (val) => Array.isArray(val) ? val.filter(Boolean) : (typeof val === 'object' && val ? Object.values(val).filter(Boolean) : []);
+const toInt = (v, fallback = 0) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : fallback; };
 const pad2 = (n) => String(n).padStart(2, '0');
-
-const getWeekKey = (d = new Date()) => {
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const day = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
-  return `${date.getUTCFullYear()}-W${pad2(weekNo)}`;
-};
-
-const getTodayWeekdayIdx = () => {
-  const d = new Date().getDay();
-  if (d === 0 || d === 6) return -1;
-  return d - 1;
-};
-
-const isAttendanceOpen = () => {
-  const now = new Date();
-  const cutoff = now.getHours() * 60 + now.getMinutes();
-  return cutoff < (ATTENDANCE_DEADLINE.hour * 60 + ATTENDANCE_DEADLINE.minute);
-};
-
-const formatDate = (ts = Date.now()) => {
-  const d = new Date(ts);
-  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
-};
-
-const formatMs = (ms) => {
-  if (ms < 0) ms = 0;
-  const s = Math.floor(ms / 1000);
-  return `${pad2(Math.floor(s/60))}:${pad2(s%60)}`;
-};
+const getWeekKey = (d = new Date()) => { const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = date.getUTCDay() || 7; date.setUTCDate(date.getUTCDate() + 4 - day); const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1)); const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1) / 7); return `${date.getUTCFullYear()}-W${pad2(weekNo)}`; };
+const getTodayWeekdayIdx = () => { const d = new Date().getDay(); if (d === 0 || d === 6) return -1; return d - 1; };
+const isAttendanceOpen = () => { const now = new Date(); const cutoff = now.getHours() * 60 + now.getMinutes(); return cutoff < (ATTENDANCE_DEADLINE.hour * 60 + ATTENDANCE_DEADLINE.minute); };
+const formatDate = (ts = Date.now()) => { const d = new Date(ts); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; };
+const formatMs = (ms) => { if (ms < 0) ms = 0; const s = Math.floor(ms / 1000); return `${pad2(Math.floor(s/60))}:${pad2(s%60)}`; };
 
 // ══════════════════════════════════════════════════════════════
 // 🎵 SOUND ENGINE
 // ══════════════════════════════════════════════════════════════
 const playSound = (type) => {
   try {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    const now = ctx.currentTime;
-
-    const tone = (freq, dur, t0 = 0, waveType = 'sine', volume = 0.15) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = waveType;
-      osc.frequency.setValueAtTime(freq, now + t0);
-      gain.gain.setValueAtTime(volume, now + t0);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + t0 + dur);
-      osc.start(now + t0);
-      osc.stop(now + t0 + dur);
-    };
-
+    const Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
+    const ctx = new Ctx(); const now = ctx.currentTime;
+    const tone = (freq, dur, t0 = 0, waveType = 'sine', volume = 0.15) => { const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.type = waveType; osc.frequency.setValueAtTime(freq, now + t0); gain.gain.setValueAtTime(volume, now + t0); gain.gain.exponentialRampToValueAtTime(0.001, now + t0 + dur); osc.start(now + t0); osc.stop(now + t0 + dur); };
     switch (type) {
       case 'good': tone(600, 0.1); tone(1200, 0.2, 0.1); break;
       case 'bad': tone(300, 0.15, 0, 'sawtooth'); tone(100, 0.2, 0.15, 'sawtooth'); break;
@@ -103,138 +55,61 @@ const playSound = (type) => {
 // ══════════════════════════════════════════════════════════════
 // 🔐 AUTH (localStorage)
 // ══════════════════════════════════════════════════════════════
-const saveAuth = (role) => {
-  const data = { role, issuedAt: Date.now(), expires: role === 'teacher' ? null : Date.now() + 24*60*60*1000 };
-  try { localStorage.setItem(AUTH_KEY, JSON.stringify(data)); } catch(_) {}
-};
-const loadAuth = (revokedAt) => {
-  try {
-    const raw = localStorage.getItem(AUTH_KEY);
-    if (!raw) return false;
-    const data = JSON.parse(raw);
-    if (!data || (data.expires !== null && Date.now() > data.expires) || (revokedAt && data.issuedAt < revokedAt)) {
-      localStorage.removeItem(AUTH_KEY); return false;
-    }
-    return data.role;
-  } catch(_) { return false; }
-};
+const saveAuth = (role) => { const data = { role, issuedAt: Date.now(), expires: role === 'teacher' ? null : Date.now() + 24*60*60*1000 }; try { localStorage.setItem(AUTH_KEY, JSON.stringify(data)); } catch(_) {} };
+const loadAuth = (revokedAt) => { try { const raw = localStorage.getItem(AUTH_KEY); if (!raw) return false; const data = JSON.parse(raw); if (!data || (data.expires !== null && Date.now() > data.expires) || (revokedAt && data.issuedAt < revokedAt)) { localStorage.removeItem(AUTH_KEY); return false; } return data.role; } catch(_) { return false; } };
 const clearAuth = () => { try { localStorage.removeItem(AUTH_KEY); } catch(_) {} };
 
 // ══════════════════════════════════════════════════════════════
-// 📚 STATIC DATA
+// 📚 STATIC DATA & GUIDES
 // ══════════════════════════════════════════════════════════════
 const ENNEAGRAM_DATA = {
-  "1": { name: '1번(개혁가)',     desc: '규칙과 책임을 잘 지켜요. 결과보다 과정의 꼼꼼함과 정직함을 알아주세요.' },
-  "2": { name: '2번(조력자)',     desc: '관계와 배려를 중시해요. "네 덕분에 고마워"라는 진심 어린 인사가 가장 큰 힘이 됩니다.' },
-  "3": { name: '3번(성취자)',     desc: '목표 지향적이에요. 구체적인 성과와 학급 기여를 명확히 인정해 주세요.' },
-  "4": { name: '4번(예술가)',     desc: '자신만의 개성과 감정을 중시해요. 독창적 아이디어를 존중해 주세요.' },
-  "5": { name: '5번(사색가)',     desc: '논리와 분석을 좋아해요. 혼자만의 시간과 지적 호기심을 칭찬해 주세요.' },
-  "6": { name: '6번(충실가)',     desc: '안전과 소속감을 중시해요. "우리가 함께한다"는 든든한 지지가 필요합니다.' },
-  "7": { name: '7번(열정가)',     desc: '재미와 자유를 추구해요. 긍정적 에너지와 호기심을 격려해 주세요.' },
-  "8": { name: '8번(도전자)',     desc: '강한 의지와 리더십. 스스로 결정할 기회와 신뢰를 부여해 주세요.' },
+  "1": { name: '1번(개혁가)', desc: '규칙과 책임을 잘 지켜요. 결과보다 과정의 꼼꼼함과 정직함을 알아주세요.' }, "2": { name: '2번(조력자)', desc: '관계와 배려를 중시해요. "네 덕분에 고마워"라는 인사가 힘이 됩니다.' },
+  "3": { name: '3번(성취자)', desc: '목표 지향적이에요. 구체적인 성과와 학급 기여를 명확히 인정해 주세요.' }, "4": { name: '4번(예술가)', desc: '자신만의 개성과 감정을 중시해요. 독창적 아이디어를 존중해 주세요.' },
+  "5": { name: '5번(사색가)', desc: '논리와 분석을 좋아해요. 혼자만의 시간과 지적 호기심을 칭찬해 주세요.' }, "6": { name: '6번(충실가)', desc: '안전과 소속감을 중시해요. "우리가 함께한다"는 지지가 필요합니다.' },
+  "7": { name: '7번(열정가)', desc: '재미와 자유를 추구해요. 긍정적 에너지와 호기심을 격려해 주세요.' }, "8": { name: '8번(도전자)', desc: '강한 의지와 리더십. 스스로 결정할 기회와 신뢰를 부여해 주세요.' },
   "9": { name: '9번(평화주의자)', desc: '조화를 원해요. 다그치기보다 편안한 분위기에서 의견을 물어봐 주세요.' }
 };
 
 const DEFAULT_STUDENTS = [
-  { id: 1,  name: '금채율', role: '학급문고 정리', group: 1, isLeader: true,  enneagram: '2' },
-  { id: 2,  name: '김라희', role: '우유 배달',     group: 1, isLeader: false, enneagram: '9' },
-  { id: 3,  name: '김민지', role: '다툼 중재자',   group: 1, isLeader: false, enneagram: '6' },
-  { id: 4,  name: '김수은', role: '생활태도 체크', group: 1, isLeader: false, enneagram: '1' },
-  { id: 5,  name: '김시우', role: '칠판 정리',     group: 2, isLeader: true,  enneagram: '3' },
-  { id: 6,  name: '박서정', role: '질서 관리',     group: 2, isLeader: false, enneagram: '8' },
-  { id: 7,  name: '이하윤', role: '학급문고 정리', group: 2, isLeader: false, enneagram: '4' },
-  { id: 8,  name: '장세아', role: '문 닫기',       group: 2, isLeader: false, enneagram: '7' },
-  { id: 9,  name: '최예나', role: '우유 배달',     group: 3, isLeader: true,  enneagram: ''  },
-  { id: 10, name: '허수정', role: '감찰사',        group: 3, isLeader: false, enneagram: ''  },
-  { id: 11, name: '황지인', role: '칠판 정리',     group: 3, isLeader: false, enneagram: ''  },
-  { id: 12, name: '김도운', role: '생활 배출물 관리', group: 3, isLeader: false, enneagram: '' },
-  { id: 13, name: '김윤재', role: '과제 확인',     group: 4, isLeader: true,  enneagram: ''  },
-  { id: 14, name: '김정현', role: '질서 관리',     group: 4, isLeader: false, enneagram: ''  },
-  { id: 15, name: '김태영', role: '복사물 관리',   group: 4, isLeader: false, enneagram: ''  },
-  { id: 16, name: '김해준', role: '칠판 정리',     group: 4, isLeader: false, enneagram: ''  },
-  { id: 17, name: '박동민', role: '과제 확인',     group: 5, isLeader: true,  enneagram: ''  },
-  { id: 18, name: '서이환', role: '가습기 관리',   group: 5, isLeader: false, enneagram: ''  },
-  { id: 19, name: '윤호영', role: '우유 배달',     group: 5, isLeader: false, enneagram: ''  },
-  { id: 20, name: '이서준', role: '과제 확인',     group: 5, isLeader: false, enneagram: ''  },
-  { id: 21, name: '이승현', role: '신발장 관리',   group: 6, isLeader: true,  enneagram: ''  },
-  { id: 22, name: '임유성', role: '질서 관리',     group: 6, isLeader: false, enneagram: ''  },
-  { id: 23, name: '장세형', role: '다툼 중재자',   group: 6, isLeader: false, enneagram: ''  },
-  { id: 24, name: '조승원', role: '부착물 관리',   group: 6, isLeader: false, enneagram: ''  },
-  { id: 25, name: '차민서', role: '신발장 관리',   group: 6, isLeader: false, enneagram: ''  },
-  { id: 26, name: '배지훈', role: '문 닫기',       group: 6, isLeader: false, enneagram: ''  }
+  { id: 1, name: '금채율', role: '학급문고 정리', group: 1, isLeader: true, enneagram: '2' }, { id: 2, name: '김라희', role: '우유 배달', group: 1, isLeader: false, enneagram: '9' }, { id: 3, name: '김민지', role: '다툼 중재자', group: 1, isLeader: false, enneagram: '6' }, { id: 4, name: '김수은', role: '생활태도 체크', group: 1, isLeader: false, enneagram: '1' },
+  { id: 5, name: '김시우', role: '칠판 정리', group: 2, isLeader: true, enneagram: '3' }, { id: 6, name: '박서정', role: '질서 관리', group: 2, isLeader: false, enneagram: '8' }, { id: 7, name: '이하윤', role: '학급문고 정리', group: 2, isLeader: false, enneagram: '4' }, { id: 8, name: '장세아', role: '문 닫기', group: 2, isLeader: false, enneagram: '7' },
+  { id: 9, name: '최예나', role: '우유 배달', group: 3, isLeader: true, enneagram: '' }, { id: 10, name: '허수정', role: '감찰사', group: 3, isLeader: false, enneagram: '' }, { id: 11, name: '황지인', role: '칠판 정리', group: 3, isLeader: false, enneagram: '' }, { id: 12, name: '김도운', role: '생활 배출물 관리', group: 3, isLeader: false, enneagram: '' },
+  { id: 13, name: '김윤재', role: '과제 확인', group: 4, isLeader: true, enneagram: '' }, { id: 14, name: '김정현', role: '질서 관리', group: 4, isLeader: false, enneagram: '' }, { id: 15, name: '김태영', role: '복사물 관리', group: 4, isLeader: false, enneagram: '' }, { id: 16, name: '김해준', role: '칠판 정리', group: 4, isLeader: false, enneagram: '' },
+  { id: 17, name: '박동민', role: '과제 확인', group: 5, isLeader: true, enneagram: '' }, { id: 18, name: '서이환', role: '가습기 관리', group: 5, isLeader: false, enneagram: '' }, { id: 19, name: '윤호영', role: '우유 배달', group: 5, isLeader: false, enneagram: '' }, { id: 20, name: '이서준', role: '과제 확인', group: 5, isLeader: false, enneagram: '' },
+  { id: 21, name: '이승현', role: '신발장 관리', group: 6, isLeader: true, enneagram: '' }, { id: 22, name: '임유성', role: '질서 관리', group: 6, isLeader: false, enneagram: '' }, { id: 23, name: '장세형', role: '다툼 중재자', group: 6, isLeader: false, enneagram: '' }, { id: 24, name: '조승원', role: '부착물 관리', group: 6, isLeader: false, enneagram: '' },
+  { id: 25, name: '차민서', role: '신발장 관리', group: 6, isLeader: false, enneagram: '' }, { id: 26, name: '배지훈', role: '문 닫기', group: 6, isLeader: false, enneagram: '' }
 ];
 
-const SEL_OPTIONS = [
-  { id: 'sel1', short: '자기 인식',       name: '1단계: 자기 인식 (Self-awareness)' },
-  { id: 'sel2', short: '자기 관리',       name: '2단계: 자기 관리 (Self-management)' },
-  { id: 'sel3', short: '사회적 인식',     name: '3단계: 사회적 인식 (Social awareness)' },
-  { id: 'sel4', short: '관계 기술',       name: '4단계: 관계 기술 (Relationship skills)' },
-  { id: 'sel5', short: '책임있는 결정',   name: '5단계: 책임 있는 의사결정 (Responsible decision-making)' }
-];
-
-const SEL_GUIDES = {
-  "1단계: 자기 인식 (Self-awareness)": "상황: 그때 내 몸과 마음에서 어떤 느낌이 들었나요?\n다짐: 내 진짜 감정의 원인은 무엇이었고, 나의 어떤 강점을 활용해 이 마음을 보듬어줄 수 있을까요?",
-  "2단계: 자기 관리 (Self-management)": "상황: 화가 나거나 포기하고 싶었을 때 내 행동은 어땠나요?\n다짐: 감정의 파도를 다스리고, 다음에는 어떻게 다르게 행동할지 구체적으로 적어보세요.",
-  "3단계: 사회적 인식 (Social awareness)": "상황: 친구의 표정이나 말투를 보았을 때 친구의 마음은 어땠을 것 같나요?\n공감: 내가 그 친구의 입장이었다면 어떤 따뜻한 말이나 도움이 필요했을지 상상해 보세요.",
-  "4단계: 관계 기술 (Relationship skills)": "상황: 대화나 활동 중 서로 오해가 생기거나 배려가 부족했던 순간을 적어보세요.\n행동: 마법 같은 우정을 다시 이어가기 위해 내가 먼저 할 수 있는 행동은 무엇인가요?",
-  "5단계: 책임 있는 의사결정 (Responsible decision-making)": "상황: 우리 반의 규칙이나 분위기를 흐릴 수 있었던 나의 선택은 무엇이었나요?\n다짐: 나뿐만 아니라 우리 모두를 위해 더 나은 세상을 만드는 바른 선택을 실천해보세요."
-};
-
-const PRAISE_GUIDES = {
-  "1단계: 자기 인식 (Self-awareness)": "칭찬 예시: 스스로의 장점을 알고 자신감 있게 도전한 모습을 칭찬해요!",
-  "2단계: 자기 관리 (Self-management)": "칭찬 예시: 감정을 잘 조절하고 끝까지 해낸 모습을 칭찬해요!",
-  "3단계: 사회적 인식 (Social awareness)": "칭찬 예시: 친구의 마음을 먼저 알아채고 공감해 준 모습을 칭찬해요!",
-  "4단계: 관계 기술 (Relationship skills)": "칭찬 예시: 친구의 말을 잘 경청하고 배려한 모습을 칭찬해요!",
-  "5단계: 책임 있는 의사결정 (Responsible decision-making)": "칭찬 예시: 학급을 위해 솔선수범하여 바른 선택을 한 모습을 칭찬해요!"
-};
+const SEL_OPTIONS = [ { id: 'sel1', short: '자기 인식', name: '1단계: 자기 인식 (Self-awareness)' }, { id: 'sel2', short: '자기 관리', name: '2단계: 자기 관리 (Self-management)' }, { id: 'sel3', short: '사회적 인식', name: '3단계: 사회적 인식 (Social awareness)' }, { id: 'sel4', short: '관계 기술', name: '4단계: 관계 기술 (Relationship skills)' }, { id: 'sel5', short: '책임있는 결정', name: '5단계: 책임 있는 의사결정 (Responsible decision-making)' } ];
+const SEL_GUIDES = { "1단계: 자기 인식 (Self-awareness)": "상황: 내 느낌은?\n다짐: 감정의 원인과 나의 강점 활용법은?", "2단계: 자기 관리 (Self-management)": "상황: 포기하고 싶었을 때 행동은?\n다짐: 감정을 다스리고 다음엔 어떻게 할까?", "3단계: 사회적 인식 (Social awareness)": "상황: 친구의 마음은?\n공감: 내가 그 친구라면?", "4단계: 관계 기술 (Relationship skills)": "상황: 오해나 배려 부족의 순간은?\n행동: 먼저 할 수 있는 행동은?", "5단계: 책임 있는 의사결정 (Responsible decision-making)": "상황: 규칙을 어길 뻔한 순간은?\n다짐: 모두를 위한 바른 선택 실천!" };
+const PRAISE_GUIDES = { "1단계: 자기 인식 (Self-awareness)": "자신감 있게 도전한 모습을 칭찬해요!", "2단계: 자기 관리 (Self-management)": "감정을 잘 조절하고 끝까지 해낸 모습을 칭찬해요!", "3단계: 사회적 인식 (Social awareness)": "친구의 마음을 알아채고 공감해 준 모습을 칭찬해요!", "4단계: 관계 기술 (Relationship skills)": "경청하고 배려한 모습을 칭찬해요!", "5단계: 책임 있는 의사결정 (Responsible decision-making)": "솔선수범하여 바른 선택을 한 모습을 칭찬해요!" };
 
 // 🔥 V10 진화 칭호 배열 (Level 0 ~ Level 5)
-const EVOLUTION_TITLES = [
-  "🌱 희망의 씨앗이 움터요",
-  "🌿 어린 나무가 자라나요",
-  "🌸 우리만의 꽃이 피었어요",
-  "🔥 열정의 기운이 가득해요",
-  "✨ 전설의 세계수로 자라나요",
-  "🌟 전설의 세계수 완성!"
-];
+const EVOLUTION_TITLES = [ "🌱 희망의 씨앗이 움터요", "🌿 어린 나무가 자라나요", "🌸 우리만의 꽃이 피었어요", "🔥 열정의 기운이 가득해요", "✨ 전설의 세계수로 자라나요", "🌟 전설의 세계수 완성!" ];
 
+// 🚨 초월보호막(shieldPoints) 영구 제거
 const INITIAL_DB = {
-  students: DEFAULT_STUDENTS,
-  rolesList: ['학급문고 정리', '우유 배달', '다툼 중재자', '현령', '감찰사'],
-  settings: {
-    title: "달보드레 행복 교실 🌸",
-    menuNames: ["행복 현황판", "성찰과 회복", "도움실", "관리실"],
-    targetScore: 5000, forceShopOpen: false,
-    weeklyTheme: "4단계: 관계 기술 (Relationship skills)",
-    masterPw: "6505", helpRoomPw: "1111",
-    showCumulativeStats: false,
-    defaultBreakMs: DEFAULT_BREAK_MS,
-    pointConfig: { praiseBasic: 10, praiseBonus: 15, penalty: 20 },
-    authRevokedAt: 0
-  },
+  students: DEFAULT_STUDENTS, rolesList: ['학급문고 정리', '우유 배달', '다툼 중재자', '현령', '감찰사'],
+  settings: { title: "달보드레 행복 교실 🌸", menuNames: ["행복 현황판", "성찰과 회복", "도움실", "관리실"], targetScore: 5000, forceShopOpen: false, weeklyTheme: "4단계: 관계 기술 (Relationship skills)", masterPw: "6505", helpRoomPw: "1111", showCumulativeStats: false, defaultBreakMs: DEFAULT_BREAK_MS, pointConfig: { praiseBasic: 10, praiseBonus: 15, penalty: 20 }, authRevokedAt: 0 },
   coopQuest: { q1Name: "다 함께 바른 생활", q1: 50, q2Name: "환대와 응원", q2: 20, q3Name: "전담수업 태도 우수", q3: 20, q4Name: "사이좋은 일주일", q4: 100, goodWeek: 0 },
   timeAttack: { isActive: false, title: "", rewardRep: 100, endTime: null, cleared: [] },
   timer: { mode: 'idle', startedAt: null, endTime: null, duration: null, isRunning: false, pausedElapsed: null, pausedRemaining: null },
-  shopItems: [], pendingShopItems: [], funding: [],
-  roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {},
-  pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [],
-  manualRepOffset: 0, 
-  allTime: { exp: {}, penalty: {}, donate: {}, fund: {} },
-  attendance: {}, attendanceBonus: {}, streakWeeks: {}, notes: {}, extraAttendDays: 0      
+  shopItems: [], pendingShopItems: [], funding: [], roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {},
+  pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [], manualRepOffset: 0, 
+  allTime: { exp: {}, penalty: {}, donate: {}, fund: {} }, attendance: {}, attendanceBonus: {}, streakWeeks: {}, notes: {}, extraAttendDays: 0
 };
 
 // ══════════════════════════════════════════════════════════════
 // 🎨 VISUAL HELPER (세계수 렌더링)
 // ══════════════════════════════════════════════════════════════
 const renderEvolution = (level) => {
-  // 아이콘 크기를 대폭 상향하여 화면 중앙의 주인공으로 만듦
   switch (level) {
-    case 0: return <div className="flex items-center justify-center gap-4 text-emerald-400 animate-pulse"><Leaf className="w-20 h-20"/> <Sparkles className="w-12 h-12 text-yellow-400"/></div>;
-    case 1: return <div className="flex items-center justify-center gap-4 text-emerald-500 animate-bounce"><TreeDeciduous className="w-24 h-24"/> <Bird className="w-14 h-14 text-orange-400"/></div>;
-    case 2: return <div className="flex items-center justify-center gap-4 text-pink-400"><TreeDeciduous className="w-28 h-28 fill-pink-200"/> <Bird className="w-16 h-16 text-orange-500 animate-pulse"/></div>;
-    case 3: return <div className="flex items-center justify-center gap-6 text-yellow-500 drop-shadow-lg"><TreeDeciduous className="w-32 h-32 fill-yellow-200"/> <Flame className="w-20 h-20 text-red-500 animate-bounce"/></div>;
+    case 0: return <div className="flex items-center justify-center gap-4 text-emerald-400 animate-pulse"><Leaf className="w-16 h-16"/> <Sparkles className="w-10 h-10 text-yellow-400"/></div>;
+    case 1: return <div className="flex items-center justify-center gap-4 text-emerald-500 animate-bounce"><TreeDeciduous className="w-20 h-20"/> <Bird className="w-12 h-12 text-orange-400"/></div>;
+    case 2: return <div className="flex items-center justify-center gap-4 text-pink-400"><TreeDeciduous className="w-24 h-24 fill-pink-200"/> <Bird className="w-14 h-14 text-orange-500 animate-pulse"/></div>;
+    case 3: return <div className="flex items-center justify-center gap-5 text-yellow-500 drop-shadow-lg"><TreeDeciduous className="w-28 h-28 fill-yellow-200"/> <Flame className="w-16 h-16 text-red-500 animate-bounce"/></div>;
     case 4:
-    case 5: return <div className="flex items-center justify-center gap-6 text-yellow-300 drop-shadow-[0_0_30px_rgba(250,204,21,0.8)]"><TreeDeciduous className="w-40 h-40 fill-yellow-100 animate-pulse"/> <Bird className="w-24 h-24 fill-red-500 text-red-600 animate-bounce"/> <Star className="w-16 h-16 fill-yellow-400 text-yellow-500 animate-spin-slow"/></div>;
+    case 5: return <div className="flex items-center justify-center gap-5 text-yellow-300 drop-shadow-[0_0_30px_rgba(250,204,21,0.8)]"><TreeDeciduous className="w-36 h-36 fill-yellow-100 animate-pulse"/> <Bird className="w-20 h-20 fill-red-500 text-red-600 animate-bounce"/></div>;
     default: return null;
   }
 };
@@ -258,29 +133,16 @@ export default function App() {
   const [timeLeftString, setTimeLeftString] = useState("");
   const [attendAnim, setAttendAnim] = useState(null);
 
-  const [praiseTarget, setPraiseTarget] = useState("");
-  const [praiseTag, setPraiseTag] = useState("");
-  const [praiseText, setPraiseText] = useState("");
-  const [refTarget, setRefTarget] = useState("");
-  const [refTag, setRefTag] = useState("");
-  const [refText, setRefText] = useState("");
-  const [newItemName, setNewItemName] = useState("");
-  const [newItemPrice, setNewItemPrice] = useState("");
-  const [artisanTarget, setArtisanTarget] = useState("");
-  const [artisanItemName, setArtisanItemName] = useState("");
-  const [artisanItemPrice, setArtisanItemPrice] = useState("");
+  const [praiseTarget, setPraiseTarget] = useState(""); const [praiseTag, setPraiseTag] = useState(""); const [praiseText, setPraiseText] = useState("");
+  const [refTarget, setRefTarget] = useState(""); const [refTag, setRefTag] = useState(""); const [refText, setRefText] = useState("");
+  const [newItemName, setNewItemName] = useState(""); const [newItemPrice, setNewItemPrice] = useState("");
+  const [artisanTarget, setArtisanTarget] = useState(""); const [artisanItemName, setArtisanItemName] = useState(""); const [artisanItemPrice, setArtisanItemPrice] = useState("");
   const [selectedReportStudent, setSelectedReportStudent] = useState("");
-  const [newStudentName, setNewStudentName] = useState("");
-  const [newStudentGroup, setNewStudentGroup] = useState("1");
-  const [newStudentEnneagram, setNewStudentEnneagram] = useState("");
-  const [newFundName, setNewFundName] = useState("");
-  const [newFundTarget, setNewFundTarget] = useState("");
+  const [newStudentName, setNewStudentName] = useState(""); const [newStudentGroup, setNewStudentGroup] = useState("1"); const [newStudentEnneagram, setNewStudentEnneagram] = useState("");
+  const [newFundName, setNewFundName] = useState(""); const [newFundTarget, setNewFundTarget] = useState("");
   const [manualScoreInput, setManualScoreInput] = useState("");
-  const [masterPwInput, setMasterPwInput] = useState("");
-  const [helpPwInput, setHelpPwInput] = useState("");
-  const [taTitle, setTaTitle] = useState("바닥 쓰레기 0개 만들기!");
-  const [taMins, setTaMins] = useState("10");
-  const [taReward, setTaReward] = useState("100");
+  const [masterPwInput, setMasterPwInput] = useState(""); const [helpPwInput, setHelpPwInput] = useState("");
+  const [taTitle, setTaTitle] = useState("바닥 쓰레기 0개 만들기!"); const [taMins, setTaMins] = useState("10"); const [taReward, setTaReward] = useState("100");
 
   const [timerDisplay, setTimerDisplay] = useState("00:00");
   const [timerStatus, setTimerStatus] = useState('idle');
@@ -292,167 +154,104 @@ export default function App() {
   const lockEditing = () => { isEditingRef.current = true; };
   const unlockEditing = () => { isEditingRef.current = false; };
   const lastNotifiedRef = useRef({});
+  const dbRef = useRef(INITIAL_DB);
 
   useEffect(() => {
+    if (isLoading) return;
     const saved = loadAuth(db.settings?.authRevokedAt || 0);
-    if (saved) setIsAuthenticated(saved);
-  }, [db.settings?.authRevokedAt]);
+    if (saved) setIsAuthenticated(saved); else setIsAuthenticated(false);
+  }, [isLoading, db.settings?.authRevokedAt]);
 
   useEffect(() => {
     let alive = true;
     const fetchLive = async () => {
       if (isEditingRef.current) return;
       try {
-        const res = await fetch(`${DATABASE_URL}${DB_PATH}.json`);
-        const data = await res.json();
+        const res = await fetch(`${DATABASE_URL}${DB_PATH}.json`); const data = await res.json();
         if (alive && data) {
-          setDb(prev => ({
-            ...prev, ...data,
-            settings:   { ...prev.settings,   ...(data.settings   || {}) },
-            allTime:    { ...prev.allTime,    ...(data.allTime    || {}) },
-            coopQuest:  { ...prev.coopQuest,  ...(data.coopQuest  || {}) },
-            timeAttack: { ...prev.timeAttack, ...(data.timeAttack || {}) },
-            timer:      { ...prev.timer,      ...(data.timer      || {}) }
-          }));
+          setDb(prev => {
+            const next = { ...prev, ...data, settings: { ...prev.settings, ...(data.settings || {}) }, allTime: { ...prev.allTime, ...(data.allTime || {}) }, coopQuest: { ...prev.coopQuest, ...(data.coopQuest || {}) }, timeAttack: { ...prev.timeAttack, ...(data.timeAttack || {}) }, timer: { ...prev.timer, ...(data.timer || {}) } };
+            dbRef.current = next; return next;
+          });
         }
       } catch (_) {}
       if (alive) setIsLoading(false);
     };
-    fetchLive();
-    const interval = setInterval(fetchLive, POLL_INTERVAL_MS);
-    return () => { alive = false; clearInterval(interval); };
+    fetchLive(); const interval = setInterval(fetchLive, POLL_INTERVAL_MS); return () => { alive = false; clearInterval(interval); };
   }, []);
 
   useEffect(() => {
     if (isLoading) return;
-    const currentWeek = getWeekKey();
-    const attendance = db.attendance || {};
-    const bonus = db.attendanceBonus || {};
+    const currentDb = dbRef.current; const currentWeek = getWeekKey(); const attendance = currentDb.attendance || {};
     const oldKeys = Object.keys(attendance).filter(k => k !== currentWeek);
     if (oldKeys.length === 0) return;
-
-    const newStreaks = { ...(db.streakWeeks || {}) };
+    const newStreaks = { ...(currentDb.streakWeeks || {}) }; const students = safeArray(currentDb.students);
     oldKeys.forEach(k => {
       const weekData = attendance[k] || {};
-      Object.keys(weekData).forEach(sId => {
-        const totalDays = (weekData[sId] || []).length + (db.extraAttendDays || 0);
-        if (totalDays < 5) newStreaks[sId] = 0;
-      });
+      students.forEach(s => { const totalDays = (safeArray(weekData[s.id])).length + (currentDb.extraAttendDays || 0); if (totalDays < 5) newStreaks[s.id] = 0; });
     });
-
-    const cleanedAttendance = { [currentWeek]: attendance[currentWeek] || {} };
-    const cleanedBonus = { [currentWeek]: bonus[currentWeek] || {} };
+    const cleanedAttendance = { [currentWeek]: attendance[currentWeek] || {} }; const cleanedBonus = { [currentWeek]: (currentDb.attendanceBonus || {})[currentWeek] || {} };
     sync({ attendance: cleanedAttendance, attendanceBonus: cleanedBonus, streakWeeks: newStreaks, extraAttendDays: 0 });
-  }, [isLoading]); 
+  }, [isLoading]);
 
   useEffect(() => {
     if (!db.timeAttack?.isActive || !db.timeAttack?.endTime) return;
-    const tick = () => {
-      const diff = Math.floor((db.timeAttack.endTime - Date.now()) / 1000);
-      if (diff <= 0) setTimeLeftString("00:00 (종료)");
-      else setTimeLeftString(`${pad2(Math.floor(diff/60))}:${pad2(diff%60)}`);
-    };
-    tick();
-    const t = setInterval(tick, 1000);
-    return () => clearInterval(t);
+    const tick = () => { const diff = Math.floor((db.timeAttack.endTime - Date.now()) / 1000); if (diff <= 0) setTimeLeftString("00:00 (종료)"); else setTimeLeftString(`${pad2(Math.floor(diff/60))}:${pad2(diff%60)}`); };
+    tick(); const t = setInterval(tick, 1000); return () => clearInterval(t);
   }, [db.timeAttack?.isActive, db.timeAttack?.endTime]);
 
   useEffect(() => {
     const tick = () => {
-      const t = db.timer || {};
-      const mode = t.mode || 'idle';
-      setTimerStatus(mode);
+      const t = db.timer || {}; const mode = t.mode || 'idle'; setTimerStatus(mode);
       if (mode === 'idle') { setTimerDisplay("00:00"); setBreakWarningLevel(0); return; }
-
       let ms = 0;
       if (mode === 'class_sw') { ms = t.isRunning ? Date.now() - t.startedAt : (t.pausedElapsed || 0); } 
-      else if (mode === 'class_cd' || mode === 'break') {
-        ms = t.isRunning ? (t.endTime - Date.now()) : (t.pausedRemaining || 0);
-        if (ms < 0) ms = 0;
-      }
+      else if (mode === 'class_cd' || mode === 'break') { ms = t.isRunning ? (t.endTime - Date.now()) : (t.pausedRemaining || 0); if (ms < 0) ms = 0; }
       setTimerDisplay(formatMs(ms));
-
       if (mode === 'break' && t.isRunning) {
-        const sec = Math.floor(ms / 1000);
-        const key = `${t.endTime}_${sec}`;
-        const notify = (level, sound) => {
-          if (lastNotifiedRef.current[key + '_' + level]) return;
-          lastNotifiedRef.current[key + '_' + level] = true;
-          playSound(sound); setBreakWarningLevel(level);
-        };
-        if (sec === 180) notify(1, 'softChime');
-        else if (sec === 60) notify(2, 'softChime');
-        else if (sec <= 30 && sec > 0 && sec % 5 === 0) notify(3, 'beep');
-        else if (sec > 180) setBreakWarningLevel(0);
-
-        if (ms <= 0) {
-          playSound('chime'); setBreakWarningLevel(0);
-          sync({ timer: { mode: 'idle', startedAt: null, endTime: null, duration: null, isRunning: false, pausedElapsed: null, pausedRemaining: null } });
-        }
+        const sec = Math.floor(ms / 1000); const key = `${t.endTime}_${sec}`;
+        const notify = (level, sound) => { if (lastNotifiedRef.current[key + '_' + level]) return; lastNotifiedRef.current[key + '_' + level] = true; playSound(sound); setBreakWarningLevel(level); };
+        if (sec === 180) notify(1, 'softChime'); else if (sec === 60) notify(2, 'softChime'); else if (sec <= 30 && sec > 0 && sec % 5 === 0) notify(3, 'beep'); else if (sec > 180) setBreakWarningLevel(0);
+        if (ms <= 0) { playSound('chime'); setBreakWarningLevel(0); sync({ timer: { mode: 'idle', startedAt: null, endTime: null, duration: null, isRunning: false, pausedElapsed: null, pausedRemaining: null } }); }
       } else if (mode === 'class_cd' && t.isRunning && ms <= 0) {
-        playSound('chime');
-        sync({ timer: { mode: 'idle', startedAt: null, endTime: null, duration: null, isRunning: false, pausedElapsed: null, pausedRemaining: null } });
+        playSound('chime'); sync({ timer: { mode: 'idle', startedAt: null, endTime: null, duration: null, isRunning: false, pausedElapsed: null, pausedRemaining: null } });
       }
     };
-    tick();
-    const iv = setInterval(tick, 250);
-    return () => clearInterval(iv);
+    tick(); const iv = setInterval(tick, 250); return () => clearInterval(iv);
   }, [db.timer]);
 
   const sync = async (updates) => {
-    setDb(prev => ({ ...prev, ...updates }));
+    setDb(prev => { const next = { ...prev, ...updates }; dbRef.current = next; return next; });
     try { await fetch(`${DATABASE_URL}${DB_PATH}.json`, { method: 'PATCH', body: JSON.stringify(updates) }); } catch (_) {}
   };
 
   const safeStudents = safeArray(db.students);
-
   const allStats = useMemo(() => safeStudents.map(s => {
-    const exp = db.roleExp[s.id] || 0; const bonus = db.bonusCoins?.[s.id] || 0;
-    const coins = Math.max(0, (exp * 10) + bonus - (db.usedCoins[s.id] || 0));
+    const exp = db.roleExp[s.id] || 0; const bonus = db.bonusCoins?.[s.id] || 0; const coins = Math.max(0, (exp * 10) + bonus - (db.usedCoins[s.id] || 0));
     let mastery = { label: '🌱 인턴', color: 'text-emerald-700', bg: 'bg-emerald-100 border-emerald-200' };
     if (exp >= 20) mastery = { label: '👑 장인', color: 'text-amber-700', bg: 'bg-gradient-to-r from-amber-100 to-yellow-200 border-amber-400' };
     else if (exp >= 10) mastery = { label: '💎 전문가', color: 'text-blue-700', bg: 'bg-blue-100 border-blue-300' };
-
-    const weekKey = getWeekKey();
-    const attendedDays = safeArray(db.attendance?.[weekKey]?.[s.id]);
-    const weeklyCount = attendedDays.length;
-    const streak = db.streakWeeks?.[s.id] || 0;
-    const todayIdx = getTodayWeekdayIdx();
-    const attendedToday = todayIdx >= 0 && attendedDays.includes(todayIdx);
-
-    return {
-      ...s, exp, coins, mastery, status: db.studentStatus[s.id] || 'normal',
-      atExp: db.allTime?.exp?.[s.id] || 0, atDonate: db.allTime?.donate?.[s.id] || 0,
-      atFund: db.allTime?.fund?.[s.id] || 0, atPen: db.allTime?.penalty?.[s.id] || 0,
-      weeklyCount, streak, attendedToday, notes: safeArray(db.notes?.[s.id])
-    };
+    const weekKey = getWeekKey(); const attendedDays = safeArray(db.attendance?.[weekKey]?.[s.id]); const weeklyCount = attendedDays.length; const streak = db.streakWeeks?.[s.id] || 0; const todayIdx = getTodayWeekdayIdx(); const attendedToday = todayIdx >= 0 && attendedDays.includes(todayIdx);
+    return { ...s, exp, coins, mastery, status: db.studentStatus[s.id] || 'normal', atExp: db.allTime?.exp?.[s.id] || 0, atDonate: db.allTime?.donate?.[s.id] || 0, atFund: db.allTime?.fund?.[s.id] || 0, atPen: db.allTime?.penalty?.[s.id] || 0, weeklyCount, streak, attendedToday, notes: safeArray(db.notes?.[s.id]) };
   }), [safeStudents, db.roleExp, db.bonusCoins, db.usedCoins, db.studentStatus, db.allTime, db.attendance, db.streakWeeks, db.notes]);
 
   const activeStudents = useMemo(() => allStats.filter(s => s.status !== 'crisis'), [allStats]);
 
-  // 🔥 V10 핵심: 5단계 가변형 진화 게이지 연산 (초월 보호막 완전 삭제)
+  // 🔥 5단계 순수 가변형 연산 (보호막 제거)
   const { classReputation, evolutionLevel, progressPercent } = useMemo(() => {
     const target = db.settings?.targetScore || 5000;
     const penaltyUnit = db.settings?.pointConfig?.penalty || 20;
-    const raw = allStats.reduce((sum, s) =>
-      sum + (s.exp * 10) + (db.bonusCoins?.[s.id] || 0) - ((db.penaltyCount[s.id] || 0) * penaltyUnit), 0)
-      + safeArray(db.donations).reduce((sum, d) => sum + (d.amount || 0), 0)
-      + (db.manualRepOffset || 0);
-    
-    let r = Math.max(0, raw);
-    if (r > target) r = target; // 최대 목표치까지만 제한
-    
-    const step = Math.max(1, target / 5); // 1구간당 점수
-    const level = Math.min(Math.floor(r / step), 5); // 0 ~ 5 레벨
-    const pct = level >= 5 ? 100 : ((r % step) / step) * 100; // 0 ~ 100%
-    
+    const raw = allStats.reduce((sum, s) => sum + (s.exp * 10) + (db.bonusCoins?.[s.id] || 0) - ((db.penaltyCount[s.id] || 0) * penaltyUnit), 0) + safeArray(db.donations).reduce((sum, d) => sum + (d.amount || 0), 0) + (db.manualRepOffset || 0);
+    let r = Math.max(0, raw); if (r > target) r = target;
+    const step = Math.max(1, target / 5);
+    const level = Math.min(Math.floor(r / step), 5);
+    const pct = level >= 5 ? 100 : ((r % step) / step) * 100;
     return { classReputation: r, evolutionLevel: level, progressPercent: pct };
   }, [allStats, db.penaltyCount, db.bonusCoins, db.donations, db.settings, db.manualRepOffset]);
 
   const sortedDashboardStats = useMemo(() => {
     if (db.settings?.showCumulativeStats) return [...allStats].sort((a,b) => a.id - b.id);
-    const order = { crisis: 0, pending: 1, normal: 2 };
-    return [...allStats].sort((a,b) => order[a.status] !== order[b.status] ? order[a.status] - order[b.status] : a.id - b.id);
+    const order = { crisis: 0, pending: 1, normal: 2 }; return [...allStats].sort((a,b) => order[a.status] !== order[b.status] ? order[a.status] - order[b.status] : a.id - b.id);
   }, [allStats, db.settings?.showCumulativeStats]);
 
   const groupedByGroupStats = useMemo(() => [...allStats].sort((a,b) => a.group - b.group || a.id - b.id), [allStats]);
@@ -463,66 +262,47 @@ export default function App() {
   const selectedRefStudentPraises = useMemo(() => !refTarget ? [] : safeArray(db.approvedPraises).filter(p => p.toId == refTarget), [refTarget, db.approvedPraises]);
   const randomPraise = selectedRefStudentPraises.length ? selectedRefStudentPraises[Math.floor(Math.random() * selectedRefStudentPraises.length)] : null;
 
-  // ── 핸들러 ───────────────────────────────────────────────
+  // ── HANDLERS ──
   const toggleAttendance = (sId) => {
-    const todayIdx = getTodayWeekdayIdx();
-    if (todayIdx < 0) return alert("주말에는 출석 체크를 할 수 없어요.");
-    const weekKey = getWeekKey(); const weekData = db.attendance?.[weekKey] || {};
-    const days = safeArray(weekData[sId]); const alreadyToday = days.includes(todayIdx);
-
+    const todayIdx = getTodayWeekdayIdx(); if (todayIdx < 0) return alert("주말에는 출석을 할 수 없습니다.");
+    const weekKey = getWeekKey(); const currentDb = dbRef.current; const weekData = currentDb.attendance?.[weekKey] || {}; const days = safeArray(weekData[sId]); const alreadyToday = days.includes(todayIdx);
     if (!alreadyToday && !isAttendanceOpen()) return alert("출석 시간이 지났어요. (08:30 마감)");
-
     const newDays = alreadyToday ? days.filter(d => d !== todayIdx) : [...days, todayIdx].sort();
-    const newWeekData = { ...weekData, [sId]: newDays };
-    const updates = { attendance: { ...db.attendance, [weekKey]: newWeekData } };
-
+    const newWeekData = { ...weekData, [sId]: newDays }; const updates = { attendance: { ...currentDb.attendance, [weekKey]: newWeekData }, manualRepOffset: (currentDb.manualRepOffset || 0) + (alreadyToday ? -1 : 1) };
     if (!alreadyToday) {
-      updates.manualRepOffset = (db.manualRepOffset || 0) + 1;
       playSound('attend'); setAttendAnim({ id: sId, ts: Date.now() }); setTimeout(() => setAttendAnim(null), 1400);
-
-      const totalDays = newDays.length + (db.extraAttendDays || 0);
-      const alreadyBonus = db.attendanceBonus?.[weekKey]?.[sId];
-      if (totalDays >= 5 && !alreadyBonus) {
-        updates.bonusCoins = { ...db.bonusCoins, [sId]: (db.bonusCoins?.[sId] || 0) + 3 };
-        updates.attendanceBonus = { ...db.attendanceBonus, [weekKey]: { ...(db.attendanceBonus?.[weekKey] || {}), [sId]: true } };
-        updates.streakWeeks = { ...db.streakWeeks, [sId]: (db.streakWeeks?.[sId] || 0) + 1 };
-        setTimeout(() => playSound('jackpot'), 600); setTimeout(() => alert(`🎉 ${allStats.find(x=>x.id===sId)?.name} 개근 달성! 🪙3 보너스!`), 900);
-      }
-    } else { updates.manualRepOffset = (db.manualRepOffset || 0) - 1; }
+      const totalDays = newDays.length + (currentDb.extraAttendDays || 0); const alreadyBonus = currentDb.attendanceBonus?.[weekKey]?.[sId];
+      if (totalDays >= 5 && !alreadyBonus) { updates.bonusCoins = { ...currentDb.bonusCoins, [sId]: (currentDb.bonusCoins?.[sId] || 0) + 3 }; updates.attendanceBonus = { ...currentDb.attendanceBonus, [weekKey]: { ...(currentDb.attendanceBonus?.[weekKey] || {}), [sId]: true } }; updates.streakWeeks = { ...currentDb.streakWeeks, [sId]: (currentDb.streakWeeks?.[sId] || 0) + 1 }; setTimeout(() => playSound('jackpot'), 600); setTimeout(() => alert(`🎉 ${allStats.find(x=>x.id===sId)?.name} 개근! 🪙3 보너스!`), 900); }
+    }
     sync(updates);
   };
 
   const teacherAddHoliday = () => {
-    if (!window.confirm("공휴일/재량휴업일로 간주하여 모든 학생의 이번 주 출석일수에 +1을 반영할까요?")) return;
-    const next = (db.extraAttendDays || 0) + 1; const weekKey = getWeekKey();
-    const updates = { extraAttendDays: next }; const weekData = db.attendance?.[weekKey] || {};
-    let newBonus = { ...(db.attendanceBonus?.[weekKey] || {}) }; let newStreaks = { ...(db.streakWeeks || {}) }; let newCoins = { ...(db.bonusCoins || {}) }; let bonusCount = 0;
-    safeStudents.forEach(s => {
-      const days = safeArray(weekData[s.id]); const total = days.length + next;
-      if (total >= 5 && !newBonus[s.id]) { newBonus[s.id] = true; newStreaks[s.id] = (newStreaks[s.id] || 0) + 1; newCoins[s.id] = (newCoins[s.id] || 0) + 3; bonusCount++; }
-    });
-    updates.attendanceBonus = { ...db.attendanceBonus, [weekKey]: newBonus }; updates.streakWeeks = newStreaks; updates.bonusCoins = newCoins; sync(updates);
-    alert(`📅 전체 출석일수 +1 반영 완료 (현재 보정: +${next}일, 추가 개근 달성 ${bonusCount}명)`);
+    if (!window.confirm("전체 출석일수에 +1을 반영할까요?")) return;
+    const currentDb = dbRef.current; const next = (currentDb.extraAttendDays || 0) + 1; const weekKey = getWeekKey(); const updates = { extraAttendDays: next }; const weekData = currentDb.attendance?.[weekKey] || {};
+    let newBonus = { ...(currentDb.attendanceBonus?.[weekKey] || {}) }; let newStreaks = { ...(currentDb.streakWeeks || {}) }; let newCoins = { ...(currentDb.bonusCoins || {}) }; let bonusCount = 0;
+    safeArray(currentDb.students).forEach(s => { const days = safeArray(weekData[s.id]); const total = days.length + next; if (total >= 5 && !newBonus[s.id]) { newBonus[s.id] = true; newStreaks[s.id] = (newStreaks[s.id] || 0) + 1; newCoins[s.id] = (newCoins[s.id] || 0) + 3; bonusCount++; } });
+    updates.attendanceBonus = { ...currentDb.attendanceBonus, [weekKey]: newBonus }; updates.streakWeeks = newStreaks; updates.bonusCoins = newCoins; sync(updates); alert(`📅 반영 완료 (+${next}일, 개근 ${bonusCount}명)`);
   };
 
   const openNoteModal = (sId) => { if (isAuthenticated !== 'teacher') return setShowModal('password'); setShowNoteModal(sId); setNoteText(""); };
-  const submitNote = () => { if (!noteText.trim()) return alert("내용을 입력하세요."); const sId = showNoteModal; const note = { id: Date.now(), date: formatDate(), text: noteText.trim() }; sync({ notes: { ...db.notes, [sId]: [...safeArray(db.notes?.[sId]), note] } }); setShowNoteModal(null); setNoteText(""); alert("📝 누가기록 저장 완료!"); };
-  const deleteNote = (sId, noteId) => { if (!window.confirm("삭제할까요?")) return; sync({ notes: { ...db.notes, [sId]: safeArray(db.notes?.[sId]).filter(n => n.id !== noteId) } }); };
+  const submitNote = () => { if (!noteText.trim()) return alert("입력하세요."); const sId = showNoteModal; const note = { id: Date.now(), date: formatDate(), text: noteText.trim() }; sync({ notes: { ...db.notes, [sId]: [...safeArray(db.notes?.[sId]), note] } }); setShowNoteModal(null); setNoteText(""); alert("저장 완료!"); };
+  const deleteNote = (sId, noteId) => { if (!window.confirm("삭제?")) return; sync({ notes: { ...db.notes, [sId]: safeArray(db.notes?.[sId]).filter(n => n.id !== noteId) } }); };
 
   const buildStudentReport = (s) => {
     const praises = safeArray(db.approvedPraises).filter(p => p.toId == s.id); const reflections = safeArray(db.pendingReflections).filter(r => r.sId == s.id); const notes = safeArray(db.notes?.[s.id]);
     let md = `## ${s.name} (${s.group}모둠 · ${s.role}${s.isLeader ? ' · 모둠장' : ''})\n`;
     if (s.enneagram && ENNEAGRAM_DATA[s.enneagram]) md += `- 에니어그램: ${ENNEAGRAM_DATA[s.enneagram].name}\n`;
-    md += `- 누적 완수: ${s.atExp}회 / 기부: ${s.atDonate}🪙 / 펀딩: ${s.atFund}🪙 / 위기: ${s.atPen}회\n- 이번 주 출석: ${s.weeklyCount}/5 · 누적 개근 주수: ${s.streak}주\n- 현재 숙련도: ${s.mastery.label} (누적 ${s.exp})\n\n### 받은 칭찬 (${praises.length}건)\n`;
-    if (praises.length) praises.forEach(p => { md += `- [${p.date}] ${SEL_OPTIONS.find(o=>o.name===p.tag)?.short || '-'}: "${p.text}"\n`; }); else md += `- (없음)\n`;
+    md += `- 누적 완수: ${s.atExp}회 / 기부: ${s.atDonate}🪙 / 펀딩: ${s.atFund}🪙 / 위기: ${s.atPen}회\n- 출석: ${s.weeklyCount}/5 · 개근: ${s.streak}주\n- 숙련도: ${s.mastery.label} (${s.exp})\n\n### 받은 칭찬 (${praises.length}건)\n`;
+    if (praises.length) praises.forEach(p => { md += `- [${p.date}] ${SEL_OPTIONS.find(o=>o.name===p.tag)?.short||'-'}: "${p.text}"\n`; }); else md += `- (없음)\n`;
     md += `\n### 제출한 성찰 (${reflections.length}건)\n`;
-    if (reflections.length) reflections.forEach(r => { md += `- [${r.date}] ${SEL_OPTIONS.find(o=>o.name===r.tag)?.short || '-'}: "${r.text}"\n`; }); else md += `- (없음)\n`;
+    if (reflections.length) reflections.forEach(r => { md += `- [${r.date}] ${SEL_OPTIONS.find(o=>o.name===r.tag)?.short||'-'}: "${r.text}"\n`; }); else md += `- (없음)\n`;
     md += `\n### 누가기록 (${notes.length}건)\n`;
     if (notes.length) notes.forEach(n => { md += `- [${n.date}] ${n.text}\n`; }); else md += `- (없음)\n`;
     return md;
   };
   const exportStudent = (sId) => { const s = allStats.find(x => x.id == sId); if (!s) return; downloadOrCopy(`# 달보드레 학생 리포트\n생성일: ${formatDate()}\n\n${buildStudentReport(s)}`, `report_${s.name}_${formatDate()}.md`); };
-  const exportAll = () => { let md = `# 달보드레 학급 전체 리포트\n생성일: ${formatDate()}\n총 학생 수: ${allStats.length}명\n학급 명성: ${classReputation}p\n\n---\n\n`; allStats.forEach(s => { md += buildStudentReport(s) + "\n---\n\n"; }); downloadOrCopy(md, `class_report_${formatDate()}.md`); };
+  const exportAll = () => { let md = `# 달보드레 학급 리포트\n생성일: ${formatDate()}\n총 ${allStats.length}명 · 명성: ${classReputation}p\n\n---\n\n`; allStats.forEach(s => { md += buildStudentReport(s) + "\n---\n\n"; }); downloadOrCopy(md, `class_report_${formatDate()}.md`); };
   const downloadOrCopy = (text, filename) => { try { navigator.clipboard.writeText(text); } catch(_) {} try { const blob = new Blob([text], { type: 'text/markdown;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); alert(`📋 복사 및 다운로드 완료!`); } catch (e) { alert("다운로드 실패. 복사되었습니다."); } };
 
   const startStopwatch = () => sync({ timer: { mode: 'class_sw', startedAt: Date.now(), endTime: null, duration: null, isRunning: true, pausedElapsed: 0, pausedRemaining: null } });
@@ -534,36 +314,37 @@ export default function App() {
 
   const handleExpAdjust = (id, delta) => { if (delta > 0) playSound('good'); sync({ roleExp: { ...db.roleExp, [id]: Math.max(0, (db.roleExp[id]||0) + delta) }, allTime: { ...db.allTime, exp: { ...db.allTime.exp, [id]: Math.max(0, (db.allTime.exp?.[id]||0) + delta) } } }); };
   const handleGivePenalty = (id) => { if (!isAuthenticated) return setShowModal('password'); if (!window.confirm("위기 지정할까요?")) return; playSound('bad'); sync({ studentStatus: { ...db.studentStatus, [id]: 'crisis' }, penaltyCount: { ...db.penaltyCount, [id]: (db.penaltyCount[id] || 0) + 1 }, allTime: { ...db.allTime, penalty: { ...db.allTime.penalty, [id]: (db.allTime.penalty?.[id] || 0) + 1 } } }); };
-  const handleDonate = (sId, amount) => { const u = allStats.find(s => s.id == sId); if (!u || u.coins < amount) return alert("코인 부족!"); playSound('buy'); sync({ usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + amount }, donations: [{ id: Date.now(), name: u.name, amount }, ...safeArray(db.donations)].slice(0, 15), allTime: { ...db.allTime, donate: { ...db.allTime.donate, [sId]: (db.allTime.donate?.[sId] || 0) + amount } } }); alert("기부 완료! ✨"); };
+  const handleDonate = (sId, amount) => { const u = allStats.find(s => s.id == sId); if (!u || u.coins < amount) return alert("코인 부족!"); playSound('buy'); sync({ usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + amount }, donations: [{ id: Date.now(), name: u.name, amount }, ...safeArray(db.donations)].slice(0, 15), allTime: { ...db.allTime, donate: { ...db.allTime.donate, [sId]: (db.allTime.donate?.[sId] || 0) + amount } } }); alert("기부 완료!"); };
   const handleFund = (fId, sId, amount) => { const u = allStats.find(s => s.id == sId); if (!u || u.coins < amount) return alert("코인 부족!"); playSound('buy'); sync({ usedCoins: { ...db.usedCoins, [sId]: (db.usedCoins[sId] || 0) + amount }, funding: safeArray(db.funding).map(f => f.id === fId ? { ...f, current: (Number(f.current)||0) + amount } : f), allTime: { ...db.allTime, fund: { ...db.allTime.fund, [sId]: (db.allTime.fund?.[sId] || 0) + amount } } }); alert("투자 완료!"); };
   const addCoopScore = (points, title) => { playSound('jackpot'); sync({ manualRepOffset: (db.manualRepOffset || 0) + points }); alert(`🎉 [${title}] 달성! +${points}점!`); };
   const adjustGoodWeek = (delta) => { const next = Math.max(0, Math.min(5, (db.coopQuest?.goodWeek || 0) + delta)); sync({ coopQuest: { ...db.coopQuest, goodWeek: next } }); if (delta > 0) playSound('good'); };
-  const completeGoodWeek = () => { playSound('jackpot'); const reward = db.coopQuest?.q4 || 100; sync({ coopQuest: { ...db.coopQuest, goodWeek: 0 }, manualRepOffset: (db.manualRepOffset || 0) + reward }); alert(`🌟 사이 좋은 일주일! +${reward}점!`); };
-  const handleStartTimeAttack = () => { const mins = toInt(taMins, 10), reward = toInt(taReward, 100); const title = taTitle.trim() || "미션"; if (mins <= 0 || reward <= 0) return alert("값을 확인하세요."); if (!window.confirm(`${mins}분 / ${reward}p로 타임어택 시작?`)) return; sync({ timeAttack: { isActive: true, title, rewardRep: reward, endTime: Date.now() + mins*60*1000, cleared: [] } }); };
-  const handleCompleteTimeAttack = () => { playSound('jackpot'); sync({ manualRepOffset: (db.manualRepOffset || 0) + (db.timeAttack?.rewardRep || 0), timeAttack: { isActive: false, title: "", rewardRep: 0, endTime: null, cleared: [] } }); alert("🎉 타임어택 성공!"); };
+  const completeGoodWeek = () => { playSound('jackpot'); const reward = db.coopQuest?.q4 || 100; sync({ coopQuest: { ...db.coopQuest, goodWeek: 0 }, manualRepOffset: (db.manualRepOffset || 0) + reward }); alert(`🌟 완료! +${reward}점!`); };
+  const handleStartTimeAttack = () => { const mins = toInt(taMins, 10), reward = toInt(taReward, 100); const title = taTitle.trim() || "미션"; if (mins <= 0 || reward <= 0) return alert("입력 확인."); if (!window.confirm(`${mins}분 / ${reward}p로 타임어택 시작?`)) return; sync({ timeAttack: { isActive: true, title, rewardRep: reward, endTime: Date.now() + mins*60*1000, cleared: [] } }); };
+  const handleCompleteTimeAttack = () => { playSound('jackpot'); sync({ manualRepOffset: (db.manualRepOffset || 0) + (db.timeAttack?.rewardRep || 0), timeAttack: { isActive: false, title: "", rewardRep: 0, endTime: null, cleared: [] } }); alert("🎉 성공!"); };
   const handleFailTimeAttack = () => { sync({ timeAttack: { isActive: false, title: "", rewardRep: 0, endTime: null, cleared: [] } }); };
   const toggleTimeAttackClear = (id) => { if (!db.timeAttack?.isActive) return; const cleared = safeArray(db.timeAttack.cleared).map(Number); const isDone = cleared.includes(Number(id)); const next = isDone ? cleared.filter(c => c !== Number(id)) : [...cleared, Number(id)]; sync({ timeAttack: { ...db.timeAttack, cleared: next } }); if (!isDone) playSound('good'); };
-  const submitArtisanItem = () => { if (!artisanTarget || !artisanItemName || !artisanItemPrice) return alert("입력 오류"); const artisan = allStats.find(s => s.id == artisanTarget); if (!artisan || artisan.exp < 20) return alert("장인만 가능"); sync({ pendingShopItems: [{ id: Date.now(), name: artisanItemName, price: toInt(artisanItemPrice), creator: artisan.name }, ...safeArray(db.pendingShopItems)] }); setArtisanTarget(""); setArtisanItemName(""); setArtisanItemPrice(""); alert("결재 올림!"); };
-  const submitPraise = () => { if (!praiseTarget || !praiseTag || !praiseText) return alert("빈칸 확인!"); sync({ pendingPraises: [{ id: Date.now(), toId: praiseTarget, tag: praiseTag, text: praiseText, date: formatDate() }, ...safeArray(db.pendingPraises)] }); setShowPraiseModal(false); setPraiseTarget(""); setPraiseText(""); setPraiseTag(""); alert("온기 배달 완료!"); };
-  const submitReflection = () => { if (!refTarget || !refTag || !refText) return alert("빈칸 확인!"); sync({ pendingReflections: [{ id: Date.now(), sId: refTarget, tag: refTag, text: refText, date: formatDate() }, ...safeArray(db.pendingReflections)], studentStatus: { ...db.studentStatus, [refTarget]: 'pending' } }); setRefTarget(""); setRefText(""); setRefTag(""); alert("다짐 제출 완료!"); };
-  const approvePraise = (p) => { const target = allStats.find(u => u.id == p.toId); if (target?.status === 'crisis') return alert("위기 학생에게는 지급 불가. 성찰이 먼저입니다."); const next = safeArray(db.pendingPraises).filter(pr => pr.id !== p.id); const app = [p, ...safeArray(db.approvedPraises)].slice(0, 20); const themeMatch = p.tag === db.settings?.weeklyTheme; const earned = themeMatch ? (db.settings?.pointConfig?.praiseBonus || 15) : (db.settings?.pointConfig?.praiseBasic || 10); const updates = { pendingPraises: next, approvedPraises: app }; if (p.toId !== 'me') { updates.bonusCoins = { ...db.bonusCoins, [p.toId]: (db.bonusCoins?.[p.toId] || 0) + earned }; updates.allTime = { ...db.allTime, exp: { ...db.allTime.exp, [p.toId]: (db.allTime.exp?.[p.toId] || 0) + 1 } }; } sync(updates); alert(`승인 완료! (+${earned}🪙)`); playSound('good'); };
+  
+  const submitArtisanItem = () => { if (!artisanTarget || !artisanItemName || !artisanItemPrice) return alert("오류"); const artisan = allStats.find(s => s.id == artisanTarget); if (!artisan || artisan.exp < 20) return alert("장인만 가능"); sync({ pendingShopItems: [{ id: Date.now(), name: artisanItemName, price: toInt(artisanItemPrice), creator: artisan.name }, ...safeArray(db.pendingShopItems)] }); setArtisanTarget(""); setArtisanItemName(""); setArtisanItemPrice(""); alert("결재 올림!"); };
+  const submitPraise = () => { if (!praiseTarget || !praiseTag || !praiseText) return alert("확인!"); sync({ pendingPraises: [{ id: Date.now(), toId: praiseTarget, tag: praiseTag, text: praiseText, date: formatDate() }, ...safeArray(db.pendingPraises)] }); setShowPraiseModal(false); setPraiseTarget(""); setPraiseText(""); setPraiseTag(""); alert("완료!"); };
+  const submitReflection = () => { if (!refTarget || !refTag || !refText) return alert("확인!"); sync({ pendingReflections: [{ id: Date.now(), sId: refTarget, tag: refTag, text: refText, date: formatDate() }, ...safeArray(db.pendingReflections)], studentStatus: { ...db.studentStatus, [refTarget]: 'pending' } }); setRefTarget(""); setRefText(""); setRefTag(""); alert("제출 완료!"); };
+  const approvePraise = (p) => { const target = allStats.find(u => u.id == p.toId); if (target?.status === 'crisis') return alert("불가"); const next = safeArray(db.pendingPraises).filter(pr => pr.id !== p.id); const app = [p, ...safeArray(db.approvedPraises)].slice(0, 20); const earned = (p.tag === db.settings?.weeklyTheme) ? (db.settings?.pointConfig?.praiseBonus || 15) : (db.settings?.pointConfig?.praiseBasic || 10); const updates = { pendingPraises: next, approvedPraises: app }; if (p.toId !== 'me') { updates.bonusCoins = { ...db.bonusCoins, [p.toId]: (db.bonusCoins?.[p.toId] || 0) + earned }; updates.allTime = { ...db.allTime, exp: { ...db.allTime.exp, [p.toId]: (db.allTime.exp?.[p.toId] || 0) + 1 } }; } sync(updates); alert(`승인!`); playSound('good'); };
 
-  const handleLogin = () => { const isMaster = password === (db.settings?.masterPw || "6505"); const isHelp = password === (db.settings?.helpRoomPw || "1111"); if (isMaster) { setIsAuthenticated('teacher'); saveAuth('teacher'); setActiveTab('admin'); setShowModal(null); setPassword(""); } else if (isHelp) { setIsAuthenticated('inspector'); saveAuth('inspector'); setActiveTab('helproom'); setShowModal(null); setPassword(""); } else { alert("비밀번호 오류 ❌"); playSound('bad'); } };
+  const handleLogin = () => { const isMaster = password === (db.settings?.masterPw || "6505"); const isHelp = password === (db.settings?.helpRoomPw || "1111"); if (isMaster) { setIsAuthenticated('teacher'); saveAuth('teacher'); setActiveTab('admin'); setShowModal(null); setPassword(""); } else if (isHelp) { setIsAuthenticated('inspector'); saveAuth('inspector'); setActiveTab('helproom'); setShowModal(null); setPassword(""); } else { alert("오류"); playSound('bad'); } };
   const handleLogout = () => { clearAuth(); setIsAuthenticated(false); setActiveTab('dashboard'); };
-  const revokeAllSessions = () => { if (!window.confirm("모든 기기에서 강제 로그아웃합니다.")) return; sync({ settings: { ...db.settings, authRevokedAt: Date.now() } }); clearAuth(); setIsAuthenticated(false); setActiveTab('dashboard'); alert("모든 세션을 무효화했습니다."); };
+  const revokeAllSessions = () => { if (!window.confirm("강제 로그아웃?")) return; sync({ settings: { ...db.settings, authRevokedAt: Date.now() } }); clearAuth(); setIsAuthenticated(false); setActiveTab('dashboard'); };
 
   const handleStudentFieldChange = (id, field, value) => sync({ students: safeStudents.map(st => st.id === id ? { ...st, [field]: value } : st) });
-  const handleAddStudent = () => { if (!newStudentName) return; const nextId = safeStudents.length ? Math.max(...safeStudents.map(s => s.id)) + 1 : 1; sync({ students: [...safeStudents, { id: nextId, name: newStudentName, role: '향리', group: toInt(newStudentGroup, 1), isLeader: false, enneagram: newStudentEnneagram }] }); setNewStudentName(""); alert("전입 완료!"); };
-  const handleRemoveStudent = (id) => { if (window.confirm("삭제할까요?")) sync({ students: safeStudents.filter(s => s.id !== id) }); };
-  const closeSemester = () => { if (window.prompt("'마감' 입력:") !== "마감") return; sync({ roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], donations: [], attendance: {}, attendanceBonus: {}, streakWeeks: {}, notes: {} }); alert("학기 마감 완료!"); };
-  const factoryReset = () => { if (window.prompt("'초기화' 입력:") !== "초기화") return; sync({ roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [], pendingShopItems: [], shopItems: [], funding: [], manualRepOffset: 0, allTime: { exp: {}, penalty: {}, donate: {}, fund: {} }, timeAttack: { isActive: false, title: "", rewardRep: 100, endTime: null, cleared: [] }, attendance: {}, attendanceBonus: {}, streakWeeks: {}, notes: {}, extraAttendDays: 0 }); alert("전체 리셋 완료."); };
+  const handleAddStudent = () => { if (!newStudentName) return; const nextId = safeStudents.length ? Math.max(...safeStudents.map(s => s.id)) + 1 : 1; sync({ students: [...safeStudents, { id: nextId, name: newStudentName, role: '향리', group: toInt(newStudentGroup, 1), isLeader: false, enneagram: newStudentEnneagram }] }); setNewStudentName(""); alert("완료!"); };
+  const handleRemoveStudent = (id) => { if (window.confirm("삭제?")) sync({ students: safeStudents.filter(s => s.id !== id) }); };
+  const closeSemester = () => { if (window.prompt("입력: 마감") !== "마감") return; sync({ roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], donations: [], attendance: {}, attendanceBonus: {}, streakWeeks: {}, notes: {} }); alert("마감 완료!"); };
+  const factoryReset = () => { if (window.prompt("입력: 초기화") !== "초기화") return; sync({ roleExp: {}, bonusCoins: {}, usedCoins: {}, penaltyCount: {}, studentStatus: {}, pendingReflections: [], pendingPraises: [], approvedPraises: [], donations: [], pendingShopItems: [], shopItems: [], funding: [], manualRepOffset: 0, allTime: { exp: {}, penalty: {}, donate: {}, fund: {} }, timeAttack: { isActive: false, title: "", rewardRep: 100, endTime: null, cleared: [] }, attendance: {}, attendanceBonus: {}, streakWeeks: {}, notes: {}, extraAttendDays: 0 }); alert("리셋 완료."); };
   const toggleCumulativeStats = () => sync({ settings: { ...db.settings, showCumulativeStats: !db.settings?.showCumulativeStats } });
 
 // =========== [1부 코드의 끝] ===========
 return (
     <div className="min-h-screen bg-amber-50/50 pb-32 font-sans text-slate-800 transition-all">
-      
-      {/* 1. 명성 전광판 (초대형 스케일 및 3분할 레이아웃 적용) */}
+
+      {/* ═══ HEADER: 3분할 레이아웃 (초대형 스케일 및 5단계 게이지) ═══ */}
       <header className="bg-gradient-to-br from-amber-100 to-orange-100 p-6 md:p-10 shadow-sm relative overflow-hidden border-b-4 border-white">
         <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-[100px] opacity-60"></div>
         <div className="max-w-7xl mx-auto relative z-10">
@@ -580,7 +361,7 @@ return (
                 <span className="text-2xl font-black text-amber-600 mb-3">p</span>
               </div>
 
-              {/* 🔥 V10 진화 칭호가 들어간 대형 게이지 바 */}
+              {/* 🔥 V10 진화 칭호가 들어간 대형 5단계 게이지 바 */}
               <div className="w-full h-10 bg-white/60 rounded-full overflow-hidden shadow-inner border-4 border-amber-200 relative mt-4">
                 <div className={`h-full transition-all duration-1000 ${evolutionLevel >= 5 ? 'bg-gradient-to-r from-yellow-300 via-amber-400 to-red-500 animate-pulse' : 'bg-gradient-to-r from-yellow-300 to-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]'}`} style={{ width: `${progressPercent}%` }}></div>
                 <div className="absolute inset-0 flex items-center justify-center font-black text-amber-900 text-sm md:text-base tracking-widest drop-shadow-md">
@@ -600,7 +381,6 @@ return (
 
             {/* 중앙 (3/12): 초대형 세계수 애니메이션 */}
             <div className="lg:col-span-3 flex items-center justify-center py-6">
-              {/* 스케일을 대폭 키워 화면의 주인공으로 만듦 */}
               <div className="scale-125 transform-origin-center">
                 {renderEvolution(evolutionLevel)}
               </div>
@@ -635,9 +415,8 @@ return (
         {/* ═══ PAGE 1: 대시보드 ═══ */}
         {activeTab === 'dashboard' && (
           <div className="space-y-10 animate-in fade-in duration-500">
-
-            {/* 공동퀘스트 + 타임어택 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* 공동퀘스트 */}
               <div className="bg-white p-6 rounded-[30px] border-2 border-blue-100 shadow-sm flex flex-col justify-between">
                 <h3 className="text-base font-black text-blue-600 mb-4 flex items-center gap-2"><Zap className="w-5 h-5"/> 학급 공동 퀘스트</h3>
                 <div className="grid grid-cols-2 gap-3 mb-4">
@@ -658,6 +437,7 @@ return (
                 )}
               </div>
 
+              {/* 타임어택 */}
               <div className={`p-6 rounded-[30px] border-2 flex flex-col items-center justify-center min-h-[180px] ${db.timeAttack?.isActive ? 'bg-red-50 border-red-300 shadow-inner' : 'bg-slate-50 border-dashed border-slate-200'}`}>
                 {db.timeAttack?.isActive ? (
                   <>
@@ -705,7 +485,7 @@ return (
               </button>
             </div>
 
-            {/* 학생 카드 목록 (가독성을 위해 패딩/폰트 크기 상향) */}
+            {/* 학생 카드 그리드 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {sortedDashboardStats.map(s => {
                 const isTaCleared = safeArray(db.timeAttack?.cleared).map(Number).includes(Number(s.id));
@@ -722,7 +502,6 @@ return (
                       </div>
                     )}
 
-                    {/* 출석 +1 애니메이션 */}
                     {isAnim && (
                       <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
                         <span className="text-4xl font-black text-amber-500 drop-shadow-lg animate-flyToScore">+1</span>
@@ -746,7 +525,6 @@ return (
 
                     <div className="flex flex-col mb-5 gap-3">
                       <p className="text-[12px] font-bold text-slate-400 tracking-wide truncate">{s.group}모둠 · {s.role}</p>
-
                       <button
                         onClick={() => toggleAttendance(s.id)}
                         disabled={s.status === 'crisis' || (getTodayWeekdayIdx() < 0)}
@@ -760,7 +538,6 @@ return (
                           <span className="text-xs font-bold text-slate-400 ml-1">{s.weeklyCount}/5 · ⭐{s.streak}</span>
                         </h3>
                       </button>
-
                       <div className={`text-sm font-black px-3 py-1.5 rounded-xl border-2 self-start ${s.status === 'crisis' ? 'bg-slate-200 border-slate-300 text-slate-500' : `${s.mastery.bg} ${s.mastery.color}`}`}>
                         {s.mastery.label} ({s.exp})
                       </div>
@@ -785,7 +562,7 @@ return (
           </div>
         )}
 
-        {/* ═══ PAGE 2: 성찰 ═══ */}
+        {/* ═══ PAGE 2: 성찰 센터 ═══ */}
         {activeTab === 'reflection' && (
           <div className="max-w-4xl mx-auto animate-in zoom-in-95">
             <div className="bg-white p-10 md:p-14 rounded-[50px] shadow-xl border-4 border-emerald-100 text-center">
@@ -851,7 +628,6 @@ return (
             </aside>
 
             <section className="flex-1 p-6 lg:p-10 overflow-y-auto bg-slate-50/30">
-              {/* 기부처 */}
               <div className="mb-10 bg-gradient-to-r from-yellow-100 to-amber-100 p-6 rounded-[30px] shadow-sm flex flex-col md:flex-row gap-6 items-center border-2 border-yellow-200">
                 <div className="md:w-1/3 text-center md:text-left">
                   <h4 className="text-xl font-black text-amber-800 mb-1 flex items-center justify-center md:justify-start gap-2"><Coins className="w-6 h-6 text-yellow-500"/> 명예의 기부처</h4>
@@ -959,7 +735,7 @@ return (
 
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                     {safeArray(db.shopItems).filter(i => i && i.name).map(item => (
-                      <div key={item.id} className="bg-white p-8 rounded-[30px] shadow-sm border-2 border-slate-100 flex flex-col justify-between">
+                      <div key={item.id} className="bg-white p-8 rounded-[30px] shadow-sm border-2 border-slate-100 flex flex-col justify-between hover:border-amber-300 transition-colors">
                         <div>
                           <div className="flex justify-between items-start mb-4">
                             <span className="text-xs font-black bg-slate-100 text-slate-500 px-3 py-1.5 rounded-lg">{String(item.creator)} 제작</span>
@@ -1022,16 +798,16 @@ return (
                 <h3 className="text-2xl font-black text-white">관리자 센터</h3>
               </div>
               {[
-                { key: 'mission', icon: <Zap className="w-5 h-5"/>, label: '결재/퀘스트', color: 'bg-blue-600' },
-                { key: 'shopAdmin', icon: <Store className="w-5 h-5"/>, label: '상점/펀딩', color: 'bg-blue-600' },
-                { key: 'report', icon: <BarChart3 className="w-5 h-5"/>, label: 'SEL 리포트', color: 'bg-blue-600' },
-                { key: 'students', icon: <Users className="w-5 h-5"/>, label: '명단 관리', color: 'bg-blue-600' },
-                { key: 'attendAdmin', icon: <CheckCircle2 className="w-5 h-5"/>, label: '출석 관리', color: 'bg-blue-600' },
-                { key: 'settings', icon: <Settings className="w-5 h-5"/>, label: '환경/점수', color: 'bg-blue-600' },
-                { key: 'reset', icon: <History className="w-5 h-5"/>, label: '초기화/마감', color: 'bg-red-600' }
+                { key: 'mission',    icon: <Zap className="w-5 h-5"/>,          label: '결재/퀘스트', danger: false },
+                { key: 'shopAdmin',  icon: <Store className="w-5 h-5"/>,         label: '상점/펀딩',   danger: false },
+                { key: 'report',     icon: <BarChart3 className="w-5 h-5"/>,     label: 'SEL 리포트',  danger: false },
+                { key: 'students',   icon: <Users className="w-5 h-5"/>,          label: '명단 관리',   danger: false },
+                { key: 'attendAdmin',icon: <CheckCircle2 className="w-5 h-5"/>,  label: '출석 관리',   danger: false },
+                { key: 'settings',   icon: <Settings className="w-5 h-5"/>,      label: '환경/점수',   danger: false },
+                { key: 'reset',      icon: <History className="w-5 h-5"/>,       label: '초기화/마감', danger: true  }
               ].map(m => (
                 <button key={m.key} onClick={() => setAdminSubTab(m.key)}
-                        className={`w-full p-4 rounded-xl font-black text-left flex items-center gap-3 text-base ${adminSubTab === m.key ? `${m.color} text-white shadow-lg translate-x-2` : 'bg-slate-800 text-slate-400'}`}>
+                        className={`w-full p-4 rounded-xl font-black text-left flex items-center gap-3 text-base transition-all ${adminSubTab === m.key ? (m.danger ? 'bg-red-600 text-white shadow-lg translate-x-2' : 'bg-blue-600 text-white shadow-lg translate-x-2') : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:translate-x-1'}`}>
                   {m.icon} {m.label}
                 </button>
               ))}
@@ -1042,29 +818,27 @@ return (
 
             <section className="flex-1 p-6 lg:p-10 overflow-y-auto bg-slate-50/50">
 
-              {/* 결재/퀘스트/타임어택 */}
               {adminSubTab === 'mission' && (
                 <div className="space-y-8 animate-in fade-in">
                   <div className="bg-white p-8 rounded-[30px] shadow-sm border border-slate-200">
                     <h3 className="text-xl font-black text-slate-800 border-l-8 border-blue-600 pl-4 mb-6 flex items-center gap-2"><Settings className="w-5 h-5"/> 공동 퀘스트 & 타임어택</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                       {[
-                        { key: 'q1', color: 'indigo', defName: '다 함께 바른 생활', defVal: 50 },
-                        { key: 'q2', color: 'pink', defName: '환대와 응원', defVal: 20 },
-                        { key: 'q3', color: 'emerald', defName: '전담수업 태도', defVal: 20 },
-                        { key: 'q4', color: 'yellow', defName: '사이좋은 일주일', defVal: 100 }
+                        { key: 'q1', bgClass: 'bg-indigo-50 border-indigo-100', textClass: 'text-indigo-600', defName: '다 함께 바른 생활', defVal: 50 },
+                        { key: 'q2', bgClass: 'bg-pink-50 border-pink-100',     textClass: 'text-pink-600',   defName: '환대와 응원',       defVal: 20 },
+                        { key: 'q3', bgClass: 'bg-emerald-50 border-emerald-100',textClass:'text-emerald-600',defName: '전담수업 태도',      defVal: 20 },
+                        { key: 'q4', bgClass: 'bg-yellow-50 border-yellow-100', textClass: 'text-yellow-600', defName: '사이좋은 일주일',   defVal: 100 }
                       ].map(q => (
-                        <div key={q.key} className={`bg-${q.color}-50 p-3 rounded-xl border border-${q.color}-100 flex gap-2`}>
+                        <div key={q.key} className={`${q.bgClass} p-3 rounded-xl border flex gap-2`}>
                           <input type="text" value={db.coopQuest?.[`${q.key}Name`] || q.defName}
                                  onChange={e => sync({ coopQuest: { ...db.coopQuest, [`${q.key}Name`]: e.target.value } })}
-                                 onFocus={lockEditing} onBlur={unlockEditing} className="flex-1 p-2.5 rounded-lg text-sm font-bold border-none outline-none"/>
+                                 onFocus={lockEditing} onBlur={unlockEditing} className="flex-1 p-2.5 rounded-lg text-sm font-bold border-none outline-none bg-white/70"/>
                           <input type="number" value={db.coopQuest?.[q.key] ?? q.defVal}
                                  onChange={e => sync({ coopQuest: { ...db.coopQuest, [q.key]: toInt(e.target.value) } })}
-                                 onFocus={lockEditing} onBlur={unlockEditing} className={`w-16 p-2.5 rounded-lg text-sm font-black text-${q.color}-600 border-none outline-none text-center`}/>
+                                 onFocus={lockEditing} onBlur={unlockEditing} className={`w-16 p-2.5 rounded-lg text-sm font-black ${q.textClass} border-none outline-none text-center bg-white/70`}/>
                         </div>
                       ))}
                     </div>
-
                     <div className="bg-red-50 p-6 rounded-[26px] border-2 border-red-200">
                       <h4 className="text-lg font-black text-red-800 mb-5 flex items-center gap-2"><Timer className="w-5 h-5"/> 타임어택 발동기</h4>
                       {db.timeAttack?.isActive ? (
@@ -1095,34 +869,38 @@ return (
                   <div className="bg-white p-8 rounded-[30px] shadow-sm border border-green-100">
                     <h4 className="text-2xl font-black mb-6 text-slate-800 border-l-8 border-green-500 pl-4">서류 결재함</h4>
                     <div className="space-y-4 max-h-[500px] overflow-y-auto pr-3 custom-scrollbar">
+                      {/* ✅ Bug 5 해결: 장인 결재 유지 */}
                       {safeArray(db.pendingShopItems).filter(i => i && i.name).map(item => (
                         <div key={item.id} className="bg-amber-50 p-5 rounded-2xl border-2 border-amber-200">
                           <div className="flex justify-between mb-2">
-                            <span className="font-black text-amber-800 bg-amber-100 px-3 py-1 rounded-lg text-xs">장인: {String(item.creator)}</span>
-                            <span className="text-sm font-black text-amber-600">{toInt(item.price)}🪙</span>
+                            <span className="font-black text-amber-800 bg-amber-100 px-3 py-1 rounded-lg text-xs">장인: {item.creator}</span>
+                            <span className="text-sm font-black text-amber-600">{item.price}🪙</span>
                           </div>
-                          <p className="text-base text-slate-800 font-black mb-3">"{String(item.name)}"</p>
+                          <p className="text-base text-slate-800 font-black mb-3">"{item.name}"</p>
                           <div className="flex gap-2">
                             <button onClick={() => { sync({ pendingShopItems: safeArray(db.pendingShopItems).filter(i => i.id !== item.id), shopItems: [item, ...safeArray(db.shopItems)] }); alert("등록!"); playSound('good'); }} className="flex-1 bg-amber-500 text-white py-2.5 rounded-lg font-black text-sm">출시 허가</button>
                             <button onClick={() => { sync({ pendingShopItems: safeArray(db.pendingShopItems).filter(i => i.id !== item.id) }); }} className="px-4 bg-white text-slate-400 font-black rounded-lg border">반려</button>
                           </div>
                         </div>
                       ))}
+                      {/* ✅ 성찰 결재 유지 */}
                       {safeArray(db.pendingReflections).filter(r => r && r.sId).map(r => (
                         <div key={r.id} className="bg-red-50 p-5 rounded-2xl border-2 border-red-200">
                           <div className="flex justify-between items-center mb-3 border-b border-red-200/50 pb-2">
                             <span className="font-black text-red-800 bg-red-100 px-3 py-1 rounded-lg text-xs flex items-center gap-2"><AlertTriangle className="w-3.5 h-3.5"/> {allStats.find(s=>s.id==r.sId)?.name}</span>
                             <span className="text-[10px] font-black text-red-400 bg-white px-2 py-1 rounded-full">{SEL_OPTIONS.find(o=>o.name===r.tag)?.short}</span>
                           </div>
-                          <p className="text-sm text-slate-700 font-bold mb-4 whitespace-pre-wrap bg-white p-3 rounded-xl border border-red-100">"{String(r.text)}"</p>
+                          <p className="text-sm text-slate-700 font-bold mb-4 whitespace-pre-wrap bg-white p-3 rounded-xl border border-red-100">"{r.text}"</p>
                           <div className="flex gap-2">
                             <button onClick={() => { sync({ pendingReflections: safeArray(db.pendingReflections).filter(pr => pr.id !== r.id), studentStatus: { ...db.studentStatus, [r.sId]: 'normal' } }); alert("해제!"); playSound('good'); }} className="flex-1 bg-red-500 text-white py-3 rounded-lg font-black text-sm">해제 승인</button>
                             <button onClick={() => { sync({ pendingReflections: safeArray(db.pendingReflections).filter(pr => pr.id !== r.id), studentStatus: { ...db.studentStatus, [r.sId]: 'crisis' } }); }} className="px-4 bg-white text-slate-500 font-black rounded-lg border-2 text-sm">반려</button>
                           </div>
                         </div>
                       ))}
+                      {/* ✅ Bug 5 해결: 칭찬 승인 블록 복구 완료 */}
                       {safeArray(db.pendingPraises).filter(p => p && p.toId).map(p => {
-                        const target = allStats.find(u => u.id == p.toId); const isCrisis = target?.status === 'crisis';
+                        const target = allStats.find(u => u.id == p.toId);
+                        const isCrisis = target?.status === 'crisis';
                         return (
                           <div key={p.id} className="bg-pink-50 p-5 rounded-2xl border-2 border-pink-200">
                             <div className="flex justify-between items-center mb-3 border-b border-pink-200/50 pb-2">
@@ -1132,9 +910,9 @@ return (
                               </div>
                               <span className="text-[10px] font-black text-pink-500 bg-white px-2 py-1 rounded-full">{SEL_OPTIONS.find(o=>o.name===p.tag)?.short}</span>
                             </div>
-                            <p className="text-sm text-slate-700 font-bold mb-4 bg-white p-3 rounded-xl border border-pink-100">"{String(p.text)}"</p>
+                            <p className="text-sm text-slate-700 font-bold mb-4 bg-white p-3 rounded-xl border border-pink-100">"{p.text}"</p>
                             <div className="flex gap-2">
-                              <button onClick={() => approvePraise(p)} className={`flex-1 py-3 rounded-lg font-black text-sm ${isCrisis ? 'bg-slate-300 text-slate-500' : 'bg-pink-500 text-white'}`}>승인</button>
+                              <button onClick={() => approvePraise(p)} className={`flex-1 py-3 rounded-lg font-black text-sm ${isCrisis ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-pink-500 text-white hover:bg-pink-600 shadow-md'}`}>온기 사연 승인</button>
                               <button onClick={() => { sync({ pendingPraises: safeArray(db.pendingPraises).filter(pr => pr.id !== p.id) }); }} className="px-4 bg-white text-slate-500 font-black rounded-lg border-2 text-sm">반려</button>
                             </div>
                           </div>
@@ -1150,7 +928,6 @@ return (
                 </div>
               )}
 
-              {/* 상점/펀딩 관리 */}
               {adminSubTab === 'shopAdmin' && (
                 <div className="space-y-6 animate-in fade-in">
                   <h3 className="text-2xl font-black text-slate-800 border-l-8 border-blue-600 pl-5 mb-6">상점 및 펀딩 관리</h3>
@@ -1173,7 +950,7 @@ return (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {safeArray(db.shopItems).filter(i => i && i.name).map(item => (
                           <div key={item.id} className="bg-amber-50 p-3 rounded-xl border flex justify-between items-center">
-                            <div><span className="text-[9px] text-slate-400 font-black bg-white px-2 py-0.5 rounded">{String(item.creator)}</span><h4 className="font-black text-slate-800 mt-1">{String(item.name)}</h4><p className="text-amber-600 font-black text-sm">{toInt(item.price)}🪙</p></div>
+                            <div><span className="text-[9px] text-slate-400 font-black bg-white px-2 py-0.5 rounded">{item.creator}</span><h4 className="font-black text-slate-800 mt-1">{item.name}</h4><p className="text-amber-600 font-black text-sm">{item.price}🪙</p></div>
                             <button onClick={() => { if (window.confirm("삭제?")) sync({ shopItems: safeArray(db.shopItems).filter(i => i.id !== item.id) }); }} className="p-2.5 bg-white text-red-500 rounded-lg"><Trash2 className="w-4 h-4"/></button>
                           </div>
                         ))}
@@ -1193,7 +970,7 @@ return (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {safeArray(db.funding).filter(f => f && f.name).map(f => (
                           <div key={f.id} className="bg-white p-4 rounded-xl border border-blue-200 flex justify-between items-center">
-                            <div><h4 className="font-black text-blue-900">{String(f.name)}</h4><p className="text-blue-500 font-bold text-xs">{toInt(f.current)}/{toInt(f.target)}p</p></div>
+                            <div><h4 className="font-black text-blue-900">{f.name}</h4><p className="text-blue-500 font-bold text-xs">{f.current}/{f.target}p</p></div>
                             <button onClick={() => { if (window.confirm("삭제?")) sync({ funding: safeArray(db.funding).filter(x => x.id !== f.id) }); }} className="p-2.5 bg-red-50 text-red-500 rounded-lg"><Trash2 className="w-4 h-4"/></button>
                           </div>
                         ))}
@@ -1203,7 +980,6 @@ return (
                 </div>
               )}
 
-              {/* SEL 리포트 + 누가기록 */}
               {adminSubTab === 'report' && (
                 <div className="space-y-6 animate-in fade-in">
                   <h3 className="text-2xl font-black text-slate-800 border-l-8 border-blue-600 pl-5 mb-6">🌱 SEL 리포트 & 데이터 추출</h3>
@@ -1222,6 +998,7 @@ return (
                         <button onClick={exportAll} className="w-full p-3 rounded-xl font-black text-sm bg-purple-500 text-white hover:bg-purple-600 flex items-center justify-center gap-2">
                           <Download className="w-4 h-4"/> 전체 반 추출
                         </button>
+                        <p className="text-[10px] font-bold text-indigo-400 leading-tight">클립보드 복사 + 파일 다운로드됩니다. ChatGPT/Claude에 붙여넣으세요.</p>
                       </div>
                       {selectedReportStudent && (
                         <button onClick={() => setShowRollingPaper(toInt(selectedReportStudent))} className="w-full bg-gradient-to-r from-pink-400 to-rose-500 text-white p-4 rounded-2xl font-black text-base flex items-center justify-center gap-2">
@@ -1253,7 +1030,7 @@ return (
                                 <div key={tag} className="flex items-center gap-3">
                                   <span className="w-24 text-xs font-black text-slate-600 text-right">{SEL_OPTIONS.find(o=>o.name===tag)?.short}</span>
                                   <div className="flex-1 h-6 bg-white rounded-full overflow-hidden border">
-                                    <div className="h-full bg-gradient-to-r from-blue-400 to-indigo-500" style={{ width: `${(counts[tag]/max)*100}%` }}></div>
+                                    <div className="h-full bg-gradient-to-r from-blue-400 to-indigo-500 transition-all duration-500" style={{ width: `${(counts[tag]/max)*100}%` }}></div>
                                   </div>
                                   <span className="w-10 font-black text-blue-600 text-right">{counts[tag]}</span>
                                 </div>
@@ -1284,7 +1061,6 @@ return (
                 </div>
               )}
 
-              {/* 명단 관리 */}
               {adminSubTab === 'students' && (
                 <div className="space-y-6 animate-in fade-in">
                   <h3 className="text-2xl font-black text-slate-800 border-l-8 border-blue-600 pl-5 mb-6">👥 명단 관리</h3>
@@ -1315,7 +1091,6 @@ return (
                 </div>
               )}
 
-              {/* 출석 관리 */}
               {adminSubTab === 'attendAdmin' && (
                 <div className="space-y-6 animate-in fade-in">
                   <h3 className="text-2xl font-black text-slate-800 border-l-8 border-blue-600 pl-5 mb-6">📅 출석 관리</h3>
@@ -1324,7 +1099,7 @@ return (
                       <h4 className="font-black text-amber-800 mb-3 flex items-center gap-2"><Sparkles className="w-5 h-5"/> 공휴일/재량휴업일 보정</h4>
                       <p className="text-sm font-bold text-amber-700 mb-4">현재 이번 주 보정값: <span className="text-amber-900">+{db.extraAttendDays || 0}일</span></p>
                       <button onClick={teacherAddHoliday} className="w-full bg-amber-500 text-white py-4 rounded-xl font-black text-lg hover:bg-amber-600">전체 출석일수 +1 (공휴일 적용)</button>
-                      <p className="text-[11px] font-bold text-amber-500 mt-3 leading-relaxed">💡 이 버튼을 누르면 모든 학생의 이번 주 출석일수에 +1이 더해지고, 그 결과 5일이 된 학생에게 자동으로 🪙3 개근 보너스가 지급됩니다.</p>
+                      <p className="text-[11px] font-bold text-amber-500 mt-3 leading-relaxed">💡 이 버튼을 누르면 모든 학생의 이번 주 출석일수에 +1이 더해지고, 5일이 된 학생에게 🪙3 개근 보너스가 지급됩니다.</p>
                     </div>
                     <h4 className="font-black text-slate-700 mb-4">이번 주 출석 현황 ({getWeekKey()})</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1348,7 +1123,6 @@ return (
                 </div>
               )}
 
-              {/* 환경/점수 세팅 */}
               {adminSubTab === 'settings' && (
                 <div className="space-y-6 animate-in fade-in">
                   <h3 className="text-2xl font-black text-slate-800 border-l-8 border-blue-600 pl-5 mb-6">환경 및 점수 세팅</h3>
@@ -1389,6 +1163,7 @@ return (
                       </div>
                     </div>
                     <div className="pt-6 border-t-2">
+                      {/* ✅ Bug 2 해결 (토글 함수 적용 완료) */}
                       <button onClick={toggleCumulativeStats} className={`w-full py-4 rounded-2xl font-black text-lg shadow-md flex items-center justify-center gap-3 ${db.settings?.showCumulativeStats ? 'bg-blue-600 text-white' : 'bg-white text-slate-500 border-2'}`}>
                         <Eye className="w-5 h-5"/> 누적 스탯 표시 (교사 모드): {db.settings?.showCumulativeStats ? 'ON' : 'OFF'}
                       </button>
@@ -1419,7 +1194,6 @@ return (
                 </div>
               )}
 
-              {/* 초기화 / 마감 */}
               {adminSubTab === 'reset' && (
                 <div className="animate-in fade-in space-y-6">
                   <h3 className="text-2xl font-black text-slate-800 border-l-8 border-red-500 pl-5 mb-6">초기화 / 마감</h3>
@@ -1445,7 +1219,6 @@ return (
       </main>
 
       {/* ═══ 모달 영역 ═══ */}
-      {/* 온기 우체통 모달 */}
       {showPraiseModal && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-[5001] p-4">
           <div className="bg-white p-10 rounded-[40px] w-full max-w-lg shadow-2xl animate-in zoom-in-95 border-4 border-pink-100">
@@ -1460,6 +1233,7 @@ return (
                 <option value="">어떤 역량?</option>
                 {SEL_OPTIONS.map(opt => <option key={opt.name} value={opt.name}>{opt.name}</option>)}
               </select>
+              {/* ✅ Bug 3 해결: PRAISE_GUIDES 연결 확인 완료 */}
               <textarea value={praiseText} onChange={e=>setPraiseText(e.target.value)} rows="5" placeholder={praiseTag ? PRAISE_GUIDES[praiseTag] : "💌"} className="w-full p-5 rounded-[26px] bg-pink-50 border-2 border-pink-100 font-black text-base outline-none text-pink-900 shadow-inner"/>
             </div>
             <div className="flex gap-3">
@@ -1470,7 +1244,6 @@ return (
         </div>
       )}
 
-      {/* 누가기록 모달 */}
       {showNoteModal && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-[5002] p-4">
           <div className="bg-white p-10 rounded-[40px] w-full max-w-lg shadow-2xl animate-in zoom-in-95 border-4 border-yellow-200">
@@ -1485,7 +1258,6 @@ return (
         </div>
       )}
 
-      {/* 비밀번호 모달 */}
       {showModal === 'password' && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-6 z-[5003]">
           <div className="bg-white rounded-[50px] p-12 w-full max-w-lg text-center shadow-2xl animate-in zoom-in-95 border-4 border-blue-100">
@@ -1500,7 +1272,6 @@ return (
         </div>
       )}
 
-      {/* 롤링페이퍼 모달 */}
       {showRollingPaper && (() => {
         const s = allStats.find(x => x.id === showRollingPaper);
         if (!s) return null;
@@ -1535,13 +1306,13 @@ return (
         );
       })()}
 
-      {/* ═══ NAV BAR ═══ */}
+      {/* ═══ NAV BAR (✅ Bug 4: 옵셔널 체이닝 적용 완료) ═══ */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t-4 border-amber-100 px-4 py-4 flex justify-around items-center z-[4000] shadow-[0_-15px_50px_rgba(0,0,0,0.08)] pb-6 print:hidden">
         {[
-          { id: 'dashboard', icon: <Target className="w-8 h-8"/>, label: db.settings?.menuNames?.[0] || "현황판", color: "text-blue-500" },
-          { id: 'reflection', icon: <BookOpen className="w-8 h-8"/>, label: db.settings?.menuNames?.[1] || "성찰과 회복", color: "text-emerald-500" },
-          { id: 'helproom', icon: <Users className="w-8 h-8"/>, label: db.settings?.menuNames?.[2] || "도움실", color: "text-indigo-500" },
-          { id: 'admin', icon: <Settings className="w-8 h-8"/>, label: db.settings?.menuNames?.[3] || "관리실", color: "text-slate-600" }
+          { id: 'dashboard',  icon: <Target className="w-8 h-8"/>,   label: db.settings?.menuNames?.[0] || "현황판",      color: "text-blue-500" },
+          { id: 'reflection', icon: <BookOpen className="w-8 h-8"/>,  label: db.settings?.menuNames?.[1] || "성찰과 회복", color: "text-emerald-500" },
+          { id: 'helproom',   icon: <Users className="w-8 h-8"/>,     label: db.settings?.menuNames?.[2] || "도움실",      color: "text-indigo-500" },
+          { id: 'admin',      icon: <Settings className="w-8 h-8"/>,  label: db.settings?.menuNames?.[3] || "관리실",      color: "text-slate-600" }
         ].map(item => (
           <button key={item.id}
                   onClick={() => {
@@ -1590,15 +1361,13 @@ return (
 }
 
 // ══════════════════════════════════════════════════════════════
-// ⏱ TIMER WIDGET (헤더 우측 절반을 가득 채우는 대형 위젯)
+// ⏱ TIMER WIDGET
 // ══════════════════════════════════════════════════════════════
 function TimerWidget({ status, display, timer, warningLevel, breakInput, setBreakInput, defaultBreakMin, onStopwatch, onCountdown, onPause, onResume, onReset, onBreak, lockEditing, unlockEditing }) {
   const isBreak = status === 'break';
   const isRunning = timer?.isRunning;
   const flashClass = isBreak && warningLevel === 3 ? 'animate-redFlash' : '';
-  const bgClass = isBreak
-    ? (warningLevel >= 2 ? 'bg-red-100 border-red-300' : 'bg-emerald-100 border-emerald-300')
-    : 'bg-white/70 border-white';
+  const bgClass = isBreak ? (warningLevel >= 2 ? 'bg-red-100 border-red-300' : 'bg-emerald-100 border-emerald-300') : 'bg-white/70 border-white';
 
   return (
     <div className={`p-6 rounded-[36px] border-4 shadow-lg backdrop-blur-sm ${bgClass} ${flashClass} flex flex-col justify-center h-full`}>
