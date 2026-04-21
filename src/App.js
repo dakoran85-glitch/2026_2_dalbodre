@@ -251,71 +251,85 @@ export default function App() {
 return (
     <div className="min-h-screen bg-amber-50/50 pb-32 font-sans text-slate-800 transition-all">
 
-{/* ═══ HEADER: 스케치 완벽 반영 (좌측 성장존 / 우측 타이머존) ═══ */}
-      <header className="bg-gradient-to-br from-amber-100 to-orange-100 p-6 md:p-10 shadow-sm relative overflow-hidden border-b-4 border-white flex flex-col gap-6">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-[100px] opacity-60 pointer-events-none"></div>
+{/* ═══ HEADER: 스케치 디자인 완벽 반영 (좌/우 5:5 2분할 레이아웃) ═══ */}
+      <header className="bg-[#FFF5E1] p-6 md:p-12 relative overflow-hidden border-b-4 border-white flex flex-col gap-8">
+        {/* 우측 상단 빛 효과 */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white rounded-full blur-[120px] opacity-70 pointer-events-none"></div>
         
         {/* 상단 타이틀 */}
-        <div className="max-w-7xl w-full mx-auto relative z-10 flex items-center justify-between">
+        <div className="max-w-[1400px] w-full mx-auto relative z-10">
           <h1 className="text-amber-800 font-black text-xl flex items-center gap-2">
             <Sparkles className="text-amber-500 w-6 h-6"/> {db.settings?.title}
           </h1>
-          <div className="bg-white/60 px-4 py-1.5 rounded-full border-2 border-white shadow-sm backdrop-blur-sm flex items-center gap-2">
-             <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">목표 달성까지</span>
-             <span className="text-base font-black text-amber-900">{Math.max(0, (db.settings?.targetScore || 5000) - classReputation)}p</span>
-          </div>
         </div>
 
-        {/* 메인 2분할 레이아웃 (좌측: 점수+세계수+게이지 / 우측: 타임워치) */}
-        <div className="max-w-7xl w-full mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-10 items-stretch">
+        {/* 메인 비주얼 구역 (좌측: 점수+세계수+게이지 / 우측: 타임워치) */}
+        <div className="max-w-[1400px] w-full mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-end">
           
-          {/* 📍 좌측 영역 (lg:col-span-7) */}
-          <div className="lg:col-span-7 flex flex-col justify-between py-2">
+          {/* 📍 좌측 영역 (50%) */}
+          <div className="flex flex-col gap-10 w-full">
             
-            {/* 1층: 점수 & 세계수 (나란히 배치) */}
-            <div className="flex flex-row items-center justify-between px-2 mb-8">
-              <div className="flex items-baseline gap-2">
-                <span id="score-target" className="text-[100px] md:text-[130px] font-black text-amber-900 drop-shadow-md tracking-tighter leading-none">{classReputation}</span>
-                <span className="text-5xl font-black text-amber-600 mb-4">p</span>
+            {/* 1층: 점수 & 세계수 (나란히 크게 배치) */}
+            <div className="flex flex-row items-center justify-start gap-12 pl-2">
+              {/* 초대형 점수 */}
+              <div className="flex items-baseline">
+                <span className="text-[140px] md:text-[180px] font-black text-[#6B4423] drop-shadow-md tracking-tighter leading-[0.85]">
+                  {classReputation}
+                </span>
+                <span className="text-6xl md:text-7xl font-black text-amber-500 ml-3">p</span>
               </div>
               
-              <div className="flex items-center justify-center scale-125 transform-origin-center drop-shadow-xl relative pr-4">
-                <div className="absolute inset-0 bg-yellow-200 blur-3xl opacity-30 rounded-full"></div>
+              {/* 초대형 세계수 */}
+              <div className="scale-[2.0] md:scale-[2.5] transform-origin-left drop-shadow-2xl relative">
+                <div className="absolute inset-0 bg-yellow-200 blur-3xl opacity-40 rounded-full"></div>
                 {renderEvolution(evolutionLevel)}
               </div>
             </div>
 
-            {/* 2층: 5단계 게이지 & 기부 바 (점수 바로 밑에 찰싹 붙음) */}
-            <div className="space-y-4">
-              <div className="w-full h-14 bg-white/60 rounded-full overflow-hidden shadow-inner border-4 border-amber-200 relative">
-                <div className={`h-full transition-all duration-1000 ${evolutionLevel >= 5 ? 'bg-gradient-to-r from-yellow-300 via-amber-400 to-red-500 animate-pulse' : 'bg-gradient-to-r from-yellow-300 to-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)]'}`} style={{ width: `${progressPercent}%` }}></div>
+            {/* 2층: 5단계 진화 게이지 & 기부 마키 */}
+            <div className="w-full space-y-4">
+              <div className="w-full h-14 bg-white/70 rounded-full overflow-hidden shadow-inner border-4 border-amber-200 relative">
+                <div 
+                  className={`h-full transition-all duration-1000 ${evolutionLevel >= 5 ? 'bg-gradient-to-r from-yellow-300 via-amber-400 to-red-500 animate-pulse' : 'bg-gradient-to-r from-yellow-300 to-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)]'}`} 
+                  style={{ width: `${progressPercent}%` }}
+                ></div>
                 <div className="absolute inset-0 flex items-center justify-center font-black text-amber-900 text-lg md:text-xl tracking-widest drop-shadow-md">
-                  {EVOLUTION_TITLES[evolutionLevel]} <span className="text-sm ml-3 opacity-80">({evolutionLevel}/5)</span>
+                  {EVOLUTION_TITLES[evolutionLevel]} <span className="text-sm ml-3 opacity-70">({evolutionLevel}/5)</span>
                 </div>
               </div>
               
               <div className="flex items-center gap-3">
-                <div className="flex-1 overflow-hidden whitespace-nowrap text-sm font-bold text-amber-700 bg-white/50 px-4 py-2.5 rounded-full border border-amber-200 flex items-center shadow-sm">
-                  <Sparkles className="w-4 h-4 text-amber-500 mr-2 shrink-0"/>
+                <div className="flex-1 overflow-hidden whitespace-nowrap text-sm font-bold text-amber-700 bg-white/60 px-5 py-3 rounded-full border border-amber-200 flex items-center shadow-sm">
+                  <Sparkles className="w-5 h-5 text-amber-500 mr-2 shrink-0"/>
                   <span className="animate-[shimmer_25s_linear_infinite] inline-block w-full">
                      기부 명예의 전당: {safeArray(db.donations).map(d => `${String(d.name)}(${d.amount}p)`).join(' 🌸 ') || '따뜻한 마음을 기다려요!'}
                   </span>
                 </div>
-                <span className="text-sm font-black text-orange-600 bg-white px-5 py-2.5 rounded-full shadow-sm border border-orange-200 shrink-0">
+                <span className="text-sm font-black text-orange-600 bg-white px-6 py-3 rounded-full shadow-sm border border-orange-200 shrink-0">
                   최종 목표: {db.settings?.targetScore || 5000}p
                 </span>
               </div>
             </div>
-
           </div>
 
-          {/* 📍 우측 영역 (lg:col-span-5) : 초대형 타임워치 */}
-          <div className="lg:col-span-5 h-full">
+          {/* 📍 우측 영역 (50%): 타임워치 위젯 */}
+          <div className="w-full h-full pb-4">
             <TimerWidget 
-              status={timerStatus} display={timerDisplay} timer={db.timer} warningLevel={breakWarningLevel}
-              breakInput={breakInput} setBreakInput={setBreakInput} defaultBreakMin={Math.floor((db.settings?.defaultBreakMs || DEFAULT_BREAK_MS) / 60000)}
-              onStopwatch={startStopwatch} onCountdown={startCountdown} onPause={pauseTimer} onResume={resumeTimer} onReset={resetTimer} onBreak={startBreak}
-              lockEditing={lockEditing} unlockEditing={unlockEditing}
+              status={timerStatus} 
+              display={timerDisplay} 
+              timer={db.timer} 
+              warningLevel={breakWarningLevel}
+              breakInput={breakInput} 
+              setBreakInput={setBreakInput} 
+              defaultBreakMin={Math.floor((db.settings?.defaultBreakMs || DEFAULT_BREAK_MS) / 60000)}
+              onStopwatch={startStopwatch} 
+              onCountdown={startCountdown} 
+              onPause={pauseTimer} 
+              onResume={resumeTimer} 
+              onReset={resetTimer} 
+              onBreak={startBreak}
+              lockEditing={lockEditing} 
+              unlockEditing={unlockEditing}
             />
           </div>
 
@@ -1325,56 +1339,99 @@ return (
 }
 
 // ══════════════════════════════════════════════════════════════
-// ⏱ TIMER WIDGET (초대형 타이머)
+// ⏱ TIMER WIDGET (선생님 스케치 반영판)
 // ══════════════════════════════════════════════════════════════
-function TimerWidget({ status, display, timer, warningLevel, breakInput, setBreakInput, defaultBreakMin, onStopwatch, onCountdown, onPause, onResume, onReset, onBreak, lockEditing, unlockEditing }) {
+function TimerWidget({ 
+  status, display, timer, warningLevel, breakInput, setBreakInput, 
+  defaultBreakMin, onStopwatch, onCountdown, onPause, onResume, onReset, 
+  onBreak, lockEditing, unlockEditing 
+}) {
   const isBreak = status === 'break';
   const isRunning = timer?.isRunning;
   const flashClass = isBreak && warningLevel === 3 ? 'animate-redFlash' : '';
-  const bgClass = isBreak ? (warningLevel >= 2 ? 'bg-red-100 border-red-300' : 'bg-emerald-100 border-emerald-300') : 'bg-white/70 border-white';
+  const bgClass = isBreak 
+    ? (warningLevel >= 2 ? 'bg-red-100 border-red-300' : 'bg-emerald-100 border-emerald-300') 
+    : 'bg-white/80 border-white';
 
   return (
-    <div className={`p-8 md:p-10 rounded-[40px] border-4 shadow-xl backdrop-blur-sm ${bgClass} ${flashClass} flex flex-col justify-center h-full min-h-[300px]`}>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          {isBreak ? <Coffee className="w-8 h-8 text-emerald-600"/> : <Timer className="w-8 h-8 text-slate-600"/>}
-          <span className="text-lg font-black uppercase tracking-widest text-slate-600">
+    <div className={`p-6 md:p-8 rounded-[40px] border-4 shadow-2xl backdrop-blur-md ${bgClass} ${flashClass} flex flex-col h-full min-h-[340px]`}>
+      
+      {/* 상단: 상태 텍스트 & 초소형 조작 버튼들 */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-4 border-b border-black/5 pb-4">
+        
+        {/* 상태 표시 (현재 수업 중 / 쉬는 시간) */}
+        <div className="flex items-center gap-2">
+          {isBreak ? <Coffee className="w-6 h-6 text-emerald-600"/> : <Timer className="w-6 h-6 text-slate-600"/>}
+          <span className="text-lg font-black uppercase tracking-widest text-slate-700">
             {isBreak ? '쉬는 시간' : (status === 'class_sw' ? '스톱워치' : status === 'class_cd' ? '카운트다운' : '현재 수업 중')}
           </span>
         </div>
+
+        {/* 조작 버튼 영역 (아주 작게 우측 상단에 배치) */}
+        <div className="flex items-center gap-2">
+          {status === 'idle' ? (
+            <>
+              <div className="flex bg-slate-200/50 p-1 rounded-lg">
+                {[1, 3, 5, 10].map(m => (
+                  <button 
+                    key={m} 
+                    onClick={() => onCountdown(m)} 
+                    className="px-2.5 py-1.5 bg-white hover:bg-slate-100 rounded text-xs font-black shadow-sm mx-0.5"
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+              <button 
+                onClick={onStopwatch} 
+                className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-xs font-black flex items-center gap-1 shadow-sm"
+              >
+                <Play className="w-3 h-3 fill-white"/> 스톱워치
+              </button>
+              
+              <div className="flex gap-1 ml-1 bg-emerald-50 p-1 rounded-lg border border-emerald-100">
+                <input 
+                  type="number" 
+                  value={breakInput} 
+                  onChange={e => setBreakInput(e.target.value)} 
+                  onFocus={lockEditing} 
+                  onBlur={unlockEditing} 
+                  className="w-10 px-1 py-1 text-xs font-black text-center text-emerald-900 bg-white rounded border border-emerald-200 outline-none"
+                />
+                <button 
+                  onClick={() => onBreak(Math.max(1, toInt(breakInput, defaultBreakMin)))} 
+                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-xs font-black flex items-center gap-1 shadow-sm"
+                >
+                  <Coffee className="w-3 h-3"/> 쉬는시간
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              {isRunning ? (
+                <button onClick={onPause} className="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-black flex items-center gap-1 shadow-sm hover:bg-yellow-600">
+                  <Pause className="w-4 h-4 fill-white"/> 일시정지
+                </button>
+              ) : (
+                <button onClick={onResume} className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-black flex items-center gap-1 shadow-sm hover:bg-green-600">
+                  <Play className="w-4 h-4 fill-white"/> 계속
+                </button>
+              )}
+              <button onClick={onReset} className="px-4 py-2 bg-slate-400 text-white rounded-lg text-sm font-black flex items-center gap-1 shadow-sm hover:bg-slate-500">
+                <RotateCcw className="w-4 h-4"/> 종료
+              </button>
+            </div>
+          )}
+        </div>
+
       </div>
 
-      <div className={`text-center py-8 rounded-[30px] mb-6 shadow-inner ${isBreak && warningLevel >= 2 ? 'bg-red-500 text-white' : 'bg-white border-2 border-slate-100'}`}>
-        <span className="text-8xl md:text-[110px] font-black tracking-widest tabular-nums leading-none">{display}</span>
+      {/* 하단: 초대형 타이머 디스플레이 */}
+      <div className="flex-1 flex items-center justify-center py-4">
+        <span className="text-[120px] md:text-[160px] lg:text-[180px] font-black tracking-tighter tabular-nums leading-none text-slate-800 drop-shadow-md">
+          {display}
+        </span>
       </div>
-
-      {status === 'idle' && (
-        <div className="space-y-4 mt-auto">
-          <div className="grid grid-cols-4 gap-3">
-            {[1, 3, 5, 10].map(m => (
-              <button key={m} onClick={() => onCountdown(m)} className="py-4 bg-slate-100 hover:bg-slate-200 rounded-2xl font-black text-base transition-colors shadow-sm">{m}분</button>
-            ))}
-          </div>
-          <button onClick={onStopwatch} className="w-full py-4 bg-indigo-500 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-2 hover:bg-indigo-600 transition-colors shadow-md">
-            <Play className="w-5 h-5 fill-white"/> 스톱워치 시작
-          </button>
-          <div className="flex gap-3 pt-4 border-t border-slate-200">
-            <input type="number" value={breakInput} onChange={e=>setBreakInput(e.target.value)} onFocus={lockEditing} onBlur={unlockEditing} className="w-24 p-4 rounded-2xl border-2 border-slate-200 font-black text-xl text-center outline-none focus:border-emerald-400 shadow-sm"/>
-            <button onClick={() => onBreak(Math.max(1, toInt(breakInput, defaultBreakMin)))} className="flex-1 py-4 bg-emerald-500 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-2 hover:bg-emerald-600 transition-colors shadow-md">
-              <Coffee className="w-5 h-5"/> 쉬는시간 시작
-            </button>
-          </div>
-        </div>
-      )}
-
-      {status !== 'idle' && (
-        <div className="flex gap-4 mt-auto pt-4">
-          {isRunning
-            ? <button onClick={onPause} className="flex-1 py-6 bg-yellow-500 text-white rounded-2xl font-black text-xl flex items-center justify-center gap-2 hover:bg-yellow-600 transition-colors shadow-md"><Pause className="w-6 h-6 fill-white"/> 일시정지</button>
-            : <button onClick={onResume} className="flex-1 py-6 bg-green-500 text-white rounded-2xl font-black text-xl flex items-center justify-center gap-2 hover:bg-green-600 transition-colors shadow-md"><Play className="w-6 h-6 fill-white"/> 타이머 계속</button>}
-          <button onClick={onReset} className="flex-1 py-6 bg-slate-400 text-white rounded-2xl font-black text-xl flex items-center justify-center gap-2 hover:bg-slate-500 transition-colors shadow-md"><RotateCcw className="w-6 h-6"/> 종료 (리셋)</button>
-        </div>
-      )}
     </div>
   );
 }
