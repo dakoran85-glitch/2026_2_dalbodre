@@ -251,11 +251,11 @@ export default function App() {
 return (
     <div className="min-h-screen bg-amber-50/50 pb-32 font-sans text-slate-800 transition-all">
 
-      {/* ═══ HEADER: 3단 분할 레이아웃 (초대형 스케일 및 5단계 풀사이즈 게이지) ═══ */}
+{/* ═══ HEADER: 스케치 완벽 반영 (좌측 성장존 / 우측 타이머존) ═══ */}
       <header className="bg-gradient-to-br from-amber-100 to-orange-100 p-6 md:p-10 shadow-sm relative overflow-hidden border-b-4 border-white flex flex-col gap-6">
         <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-[100px] opacity-60 pointer-events-none"></div>
         
-        {/* 1단: 타이틀 */}
+        {/* 상단 타이틀 */}
         <div className="max-w-7xl w-full mx-auto relative z-10 flex items-center justify-between">
           <h1 className="text-amber-800 font-black text-xl flex items-center gap-2">
             <Sparkles className="text-amber-500 w-6 h-6"/> {db.settings?.title}
@@ -266,30 +266,51 @@ return (
           </div>
         </div>
 
-        {/* 2단: 메인 비주얼 (점수 - 세계수 - 타이머) */}
-        <div className="max-w-7xl w-full mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        {/* 메인 2분할 레이아웃 (좌측: 점수+세계수+게이지 / 우측: 타임워치) */}
+        <div className="max-w-7xl w-full mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-10 items-stretch">
           
-          {/* 좌측 (4/12): 초대형 현재 점수 */}
-          <div className="lg:col-span-4 flex flex-col items-center justify-center lg:items-start">
-            <div className="flex items-baseline gap-2">
-              <span id="score-target" className="text-[100px] md:text-[120px] font-black text-amber-900 drop-shadow-md tracking-tighter leading-none">{classReputation}</span>
-              <span className="text-4xl font-black text-amber-600 mb-4">p</span>
+          {/* 📍 좌측 영역 (lg:col-span-7) */}
+          <div className="lg:col-span-7 flex flex-col justify-between py-2">
+            
+            {/* 1층: 점수 & 세계수 (나란히 배치) */}
+            <div className="flex flex-row items-center justify-between px-2 mb-8">
+              <div className="flex items-baseline gap-2">
+                <span id="score-target" className="text-[100px] md:text-[130px] font-black text-amber-900 drop-shadow-md tracking-tighter leading-none">{classReputation}</span>
+                <span className="text-5xl font-black text-amber-600 mb-4">p</span>
+              </div>
+              
+              <div className="flex items-center justify-center scale-125 transform-origin-center drop-shadow-xl relative pr-4">
+                <div className="absolute inset-0 bg-yellow-200 blur-3xl opacity-30 rounded-full"></div>
+                {renderEvolution(evolutionLevel)}
+              </div>
             </div>
-            <div className="mt-2 bg-white/70 px-5 py-2 rounded-2xl shadow-sm border border-amber-200">
-               <span className="text-sm font-black text-amber-800">최종 목표: {db.settings?.targetScore || 5000}p</span>
+
+            {/* 2층: 5단계 게이지 & 기부 바 (점수 바로 밑에 찰싹 붙음) */}
+            <div className="space-y-4">
+              <div className="w-full h-14 bg-white/60 rounded-full overflow-hidden shadow-inner border-4 border-amber-200 relative">
+                <div className={`h-full transition-all duration-1000 ${evolutionLevel >= 5 ? 'bg-gradient-to-r from-yellow-300 via-amber-400 to-red-500 animate-pulse' : 'bg-gradient-to-r from-yellow-300 to-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)]'}`} style={{ width: `${progressPercent}%` }}></div>
+                <div className="absolute inset-0 flex items-center justify-center font-black text-amber-900 text-lg md:text-xl tracking-widest drop-shadow-md">
+                  {EVOLUTION_TITLES[evolutionLevel]} <span className="text-sm ml-3 opacity-80">({evolutionLevel}/5)</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <div className="flex-1 overflow-hidden whitespace-nowrap text-sm font-bold text-amber-700 bg-white/50 px-4 py-2.5 rounded-full border border-amber-200 flex items-center shadow-sm">
+                  <Sparkles className="w-4 h-4 text-amber-500 mr-2 shrink-0"/>
+                  <span className="animate-[shimmer_25s_linear_infinite] inline-block w-full">
+                     기부 명예의 전당: {safeArray(db.donations).map(d => `${String(d.name)}(${d.amount}p)`).join(' 🌸 ') || '따뜻한 마음을 기다려요!'}
+                  </span>
+                </div>
+                <span className="text-sm font-black text-orange-600 bg-white px-5 py-2.5 rounded-full shadow-sm border border-orange-200 shrink-0">
+                  최종 목표: {db.settings?.targetScore || 5000}p
+                </span>
+              </div>
             </div>
+
           </div>
 
-          {/* 중앙 (4/12): 세계수 애니메이션 */}
-          <div className="lg:col-span-4 flex items-center justify-center py-8">
-            <div className="scale-150 transform-origin-center drop-shadow-xl relative">
-              <div className="absolute inset-0 bg-yellow-200 blur-3xl opacity-30 rounded-full"></div>
-              {renderEvolution(evolutionLevel)}
-            </div>
-          </div>
-
-          {/* 우측 (4/12): 대형 타임워치 위젯 */}
-          <div className="lg:col-span-4 h-full">
+          {/* 📍 우측 영역 (lg:col-span-5) : 초대형 타임워치 */}
+          <div className="lg:col-span-5 h-full">
             <TimerWidget 
               status={timerStatus} display={timerDisplay} timer={db.timer} warningLevel={breakWarningLevel}
               breakInput={breakInput} setBreakInput={setBreakInput} defaultBreakMin={Math.floor((db.settings?.defaultBreakMs || DEFAULT_BREAK_MS) / 60000)}
@@ -297,25 +318,7 @@ return (
               lockEditing={lockEditing} unlockEditing={unlockEditing}
             />
           </div>
-        </div>
 
-        {/* 3단: 하단 풀사이즈 진화 게이지 & 기부 마키 */}
-        <div className="max-w-7xl w-full mx-auto relative z-10 mt-4 space-y-3">
-          {/* 🔥 가로 전체를 채우는 5단계 진화 게이지 */}
-          <div className="w-full h-14 bg-white/60 rounded-full overflow-hidden shadow-inner border-4 border-amber-200 relative">
-            <div className={`h-full transition-all duration-1000 ${evolutionLevel >= 5 ? 'bg-gradient-to-r from-yellow-300 via-amber-400 to-red-500 animate-pulse' : 'bg-gradient-to-r from-yellow-300 to-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)]'}`} style={{ width: `${progressPercent}%` }}></div>
-            <div className="absolute inset-0 flex items-center justify-center font-black text-amber-900 text-lg md:text-xl tracking-widest drop-shadow-md">
-              {EVOLUTION_TITLES[evolutionLevel]} <span className="text-sm ml-3 opacity-80">({evolutionLevel}/5)</span>
-            </div>
-          </div>
-          
-          {/* 기부자 마키 (게이지 바로 아래) */}
-          <div className="w-full overflow-hidden whitespace-nowrap text-sm font-bold text-amber-700 bg-white/40 px-4 py-2 rounded-full border border-amber-200/50 flex items-center">
-            <Sparkles className="w-4 h-4 text-amber-500 mr-2 shrink-0"/>
-            <span className="animate-[shimmer_25s_linear_infinite] inline-block w-full">
-               기부 명예의 전당: {safeArray(db.donations).map(d => `${String(d.name)}(${d.amount}p)`).join(' 🌸 ') || '따뜻한 마음을 기다려요!'}
-            </span>
-          </div>
         </div>
       </header>
 
