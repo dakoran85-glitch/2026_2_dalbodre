@@ -300,48 +300,22 @@ const INITIAL_DB = {
   notes: {},
   extraAttendDays: 0
 };
-
 // ══════════════════════════════════════════════════════════════
-// 🎨 VISUAL HELPER (세계수 렌더링 - 원본 크기 대폭 확대)
+// 🎨 VISUAL HELPER (세계수 렌더링 - 겹침 방지 절대 크기 적용)
 // ══════════════════════════════════════════════════════════════
 const renderEvolution = (level) => {
   switch (level) {
     case 0: 
-      return (
-        <div className="flex items-center justify-center gap-6 text-emerald-400 animate-pulse">
-          <Leaf className="w-16 h-16 md:w-20 md:h-20"/> 
-          <Sparkles className="w-10 h-10 md:w-14 md:h-14 text-yellow-400"/>
-        </div>
-      );
+      return <div className="flex items-center gap-4 text-emerald-400 animate-pulse"><Leaf className="w-[100px] h-[100px] md:w-[130px] md:h-[130px]"/> <Sparkles className="w-[60px] h-[60px] md:w-[80px] md:h-[80px] text-yellow-400"/></div>;
     case 1: 
-      return (
-        <div className="flex items-center justify-center gap-6 text-emerald-500 animate-bounce">
-          <TreeDeciduous className="w-20 h-20 md:w-28 md:h-28"/> 
-          <Bird className="w-12 h-12 md:w-16 md:h-16 text-orange-400"/>
-        </div>
-      );
+      return <div className="flex items-center gap-4 text-emerald-500 animate-bounce"><TreeDeciduous className="w-[130px] h-[130px] md:w-[170px] md:h-[170px]"/> <Bird className="w-[80px] h-[80px] md:w-[100px] md:h-[100px] text-orange-400"/></div>;
     case 2: 
-      return (
-        <div className="flex items-center justify-center gap-6 text-pink-400">
-          <TreeDeciduous className="w-24 h-24 md:w-36 md:h-36 fill-pink-200"/> 
-          <Bird className="w-14 h-14 md:w-20 md:h-20 text-orange-500 animate-pulse"/>
-        </div>
-      );
+      return <div className="flex items-center gap-4 text-pink-400"><TreeDeciduous className="w-[160px] h-[160px] md:w-[210px] md:h-[210px] fill-pink-200"/> <Bird className="w-[100px] h-[100px] md:w-[130px] md:h-[130px] text-orange-500 animate-pulse"/></div>;
     case 3: 
-      return (
-        <div className="flex items-center justify-center gap-8 text-yellow-500 drop-shadow-lg">
-          <TreeDeciduous className="w-32 h-32 md:w-48 md:h-48 fill-yellow-200"/> 
-          <Flame className="w-20 h-20 md:w-28 md:h-28 text-red-500 animate-bounce"/>
-        </div>
-      );
+      return <div className="flex items-center gap-5 text-yellow-500 drop-shadow-xl"><TreeDeciduous className="w-[190px] h-[190px] md:w-[250px] md:h-[250px] fill-yellow-200"/> <Flame className="w-[120px] h-[120px] md:w-[160px] md:h-[160px] text-red-500 animate-bounce"/></div>;
     case 4:
     case 5: 
-      return (
-        <div className="flex items-center justify-center gap-8 text-yellow-300 drop-shadow-[0_0_40px_rgba(250,204,21,0.8)]">
-          <TreeDeciduous className="w-40 h-40 md:w-60 md:h-60 fill-yellow-100 animate-pulse"/> 
-          <Bird className="w-24 h-24 md:w-36 md:h-36 fill-red-500 text-red-600 animate-bounce"/>
-        </div>
-      );
+      return <div className="flex items-center gap-5 text-yellow-300 drop-shadow-[0_0_50px_rgba(250,204,21,0.8)]"><TreeDeciduous className="w-[220px] h-[220px] md:w-[300px] md:h-[300px] fill-yellow-100 animate-pulse"/> <Bird className="w-[140px] h-[140px] md:w-[190px] md:h-[190px] fill-red-500 text-red-600 animate-bounce"/></div>;
     default: 
       return null;
   }
@@ -1041,72 +1015,69 @@ export default function App() {
   return (
     <div className="min-h-screen bg-amber-50/50 pb-32 font-sans text-slate-800 transition-all">
 
-      {/* ═══ HEADER: 스케치 디자인 완벽 반영 (좌/우 5:5 2분할 레이아웃) ═══ */}
-      <header className="bg-[#FFF5E1] p-6 md:p-12 relative overflow-hidden border-b-4 border-white flex flex-col gap-8">
+{/* ═══ HEADER: 완벽한 5:5 2분할 레이아웃 ═══ */}
+      <header className="bg-[#FFF5E1] p-6 md:p-12 relative overflow-hidden border-b-4 border-white flex flex-col gap-6">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white rounded-full blur-[120px] opacity-70 pointer-events-none"></div>
         
-        {/* 상단 타이틀 */}
-        <div className="max-w-[1400px] w-full mx-auto relative z-10 flex items-center justify-between">
-          <h1 className="text-amber-800 font-black text-xl flex items-center gap-2">
-            <Sparkles className="text-amber-500 w-6 h-6"/> {db.settings?.title}
+        {/* 상단 타이틀 (목표 달성 글씨 완전 삭제) */}
+        <div className="max-w-[1400px] w-full mx-auto relative z-10 flex items-center">
+          <h1 className="text-amber-800 font-black text-2xl flex items-center gap-3">
+            <Sparkles className="text-amber-500 w-8 h-8"/> {db.settings?.title}
           </h1>
-          <div className="bg-white/60 px-4 py-1.5 rounded-full border-2 border-white shadow-sm backdrop-blur-sm flex items-center gap-2">
-             <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">목표 달성까지</span>
-             <span className="text-base font-black text-amber-900">{Math.max(0, (db.settings?.targetScore || 5000) - classReputation)}p</span>
-          </div>
         </div>
 
-        {/* 메인 2분할 레이아웃 (좌측: 점수+세계수+게이지 / 우측: 타임워치) */}
-        <div className="max-w-[1400px] w-full mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-end">
+        {/* 5:5 메인 분할 (좌: 점수/세계수/게이지 | 우: 타임워치) */}
+        <div className="max-w-[1400px] w-full mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           
-          {/* 📍 좌측 영역 (50%) */}
-          <div className="lg:col-span-7 flex flex-col gap-10 w-full justify-between py-2">
+          {/* 📍 좌측 영역 (화면의 딱 50% 차지) */}
+          <div className="flex flex-col justify-center gap-10 w-full">
             
-            {/* 1층: 점수 & 세계수 (나란히 크게 배치) */}
-            <div className="flex flex-row items-center justify-start gap-12 pl-2">
-              {/* 초대형 점수 */}
+            {/* 1층: 초대형 점수 & 세계수 (gap-12로 겹침 원천 차단) */}
+            <div className="flex flex-row items-center justify-center lg:justify-start gap-12 pl-2">
               <div className="flex items-baseline">
-                <span className="text-[140px] md:text-[180px] font-black text-[#6B4423] drop-shadow-md tracking-tighter leading-[0.85]">
+                <span className="text-[130px] md:text-[180px] font-black text-[#6B4423] drop-shadow-md tracking-tighter leading-none">
                   {classReputation}
                 </span>
-                <span className="text-6xl md:text-7xl font-black text-amber-500 ml-3">p</span>
+                <span className="text-6xl md:text-7xl font-black text-amber-500 ml-2">p</span>
               </div>
               
-              {/* 초대형 세계수 */}
-              <div className="scale-[2.0] md:scale-[2.5] transform-origin-left drop-shadow-2xl relative">
+              {/* 확대경(scale) 속성을 빼서 주변을 밀어내게 만듦 */}
+              <div className="relative flex items-center justify-center">
                 <div className="absolute inset-0 bg-yellow-200 blur-3xl opacity-40 rounded-full"></div>
-                {renderEvolution(evolutionLevel)}
+                <div className="relative z-10 drop-shadow-2xl">
+                  {renderEvolution(evolutionLevel)}
+                </div>
               </div>
             </div>
 
-            {/* 2층: 5단계 진화 게이지 & 기부 마키 */}
-            <div className="w-full space-y-4">
-              <div className="w-full h-14 bg-white/70 rounded-full overflow-hidden shadow-inner border-4 border-amber-200 relative">
+            {/* 2층: 게이지 & 기부바 (좌측 50% 박스 안에 예쁘게 갇힘) */}
+            <div className="w-full space-y-4 px-2">
+              <div className="w-full h-16 bg-white/80 rounded-full overflow-hidden shadow-inner border-4 border-amber-200 relative">
                 <div 
                   className={`h-full transition-all duration-1000 ${evolutionLevel >= 5 ? 'bg-gradient-to-r from-yellow-300 via-amber-400 to-red-500 animate-pulse' : 'bg-gradient-to-r from-yellow-300 to-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)]'}`} 
                   style={{ width: `${progressPercent}%` }}
                 ></div>
-                <div className="absolute inset-0 flex items-center justify-center font-black text-amber-900 text-lg md:text-xl tracking-widest drop-shadow-md">
-                  {EVOLUTION_TITLES[evolutionLevel]} <span className="text-sm ml-3 opacity-70">({evolutionLevel}/5)</span>
+                <div className="absolute inset-0 flex items-center justify-center font-black text-amber-900 text-xl tracking-widest drop-shadow-md">
+                  {EVOLUTION_TITLES[evolutionLevel]} <span className="text-base ml-3 opacity-70">({evolutionLevel}/5)</span>
                 </div>
               </div>
               
               <div className="flex items-center gap-3">
-                <div className="flex-1 overflow-hidden whitespace-nowrap text-sm font-bold text-amber-700 bg-white/60 px-5 py-3 rounded-full border border-amber-200 flex items-center shadow-sm">
+                <div className="flex-1 overflow-hidden whitespace-nowrap text-base font-bold text-amber-700 bg-white/60 px-6 py-4 rounded-full border border-amber-200 flex items-center shadow-sm">
                   <Sparkles className="w-5 h-5 text-amber-500 mr-2 shrink-0"/>
                   <span className="animate-[shimmer_25s_linear_infinite] inline-block w-full">
                      기부 명예의 전당: {safeArray(db.donations).map(d => `${String(d.name)}(${d.amount}p)`).join(' 🌸 ') || '따뜻한 마음을 기다려요!'}
                   </span>
                 </div>
-                <span className="text-sm font-black text-orange-600 bg-white px-6 py-3 rounded-full shadow-sm border border-orange-200 shrink-0">
+                <span className="text-sm font-black text-orange-600 bg-white px-6 py-4 rounded-full shadow-sm border border-orange-200 shrink-0">
                   최종 목표: {db.settings?.targetScore || 5000}p
                 </span>
               </div>
             </div>
           </div>
 
-          {/* 📍 우측 영역 (50%): 타임워치 위젯 */}
-          <div className="lg:col-span-5 h-full pb-4">
+          {/* 📍 우측 영역 (화면의 딱 50% 차지): 선생님이 만드신 타임워치 위젯 */}
+          <div className="w-full h-full">
             <TimerWidget 
               status={timerStatus} 
               display={timerDisplay} 
@@ -1634,7 +1605,7 @@ export default function App() {
             </section>
           </div>
         )}
-// =========== [3부 코드의 끝] ===========
+
 {/* ═══ PAGE 4: 관리실 ═══ */}
         {activeTab === 'admin' && isAuthenticated === 'teacher' && (
           <div className="bg-white rounded-[50px] shadow-sm border border-slate-100 flex flex-col lg:flex-row min-h-[850px] animate-in fade-in overflow-hidden">
