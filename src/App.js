@@ -507,7 +507,7 @@ export default function App() {
   };
   const resetTimer = () => sync({ timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null} });
 
-  // ── 출석 (fix2: 출석 → 코인 & 명성 반영) ──────────────────
+  // ── 출석 (출석 시 코인 +1, 명성은 자동 반영) ──────────────────
   const toggleAttendance = (sid) => {
     const todayIdx = getTodayWeekdayIdx();
     if (todayIdx < 0) return;
@@ -516,19 +516,17 @@ export default function App() {
     const alreadyIn= current.includes(todayIdx);
     const logKey   = `${weekKey}_${sid}_${todayIdx}`;
 
-    let newDays, bonusUpdates={}, coinLogUpdates={};
+    let newDays, coinLogUpdates={};
 
     if (alreadyIn) {
-      // 출석 취소: 코인·명성 반환
+      // 출석 취소: 코인 차감 (코인이 깎이면 명성도 자동으로 내려갑니다)
       newDays = current.filter(d => d !== todayIdx);
       if (db.attendCoinLog?.[logKey]) {
         const newBonus = { ...db.bonusCoins, [sid]: Math.max(0,(db.bonusCoins?.[sid]||0) - ATTEND_COIN_PER_DAY) };
         coinLogUpdates = { bonusCoins: newBonus, attendCoinLog: { ...db.attendCoinLog, [logKey]: undefined } };
-        // manualRepOffset 감소로 명성 반환
-        bonusUpdates = { manualRepOffset: (db.manualRepOffset||0) - ATTEND_REP_PER_DAY };
       }
     } else {
-      // 출석 체크: 코인 & 명성 지급 (당일 중복 방지)
+      // 출석 체크: 코인 지급 (코인이 지급되면 명성도 자동으로 올라갑니다)
       newDays = [...current, todayIdx];
       playSound('attend');
       setAttendAnim({ id:sid, ts:Date.now() });
@@ -536,11 +534,11 @@ export default function App() {
       if (!db.attendCoinLog?.[logKey]) {
         const newBonus = { ...db.bonusCoins, [sid]: (db.bonusCoins?.[sid]||0) + ATTEND_COIN_PER_DAY };
         coinLogUpdates = { bonusCoins: newBonus, attendCoinLog: { ...(db.attendCoinLog||{}), [logKey]: true } };
-        bonusUpdates   = { manualRepOffset: (db.manualRepOffset||0) + ATTEND_REP_PER_DAY };
       }
     }
 
     const newAttendance = { ...db.attendance, [weekKey]: { ...(db.attendance?.[weekKey]||{}), [sid]: newDays } };
+    
     // 개근 체크
     const totalCount = Math.min(5, newDays.length + (db.extraAttendDays||0));
     let perfectUpdates = {};
@@ -550,7 +548,8 @@ export default function App() {
       perfectUpdates = { bonusCoins: pb, attendanceBonus: pab };
       playSound('jackpot');
     }
-    sync({ attendance: newAttendance, ...bonusUpdates, ...coinLogUpdates, ...perfectUpdates });
+    
+    sync({ attendance: newAttendance, ...coinLogUpdates, ...perfectUpdates });
   };
 
   // ── 공휴일 보정 ───────────────────────────────────────────
