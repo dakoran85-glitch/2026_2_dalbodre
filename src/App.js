@@ -910,6 +910,39 @@ export default function App() {
               </div>
             </div>
 
+            {/* ⭐ V10.7: 대시보드 펀딩 진행 현황 위젯 */}
+            {safeArray(db.funding).filter(f => f && f.name).length > 0 && (
+              <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-blue-100 mb-8">
+                <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-3">
+                  <Target className="w-7 h-7 text-blue-500"/> 진행 중인 크라우드 펀딩
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {safeArray(db.funding).filter(f => f && f.name).map(f => {
+                    const percent = Math.min((toInt(f.current) / toInt(f.target, 1)) * 100, 100);
+                    return (
+                      <div key={f.id} className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-3xl border border-blue-200 shadow-sm relative overflow-hidden">
+                        <div className="flex justify-between items-end mb-4 relative z-10">
+                          <h4 className="text-lg font-black text-blue-900 truncate pr-4">{String(f.name)}</h4>
+                          <span className="text-sm font-black text-blue-600 bg-white px-3 py-1.5 rounded-full border border-blue-200 shadow-sm">
+                            {Math.floor(percent)}%
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm font-bold mb-3 text-blue-700 relative z-10">
+                          <span>현재 {toInt(f.current)}🪙</span>
+                          <span>목표 {toInt(f.target)}🪙</span>
+                        </div>
+                        <div className="w-full h-4 bg-white rounded-full overflow-hidden border border-blue-200 shadow-inner relative z-10">
+                          <div className="h-full bg-blue-500 transition-all duration-1000 relative" style={{ width: `${percent}%` }}>
+                             <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* 명예의 전당 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
