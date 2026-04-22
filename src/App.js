@@ -195,7 +195,7 @@ const INITIAL_DB = {
     pointConfig:{ praiseBasic:10, praiseBonus:15, penalty:20 },
     authRevokedAt:0
   },
-  coopQuest:{ q1Name:"다 함께 바른 생활",q1:50, q2Name:"환대와 응원",q2:20, q3Name:"전담수업 태도 우수",q3:20, q4Name:"사이좋은 일주일",q4:100, goodWeek:0 },
+  coopQuest:{ q1Name:"다 함께 바른 생활",q1:50, q2Name:"환대와 응원",q2:20, q3Name:"전담수업 태도 우수",q3:20, q5Name:"청소 만점",q5:10, q4Name:"사이좋은 일주일",q4:100, goodWeek:0 },
   timeAttack:{ isActive:false, title:"", rewardRep:100, endTime:null, cleared:[] },
   timer:{ mode:'idle', startedAt:null, endTime:null, duration:null, isRunning:false, pausedElapsed:null, pausedRemaining:null },
   shopItems:[], pendingShopItems:[], funding:[], purchaseHistory:[],
@@ -652,7 +652,15 @@ export default function App() {
   };
 
   // ── 공동 퀘스트 ──────────────────────────────────────────
-  const addCoopScore    = (amount) => { sync({ manualRepOffset:(db.manualRepOffset||0)+amount }); playSound('good'); };
+  const addCoopScore = (amount, questKey) => {
+    const today = formatDate();
+    if (db.questLog?.[today]?.[questKey]) return alert("오늘은 이미 이 퀘스트를 달성했습니다!");
+    sync({ 
+      manualRepOffset: (db.manualRepOffset||0) + amount,
+      questLog: { ...db.questLog, [today]: { ...(db.questLog?.[today]||{}), [questKey]: true } }
+    }); 
+    playSound('good'); 
+  };
   const adjustGoodWeek  = (d)      => sync({ coopQuest:{ ...db.coopQuest, goodWeek:Math.max(0,Math.min(5,(db.coopQuest?.goodWeek||0)+d)) } });
   const completeGoodWeek= ()       => {
     const reward=db.coopQuest?.q4||100;
@@ -736,12 +744,12 @@ export default function App() {
 
   const closeSemester = () => {
     if (window.prompt("1학기 마감 실행: '마감'을 입력하세요.")!=="마감") return;
-    sync({ roleExp:{},bonusCoins:{},usedCoins:{},penaltyCount:{},studentStatus:{},pendingReflections:[],pendingPraises:[],shopItems:[],pendingShopItems:[],funding:[],purchaseHistory:[],donations:[],manualRepOffset:0,attendance:{},attendanceBonus:{},attendCoinLog:{},coopQuest:{...db.coopQuest,goodWeek:0},timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]},timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null},extraAttendDays:0 });
+    sync({ roleExp:{},bonusCoins:{},usedCoins:{},penaltyCount:{},studentStatus:{},pendingReflections:[],pendingPraises:[],shopItems:[],pendingShopItems:[],funding:[],purchaseHistory:[],donations:[],manualRepOffset:0,attendance:{},attendanceBonus:{},attendCoinLog:{},questLog:{},coopQuest:{...db.coopQuest,goodWeek:0},timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]},timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null},extraAttendDays:0 });
     alert("1학기 마감 완료. 누적 데이터는 보존됩니다.");
   };
   const factoryReset = () => {
     if (window.prompt("전체 초기화: '전체초기화'를 입력하세요.")!=="전체초기화") return;
-    sync({ roleExp:{},bonusCoins:{},usedCoins:{},penaltyCount:{},studentStatus:{},pendingReflections:[],pendingPraises:[],approvedPraises:[],shopItems:[],pendingShopItems:[],funding:[],purchaseHistory:[],donations:[],manualRepOffset:0,allTime:{exp:{},penalty:{},donate:{},fund:{}},attendance:{},attendanceBonus:{},attendCoinLog:{},streakWeeks:{},notes:{},coopQuest:{q1Name:"다 함께 바른 생활",q1:50,q2Name:"환대와 응원",q2:20,q3Name:"전담수업 태도 우수",q3:20,q4Name:"사이좋은 일주일",q4:100,goodWeek:0},timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]},timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null},extraAttendDays:0 });
+    sync({ roleExp:{},bonusCoins:{},usedCoins:{},penaltyCount:{},studentStatus:{},pendingReflections:[],pendingPraises:[],approvedPraises:[],shopItems:[],pendingShopItems:[],funding:[],purchaseHistory:[],donations:[],manualRepOffset:0,allTime:{exp:{},penalty:{},donate:{},fund:{}},attendance:{},attendanceBonus:{},attendCoinLog:{},streakWeeks:{},notes:{},questLog:{},coopQuest:{q1Name:"다 함께 바른 생활",q1:50,q2Name:"환대와 응원",q2:20,q3Name:"전담수업 태도 우수",q3:20,q5Name:"청소 만점",q5:10,q4Name:"사이좋은 일주일",q4:100,goodWeek:0},timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]},timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null},extraAttendDays:0 });
     alert("공장 초기화 완료.");
   };
 
@@ -843,9 +851,19 @@ export default function App() {
               <div className="bg-white p-8 rounded-[40px] border-2 border-blue-100 shadow-sm flex flex-col justify-between">
                 <h3 className="text-lg font-black text-blue-600 mb-5 flex items-center gap-2"><Zap className="w-6 h-6"/> 학급 공동 퀘스트</h3>
                 <div className="grid grid-cols-2 gap-4 mb-5">
-                  <button onClick={()=>addCoopScore(db.coopQuest?.q1||50)} className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-4 rounded-2xl font-black text-base border border-indigo-200 active:scale-95 truncate px-3">{db.coopQuest?.q1Name||"바른 생활"} +{db.coopQuest?.q1||50}</button>
-                  <button onClick={()=>addCoopScore(db.coopQuest?.q2||20)} className="bg-pink-50 hover:bg-pink-100 text-pink-700 py-4 rounded-2xl font-black text-base border border-pink-200 active:scale-95 truncate px-3">{db.coopQuest?.q2Name||"환대"} +{db.coopQuest?.q2||20}</button>
-                  <button onClick={()=>addCoopScore(db.coopQuest?.q3||20)} className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 py-4 rounded-2xl font-black text-base border border-emerald-200 active:scale-95 col-span-2 truncate px-3">{db.coopQuest?.q3Name||"전담 우수"} +{db.coopQuest?.q3||20}</button>
+                  <button disabled={db.questLog?.[formatDate()]?.q1} onClick={()=>addCoopScore(db.coopQuest?.q1||50, 'q1')} className={`py-4 rounded-2xl font-black text-base border active:scale-95 truncate px-3 ${db.questLog?.[formatDate()]?.q1 ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'}`}>
+                    {db.coopQuest?.q1Name||"바른 생활"} {db.questLog?.[formatDate()]?.q1 ? '(완료)' : `+${db.coopQuest?.q1||50}`}
+                  </button>
+                  <button disabled={db.questLog?.[formatDate()]?.q2} onClick={()=>addCoopScore(db.coopQuest?.q2||20, 'q2')} className={`py-4 rounded-2xl font-black text-base border active:scale-95 truncate px-3 ${db.questLog?.[formatDate()]?.q2 ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-pink-50 hover:bg-pink-100 text-pink-700 border-pink-200'}`}>
+                    {db.coopQuest?.q2Name||"환대"} {db.questLog?.[formatDate()]?.q2 ? '(완료)' : `+${db.coopQuest?.q2||20}`}
+                  </button>
+                  <button disabled={db.questLog?.[formatDate()]?.q3} onClick={()=>addCoopScore(db.coopQuest?.q3||20, 'q3')} className={`py-4 rounded-2xl font-black text-base border active:scale-95 truncate px-3 ${db.questLog?.[formatDate()]?.q3 ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
+                    {db.coopQuest?.q3Name||"전담 우수"} {db.questLog?.[formatDate()]?.q3 ? '(완료)' : `+${db.coopQuest?.q3||20}`}
+                  </button>
+                  {/* ⭐ V10.6: 청소 만점 버튼 추가 (오른쪽 절반) */}
+                  <button disabled={db.questLog?.[formatDate()]?.q5} onClick={()=>addCoopScore(db.coopQuest?.q5||10, 'q5')} className={`py-4 rounded-2xl font-black text-base border active:scale-95 truncate px-3 ${db.questLog?.[formatDate()]?.q5 ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'}`}>
+                    {db.coopQuest?.q5Name||"청소 만점"} {db.questLog?.[formatDate()]?.q5 ? '(완료)' : `+${db.coopQuest?.q5||10}`}
+                  </button>
                 </div>
                 <div className="flex items-center justify-between bg-yellow-50 p-5 rounded-2xl border border-yellow-200">
                   <div className="flex flex-col gap-2 flex-1 pr-4">
@@ -963,8 +981,9 @@ export default function App() {
                       {/* fix1: 출석 버튼 — 개근/별 표시 짤림 방지 */}
                       <button
                         onClick={()=>toggleAttendance(s.id)}
-                        disabled={s.status==='crisis'||(getTodayWeekdayIdx()<0)}
-                        className={`text-left transition-all ${s.status==='crisis'?'cursor-not-allowed':'hover:bg-amber-50 active:scale-95'} rounded-xl py-1 px-1 w-full`}
+                        disabled={s.status==='crisis' || getTodayWeekdayIdx()<0 || (!isAttendanceOpen() && !s.attendedToday)}
+                        className={`text-left transition-all ${(s.status==='crisis' || (!isAttendanceOpen() && !s.attendedToday)) ? 'cursor-not-allowed opacity-50' : 'hover:bg-amber-50 active:scale-95'} rounded-xl py-1 px-1 w-full`}
+                        title={!isAttendanceOpen() && !s.attendedToday ? "출석 마감" : s.attendedToday ? "출석 취소" : "출석 체크"}
                       >
                         <div className="flex items-center gap-2 w-full min-w-0">
                           {/* 체크 아이콘 */}
@@ -1433,6 +1452,7 @@ export default function App() {
                         { key:'q1',bgClass:'bg-indigo-50 border-indigo-100',textClass:'text-indigo-600',defName:'다 함께 바른 생활',defVal:50 },
                         { key:'q2',bgClass:'bg-pink-50 border-pink-100',    textClass:'text-pink-600',  defName:'환대와 응원',      defVal:20 },
                         { key:'q3',bgClass:'bg-emerald-50 border-emerald-100',textClass:'text-emerald-600',defName:'전담수업 태도', defVal:20 },
+                        { key:'q5',bgClass:'bg-amber-50 border-amber-100',textClass:'text-amber-600',defName:'청소 만점', defVal:10 },
                         { key:'q4',bgClass:'bg-yellow-50 border-yellow-100',textClass:'text-yellow-600',defName:'사이좋은 일주일', defVal:100 }
                       ].map(q=>(
                         <div key={q.key} className={`${q.bgClass} p-4 rounded-2xl border flex gap-3 shadow-sm`}>
