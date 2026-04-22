@@ -5,7 +5,7 @@ import {
   Sparkles, Star, Target, Settings, Trash2, ShoppingCart, CheckCircle2,
   BookOpen, Briefcase, Zap, Crown, Coins, BarChart3, MessageSquare, Send,
   Gavel, Leaf, TreeDeciduous, Bird, Flame, Shield, Printer, Timer, Store, Eye,
-  Play, Pause, RotateCcw, Coffee, Download, Copy, StickyNote, LogOut, CloudRain, CloudLightning, Sun, Cloud
+  Play, Pause, RotateCcw, Coffee, Download, Copy, StickyNote, LogOut
 } from 'lucide-react';
 
 // ══════════════════════════════════════════════════════════════
@@ -17,8 +17,7 @@ const POLL_INTERVAL_MS = 5000;
 const AUTH_KEY = "dalbodre_auth_v10";
 const ATTENDANCE_DEADLINE = { hour: 8, minute: 30 };
 const DEFAULT_BREAK_MS = 10 * 60 * 1000;
-
-// 출석 1회당 코인 & 학급 명성 반영량 (⭐ 중복 점수 오작동 완벽 해결)
+// 출석 1회당 코인 & 학급 명성 반영량
 const ATTEND_COIN_PER_DAY = 1;   // 출석 1회 → 개인 코인 +1
 const ATTEND_REP_PER_DAY  = 1;   // 출석 1회 → 학급 명성 +1
 
@@ -119,15 +118,6 @@ const clearAuth = () => { try { localStorage.removeItem(AUTH_KEY); } catch(_) {}
 // ══════════════════════════════════════════════════════════════
 // 📚 STATIC DATA
 // ══════════════════════════════════════════════════════════════
-// ⭐ V10.8 신규: 마음 날씨 데이터
-const MOOD_OPTIONS = [
-  { emoji: '😊', name: '맑음', color: 'bg-yellow-100 border-yellow-300 text-yellow-800', message: '오늘도 빛나는 너를 응원해!' },
-  { emoji: '😌', name: '구름조금', color: 'bg-emerald-100 border-emerald-300 text-emerald-800', message: '괜찮아, 천천히 가도 돼.' },
-  { emoji: '😔', name: '흐림', color: 'bg-slate-100 border-slate-300 text-slate-800', message: '누구나 힘든 날도 있는 거야.' },
-  { emoji: '😢', name: '비', color: 'bg-blue-100 border-blue-300 text-blue-800', message: '울어도 괜찮아. 비 온 뒤 땅이 굳어.' },
-  { emoji: '⚡', name: '폭풍', color: 'bg-red-100 border-red-300 text-red-800', message: '지금 당장 누군가의 도움이 필요해.' }
-];
-
 const ENNEAGRAM_DATA = {
   "1": { name:'1번(개혁가)', desc:'규칙과 책임을 잘 지켜요. 결과보다 과정의 꼼꼼함과 정직함을 알아주세요.' },
   "2": { name:'2번(조력자)', desc:'관계와 배려를 중시해요. "네 덕분에 고마워"라는 진심 어린 인사가 가장 큰 힘이 됩니다.' },
@@ -139,36 +129,34 @@ const ENNEAGRAM_DATA = {
   "8": { name:'8번(도전자)', desc:'강한 의지와 리더십. 스스로 결정할 기회와 신뢰를 부여해 주세요.' },
   "9": { name:'9번(평화주의자)', desc:'조화를 원해요. 다그치기보다 편안한 분위기에서 의견을 물어봐 주세요.' }
 };
-
 const DEFAULT_STUDENTS = [
   { id:1,  name:'금채율', role:'학급문고 정리',   group:1, isLeader:true,  enneagram:'2' },
-  { id:2,  name:'김라희', role:'우유 배달',       group:1, isLeader:false, enneagram:'9' },
-  { id:3,  name:'김민지', role:'다툼 중재자',     group:1, isLeader:false, enneagram:'6' },
-  { id:4,  name:'김수은', role:'생활태도 체크',   group:1, isLeader:false, enneagram:'1' },
-  { id:5,  name:'김시우', role:'칠판 정리',       group:2, isLeader:true,  enneagram:'3' },
-  { id:6,  name:'박서정', role:'질서 관리',       group:2, isLeader:false, enneagram:'8' },
-  { id:7,  name:'이하윤', role:'학급문고 정리',   group:2, isLeader:false, enneagram:'4' },
-  { id:8,  name:'장세아', role:'문 닫기',         group:2, isLeader:false, enneagram:'7' },
-  { id:9,  name:'최예나', role:'우유 배달',       group:3, isLeader:true,  enneagram:'' },
-  { id:10, name:'허수정', role:'감찰사',          group:3, isLeader:false, enneagram:'' },
-  { id:11, name:'황지인', role:'칠판 정리',       group:3, isLeader:false, enneagram:'' },
+  { id:2,  name:'김라희', role:'우유 배달',        group:1, isLeader:false, enneagram:'9' },
+  { id:3,  name:'김민지', role:'다툼 중재자',      group:1, isLeader:false, enneagram:'6' },
+  { id:4,  name:'김수은', role:'생활태도 체크',    group:1, isLeader:false, enneagram:'1' },
+  { id:5,  name:'김시우', role:'칠판 정리',        group:2, isLeader:true,  enneagram:'3' },
+  { id:6,  name:'박서정', role:'질서 관리',        group:2, isLeader:false, enneagram:'8' },
+  { id:7,  name:'이하윤', role:'학급문고 정리',    group:2, isLeader:false, enneagram:'4' },
+  { id:8,  name:'장세아', role:'문 닫기',          group:2, isLeader:false, enneagram:'7' },
+  { id:9,  name:'최예나', role:'우유 배달',        group:3, isLeader:true,  enneagram:'' },
+  { id:10, name:'허수정', role:'감찰사',           group:3, isLeader:false, enneagram:'' },
+  { id:11, name:'황지인', role:'칠판 정리',        group:3, isLeader:false, enneagram:'' },
   { id:12, name:'김도운', role:'생활 배출물 관리', group:3, isLeader:false, enneagram:'' },
-  { id:13, name:'김윤재', role:'과제 확인',       group:4, isLeader:true,  enneagram:'' },
-  { id:14, name:'김정현', role:'질서 관리',       group:4, isLeader:false, enneagram:'' },
-  { id:15, name:'김태영', role:'복사물 관리',     group:4, isLeader:false, enneagram:'' },
-  { id:16, name:'김해준', role:'칠판 정리',       group:4, isLeader:false, enneagram:'' },
-  { id:17, name:'박동민', role:'마음 약사',       group:5, isLeader:true,  enneagram:'' }, // ⭐ V10.8: 예시로 마음 약사 직업 부여
-  { id:18, name:'서이환', role:'가습기 관리',     group:5, isLeader:false, enneagram:'' },
-  { id:19, name:'윤호영', role:'우유 배달',       group:5, isLeader:false, enneagram:'' },
-  { id:20, name:'이서준', role:'과제 확인',       group:5, isLeader:false, enneagram:'' },
-  { id:21, name:'이승현', role:'신발장 관리',     group:6, isLeader:true,  enneagram:'' },
-  { id:22, name:'임유성', role:'질서 관리',       group:6, isLeader:false, enneagram:'' },
-  { id:23, name:'장세형', role:'다툼 중재자',     group:6, isLeader:false, enneagram:'' },
-  { id:24, name:'조승원', role:'부착물 관리',     group:6, isLeader:false, enneagram:'' },
-  { id:25, name:'차민서', role:'신발장 관리',     group:6, isLeader:false, enneagram:'' },
-  { id:26, name:'배지훈', role:'문 닫기',         group:6, isLeader:false, enneagram:'' }
+  { id:13, name:'김윤재', role:'과제 확인',        group:4, isLeader:true,  enneagram:'' },
+  { id:14, name:'김정현', role:'질서 관리',        group:4, isLeader:false, enneagram:'' },
+  { id:15, name:'김태영', role:'복사물 관리',      group:4, isLeader:false, enneagram:'' },
+  { id:16, name:'김해준', role:'칠판 정리',        group:4, isLeader:false, enneagram:'' },
+  { id:17, name:'박동민', role:'과제 확인',        group:5, isLeader:true,  enneagram:'' },
+  { id:18, name:'서이환', role:'가습기 관리',      group:5, isLeader:false, enneagram:'' },
+  { id:19, name:'윤호영', role:'우유 배달',        group:5, isLeader:false, enneagram:'' },
+  { id:20, name:'이서준', role:'과제 확인',        group:5, isLeader:false, enneagram:'' },
+  { id:21, name:'이승현', role:'신발장 관리',      group:6, isLeader:true,  enneagram:'' },
+  { id:22, name:'임유성', role:'질서 관리',        group:6, isLeader:false, enneagram:'' },
+  { id:23, name:'장세형', role:'다툼 중재자',      group:6, isLeader:false, enneagram:'' },
+  { id:24, name:'조승원', role:'부착물 관리',      group:6, isLeader:false, enneagram:'' },
+  { id:25, name:'차민서', role:'신발장 관리',      group:6, isLeader:false, enneagram:'' },
+  { id:26, name:'배지훈', role:'문 닫기',          group:6, isLeader:false, enneagram:'' }
 ];
-
 const SEL_OPTIONS = [
   { id:'sel1', short:'자기 인식',    name:'1단계: 자기 인식 (Self-awareness)' },
   { id:'sel2', short:'자기 관리',    name:'2단계: 자기 관리 (Self-management)' },
@@ -176,7 +164,6 @@ const SEL_OPTIONS = [
   { id:'sel4', short:'관계 기술',    name:'4단계: 관계 기술 (Relationship skills)' },
   { id:'sel5', short:'책임있는 결정',name:'5단계: 책임 있는 의사결정 (Responsible decision-making)' }
 ];
-
 const SEL_GUIDES = {
   "1단계: 자기 인식 (Self-awareness)": "상황: 그때 내 몸과 마음에서 어떤 느낌이 들었나요?\n다짐: 내 진짜 감정의 원인은 무엇이었고, 나의 어떤 강점을 활용해 이 마음을 보듬어줄 수 있을까요?",
   "2단계: 자기 관리 (Self-management)": "상황: 화가 나거나 포기하고 싶었을 때 내 행동은 어땠나요?\n다짐: 감정의 파도를 다스리고, 다음에는 어떻게 다르게 행동할지 구체적으로 적어보세요.",
@@ -184,7 +171,6 @@ const SEL_GUIDES = {
   "4단계: 관계 기술 (Relationship skills)": "상황: 대화나 활동 중 서로 오해가 생기거나 배려가 부족했던 순간을 적어보세요.\n행동: 마법 같은 우정을 다시 이어가기 위해 내가 먼저 할 수 있는 행동은 무엇인가요?",
   "5단계: 책임 있는 의사결정 (Responsible decision-making)": "상황: 우리 반의 규칙이나 분위기를 흐릴 수 있었던 나의 선택은 무엇이었나요?\n다짐: 나뿐만 아니라 우리 모두를 위해 더 나은 세상을 만드는 바른 선택을 실천해보세요."
 };
-
 const PRAISE_GUIDES = {
   "1단계: 자기 인식 (Self-awareness)": "칭찬 예시: 스스로의 장점을 알고 자신감 있게 도전한 모습을 칭찬해요!",
   "2단계: 자기 관리 (Self-management)": "칭찬 예시: 감정을 잘 조절하고 끝까지 해낸 모습을 칭찬해요!",
@@ -192,18 +178,16 @@ const PRAISE_GUIDES = {
   "4단계: 관계 기술 (Relationship skills)": "칭찬 예시: 친구의 말을 잘 경청하고 배려한 모습을 칭찬해요!",
   "5단계: 책임 있는 의사결정 (Responsible decision-making)": "칭찬 예시: 학급을 위해 솔선수범하여 바른 선택을 한 모습을 칭찬해요!"
 };
-
 const EVOLUTION_TITLES = [
   "🌱 희망의 씨앗이 움터요","🌿 어린 나무가 자라나요","🌸 우리만의 꽃이 피었어요",
   "🔥 열정의 기운이 가득해요","✨ 전설의 세계수로 자라나요","🌟 전설의 세계수 완성!"
 ];
-
 const INITIAL_DB = {
   students: DEFAULT_STUDENTS,
-  rolesList: ['학급문고 정리','우유 배달','다툼 중재자','현령','감찰사','마음 약사'], // ⭐ V10.8: 마음 약사 직업 기본 추가
+  rolesList: ['학급문고 정리','우유 배달','다툼 중재자','현령','감찰사'],
   settings: {
     title:"달보드레 행복 교실 🌸",
-    menuNames:["행복 현황판","성찰과 성장","도움실","관리실"], // ⭐ V10.8: 메뉴 이름 변경
+    menuNames:["행복 현황판","성찰과 회복","도움실","관리실"],
     targetScore:5000, forceShopOpen:false,
     weeklyTheme:"4단계: 관계 기술 (Relationship skills)",
     masterPw:"6505", helpRoomPw:"1111",
@@ -211,7 +195,6 @@ const INITIAL_DB = {
     pointConfig:{ praiseBasic:10, praiseBonus:15, penalty:20 },
     authRevokedAt:0
   },
-  // ⭐ V10.6: 청소 만점 추가 적용 완료
   coopQuest:{ q1Name:"다 함께 바른 생활",q1:50, q2Name:"환대와 응원",q2:20, q3Name:"전담수업 태도 우수",q3:20, q5Name:"청소 만점",q5:10, q4Name:"사이좋은 일주일",q4:100, goodWeek:0 },
   timeAttack:{ isActive:false, title:"", rewardRep:100, endTime:null, cleared:[] },
   timer:{ mode:'idle', startedAt:null, endTime:null, duration:null, isRunning:false, pausedElapsed:null, pausedRemaining:null },
@@ -221,15 +204,15 @@ const INITIAL_DB = {
   approvedPraises:[], donations:[], manualRepOffset:0,
   allTime:{ exp:{}, penalty:{}, donate:{}, fund:{} },
   attendance:{}, attendanceBonus:{}, streakWeeks:{}, notes:{}, extraAttendDays:0,
-  attendCoinLog:{}, questLog:{},
-  moodLog: {}, // ⭐ V10.8: 마음 날씨 기록장
-  mistakes: [] // ⭐ V10.8: 빛나는 실수 게시판 기록
+  // 출석 누적 코인 추적 (중복 지급 방지)
+  attendCoinLog:{}
 };
 
 // ══════════════════════════════════════════════════════════════
-// 🎨 VISUAL: 세계수 렌더링 (반딧불이 포함 구조)
+// 🎨 VISUAL: 세계수 렌더링 (fix3: 오른쪽 배치·살짝 작게)
 // ══════════════════════════════════════════════════════════════
 const renderEvolution = (level) => {
+  // 크기를 이전보다 약간 작게 조정
   const sizes = {
     leaf:    "w-[80px]  h-[80px]  md:w-[100px] md:h-[100px]",
     spark:   "w-[50px]  h-[50px]  md:w-[60px]  md:h-[60px]",
@@ -252,87 +235,77 @@ const renderEvolution = (level) => {
     default: return null;
   }
 };
-// =========== [1부 코드의 끝] ===========
+
 // ══════════════════════════════════════════════════════════════
-// 🧩 MAIN APP COMPONENT
+// 🧩 MAIN APP
 // ══════════════════════════════════════════════════════════════
 export default function App() {
-  // ── UI STATE ────────────────────────────────────────────────
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [helpSubTab, setHelpSubTab] = useState('inspector');
-  const [adminSubTab, setAdminSubTab] = useState('mission');
+  // ── UI STATE ──────────────────────────────────────────────
+  const [isLoading, setIsLoading]           = useState(true);
+  const [activeTab, setActiveTab]           = useState('dashboard');
+  // helproom sub-tabs: inspector | magistrate | shop | roster
+  const [helpSubTab, setHelpSubTab]         = useState('inspector');
+  const [adminSubTab, setAdminSubTab]       = useState('mission');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState("");
-  const [showModal, setShowModal] = useState(null);
-  
+  const [password, setPassword]             = useState("");
+  const [showModal, setShowModal]           = useState(null);
   const [showPraiseModal, setShowPraiseModal] = useState(false);
   const [showRollingPaper, setShowRollingPaper] = useState(null);
-  const [showNoteModal, setShowNoteModal] = useState(null);
-  const [noteText, setNoteText] = useState("");
+  const [showNoteModal, setShowNoteModal]   = useState(null);
+  const [noteText, setNoteText]             = useState("");
   const [showNotesInReport, setShowNotesInReport] = useState(false);
   const [timeLeftString, setTimeLeftString] = useState("");
-  const [attendAnim, setAttendAnim] = useState(null);
+  const [attendAnim, setAttendAnim]         = useState(null);
 
-  // ⭐ V10.8 신규 UI 상태
-  const [moodModalStudent, setMoodModalStudent] = useState(null); // 출석 시 마음 날씨 팝업 대상
-  const [showMistakeModal, setShowMistakeModal] = useState(false);
-  const [mistakeText, setMistakeText] = useState("");
-  const [mistakeLesson, setMistakeLesson] = useState("");
-
-  // ── FORM STATE ──────────────────────────────────────────────
-  const [praiseTarget, setPraiseTarget] = useState("");
-  const [praiseFrom, setPraiseFrom] = useState(""); // 누가 보냈는지 기록용
-  const [praiseTag, setPraiseTag] = useState("");
-  const [praiseText, setPraiseText] = useState("");
-  
-  const [refTarget, setRefTarget] = useState("");
-  const [refTag, setRefTag] = useState("");
-  const [refText, setRefText] = useState("");
-  
-  const [artisanTarget, setArtisanTarget] = useState("");
+  // ── FORM STATE ────────────────────────────────────────────
+  const [praiseTarget, setPraiseTarget]     = useState("");
+  const [praiseTag, setPraiseTag]           = useState("");
+  const [praiseText, setPraiseText]         = useState("");
+  const [refTarget, setRefTarget]           = useState("");
+  const [refTag, setRefTag]                 = useState("");
+  const [refText, setRefText]               = useState("");
+  const [artisanTarget, setArtisanTarget]   = useState("");
   const [artisanItemName, setArtisanItemName] = useState("");
   const [artisanItemPrice, setArtisanItemPrice] = useState("");
-  
   const [selectedReportStudent, setSelectedReportStudent] = useState("");
   const [newStudentName, setNewStudentName] = useState("");
   const [newStudentGroup, setNewStudentGroup] = useState("1");
   const [newStudentEnneagram, setNewStudentEnneagram] = useState("");
   const [manualScoreInput, setManualScoreInput] = useState("");
-  const [masterPwInput, setMasterPwInput] = useState("");
-  const [helpPwInput, setHelpPwInput] = useState("");
-  
-  const [taTitle, setTaTitle] = useState("바닥 쓰레기 0개 만들기!");
-  const [taMins, setTaMins] = useState("10");
-  const [taReward, setTaReward] = useState("100");
+  const [masterPwInput, setMasterPwInput]   = useState("");
+  const [helpPwInput, setHelpPwInput]       = useState("");
+  const [taTitle, setTaTitle]               = useState("바닥 쓰레기 0개 만들기!");
+  const [taMins, setTaMins]                 = useState("10");
+  const [taReward, setTaReward]             = useState("100");
 
-  // ── TIMER STATE ─────────────────────────────────────────────
-  const [timerDisplay, setTimerDisplay] = useState("00:00");
-  const [timerStatus, setTimerStatus] = useState('idle');
-  const [breakInput, setBreakInput] = useState("10");
+  // ── TIMER STATE ───────────────────────────────────────────
+  const [timerDisplay, setTimerDisplay]     = useState("00:00");
+  const [timerStatus, setTimerStatus]       = useState('idle');
+  const [breakInput, setBreakInput]         = useState("10");
   const [breakWarningLevel, setBreakWarningLevel] = useState(0);
 
-  // ── DB STATE ────────────────────────────────────────────────
-  const [db, setDb] = useState(INITIAL_DB);
-  const isEditingRef = useRef(false);
-  const lockEditing = () => { isEditingRef.current = true; };
-  const unlockEditing = () => { isEditingRef.current = false; };
-  const lastNotifiedRef = useRef({});
-  const dbRef = useRef(INITIAL_DB);
+  // ── DB STATE ──────────────────────────────────────────────
+  const [db, setDb]             = useState(INITIAL_DB);
+  const isEditingRef            = useRef(false);
+  const lockEditing             = () => { isEditingRef.current = true; };
+  const unlockEditing           = () => { isEditingRef.current = false; };
+  const lastNotifiedRef         = useRef({});
+  const dbRef                   = useRef(INITIAL_DB);
 
-  // ── 인증 및 데이터 동기화 (V10.7 버그 수정 반영) ──────────────
+  // ── 인증 복원 ─────────────────────────────────────────────
   useEffect(() => {
     if (isLoading) return;
     const saved = loadAuth(db.settings?.authRevokedAt || 0);
     if (saved) setIsAuthenticated(saved); else setIsAuthenticated(false);
   }, [isLoading, db.settings?.authRevokedAt]);
 
+  // ── Firebase 동기화 ───────────────────────────────────────
   useEffect(() => {
     let alive = true;
     const fetchLive = async () => {
       if (isEditingRef.current) return;
       try {
-        const res = await fetch(`${DATABASE_URL}${DB_PATH}.json`);
+        const res  = await fetch(`${DATABASE_URL}${DB_PATH}.json`);
         const data = await res.json();
         if (alive && data) {
           setDb(prev => {
@@ -348,7 +321,7 @@ export default function App() {
             return next;
           });
         }
-      } catch (_) {}
+      } catch(_) {}
       if (alive) setIsLoading(false);
     };
     fetchLive();
@@ -356,22 +329,7 @@ export default function App() {
     return () => { alive = false; clearInterval(iv); };
   }, []);
 
-  // ── SYNC 엔진 (⭐ 빈 객체 및 취소 버그 해결 버전) ────────────
-  const sync = async (updates) => {
-    setDb(prev => { const next={...prev,...updates}; dbRef.current=next; return next; });
-    const dbUpdates = {};
-    for (const key in updates) {
-      if (updates[key] !== null && typeof updates[key] === 'object' && Object.keys(updates[key]).length === 0 && !Array.isArray(updates[key])) {
-        dbUpdates[key] = null; 
-      } else {
-        dbUpdates[key] = updates[key];
-      }
-    }
-    const finalJson = JSON.stringify(dbUpdates, (k, v) => v === undefined ? null : v);
-    try { await fetch(`${DATABASE_URL}${DB_PATH}.json`,{method:'PATCH',body:finalJson}); } catch(_) {}
-  };
-
-  // ── 주간 초기화 및 타임어택 (1~2부 로직 동일) ────────────────
+  // ── 주간 출석 자동 초기화 ─────────────────────────────────
   useEffect(() => {
     if (isLoading) return;
     const cur = dbRef.current;
@@ -390,74 +348,123 @@ export default function App() {
       attendance: { [wk]: att[wk] || {} },
       attendanceBonus: { [wk]: (cur.attendanceBonus||{})[wk] || {} },
       attendCoinLog: {},
-      moodLog: {}, // ⭐ 매주 날씨도 초기화
       streakWeeks: newStreaks,
       extraAttendDays: 0
     });
   }, [isLoading]);
 
+  // ── 타임어택 카운트다운 ───────────────────────────────────
+  useEffect(() => {
+    if (!db.timeAttack?.isActive || !db.timeAttack?.endTime) return;
+    const tick = () => {
+      const diff = Math.floor((db.timeAttack.endTime - Date.now()) / 1000);
+      setTimeLeftString(diff <= 0 ? "00:00 (종료)" : `${pad2(Math.floor(diff/60))}:${pad2(diff%60)}`);
+    };
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [db.timeAttack?.isActive, db.timeAttack?.endTime]);
+
+  // ── 타이머 구동 ───────────────────────────────────────────
+  useEffect(() => {
+    const tick = () => {
+      const t    = db.timer || {};
+      const mode = t.mode || 'idle';
+      setTimerStatus(mode);
+      if (mode === 'idle') { setTimerDisplay("00:00"); setBreakWarningLevel(0); return; }
+      let ms = 0;
+      if (mode === 'class_sw') ms = t.isRunning ? Date.now()-t.startedAt : (t.pausedElapsed||0);
+      else if (mode==='class_cd'||mode==='break') {
+        ms = t.isRunning ? (t.endTime-Date.now()) : (t.pausedRemaining||0);
+        if (ms<0) ms=0;
+      }
+      setTimerDisplay(formatMs(ms));
+      if (mode==='break' && t.isRunning) {
+        const sec = Math.floor(ms/1000);
+        const key = `${t.endTime}_${sec}`;
+        const notify = (lv,sound) => { if(lastNotifiedRef.current[key+'_'+lv]) return; lastNotifiedRef.current[key+'_'+lv]=true; playSound(sound); setBreakWarningLevel(lv); };
+        if      (sec===180)                         notify(1,'softChime');
+        else if (sec===60)                          notify(2,'softChime');
+        else if (sec<=30&&sec>0&&sec%5===0)         notify(3,'beep');
+        else if (sec>180)                           setBreakWarningLevel(0);
+        if (ms<=0) { playSound('chime'); setBreakWarningLevel(0); sync({ timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null} }); }
+      } else if (mode==='class_cd'&&t.isRunning&&ms<=0) {
+        playSound('chime');
+        sync({ timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null} });
+      }
+    };
+    tick();
+    const iv = setInterval(tick, 250);
+    return () => clearInterval(iv);
+  }, [db.timer]);
+
+  // ── SYNC (빈 객체 및 출석 취소 버그 완벽 패치) ──────────────────
+  const sync = async (updates) => {
+    setDb(prev => { const next={...prev,...updates}; dbRef.current=next; return next; });
+    
+    const dbUpdates = {};
+    for (const key in updates) {
+      if (updates[key] !== null && typeof updates[key] === 'object' && Object.keys(updates[key]).length === 0 && !Array.isArray(updates[key])) {
+        dbUpdates[key] = null; 
+      } else {
+        dbUpdates[key] = updates[key];
+      }
+    }
+    
+    const finalJson = JSON.stringify(dbUpdates, (k, v) => v === undefined ? null : v);
+    try { await fetch(`${DATABASE_URL}${DB_PATH}.json`,{method:'PATCH',body:finalJson}); } catch(_) {}
+  };
+
   // ══════════════════════════════════════════════════════════
-  // 🧮 파생 상태 (V10.8 MVP & 반딧불이 계산기)
+  // 🧮 파생 상태
   // ══════════════════════════════════════════════════════════
-  const allStats = useMemo(() => safeArray(db.students).map(s => {
+  const safeStudents = safeArray(db.students);
+
+  const allStats = useMemo(() => safeStudents.map(s => {
     const exp    = db.roleExp[s.id] || 0;
     const bonus  = db.bonusCoins?.[s.id] || 0;
+    // fix2: 출석 코인 반영: bonusCoins에 attendCoinLog가 별도 저장되어 있으므로 그냥 bonusCoins 합산
     const coins  = Math.max(0, (exp*10) + bonus - (db.usedCoins[s.id]||0));
-    
     let mastery  = { label:'🌱 인턴', color:'text-emerald-700', bg:'bg-emerald-100 border-emerald-200' };
     if (exp>=20) mastery = { label:'👑 장인', color:'text-amber-700',  bg:'bg-gradient-to-r from-amber-100 to-yellow-200 border-amber-400' };
     else if (exp>=10) mastery = { label:'💎 전문가', color:'text-blue-700', bg:'bg-blue-100 border-blue-300' };
-
     const weekKey     = getWeekKey();
     const attendedDays = safeArray(db.attendance?.[weekKey]?.[s.id]);
     const weeklyCount  = Math.min(5, attendedDays.length + (db.extraAttendDays||0));
     const streak       = db.streakWeeks?.[s.id] || 0;
-    const attendedToday= (getTodayWeekdayIdx() >= 0) && attendedDays.includes(getTodayWeekdayIdx());
-    const todayMood    = db.moodLog?.[formatDate()]?.[s.id] || null;
-
+    const todayIdx     = getTodayWeekdayIdx();
+    const attendedToday= todayIdx>=0 && attendedDays.includes(todayIdx);
     return {
       ...s, exp, coins, mastery, status: db.studentStatus[s.id]||'normal',
-      atExp: db.allTime?.exp?.[s.id] || 0, atDonate: db.allTime?.donate?.[s.id] || 0,
-      atFund: db.allTime?.fund?.[s.id] || 0, atPen: db.allTime?.penalty?.[s.id] || 0,
-      weeklyCount, streak, attendedToday, todayMood, notes: safeArray(db.notes?.[s.id])
+      atExp:    db.allTime?.exp?.[s.id]    || 0,
+      atDonate: db.allTime?.donate?.[s.id] || 0,
+      atFund:   db.allTime?.fund?.[s.id]   || 0,
+      atPen:    db.allTime?.penalty?.[s.id]|| 0,
+      weeklyCount, streak, attendedToday,
+      notes: safeArray(db.notes?.[s.id])
     };
-  }), [db]);
+  }), [safeStudents, db.roleExp, db.bonusCoins, db.usedCoins, db.studentStatus,
+       db.allTime, db.attendance, db.streakWeeks, db.notes, db.extraAttendDays]);
 
-  // ⭐ V10.8: 온기 MVP 및 반딧불이(공감 하트) 계산
-  const { praiseFeed, topGivers, topReceivers, fireflyCount } = useMemo(() => {
-    const feed = safeArray(db.approvedPraises).sort((a,b) => b.id - a.id);
-    const givers = {}, receivers = {};
-    let totalHearts = 0;
-    
-    feed.forEach(p => {
-      if (p.fromId) givers[p.fromId] = (givers[p.fromId] || 0) + 1;
-      receivers[p.toId] = (receivers[p.toId] || 0) + 1;
-      totalHearts += (p.thankCount || 0);
-    });
-
-    const getTop = (obj) => Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,1).map(([id]) => allStats.find(s=>s.id==id)?.name);
-    
-    return { 
-      praiseFeed: feed.slice(0, 10), 
-      topGivers: getTop(givers), 
-      topReceivers: getTop(receivers),
-      fireflyCount: Math.min(totalHearts + safeArray(db.mistakes).length, 50) 
-    };
-  }, [db.approvedPraises, db.mistakes, allStats]);
+  const activeStudents = useMemo(()=>allStats.filter(s=>s.status!=='crisis'),[allStats]);
 
   const { classReputation, evolutionLevel, progressPercent } = useMemo(() => {
-    const target = db.settings?.targetScore || 5000;
+    const target      = db.settings?.targetScore || 5000;
     const penaltyUnit = db.settings?.pointConfig?.penalty || 20;
-    const raw = allStats.reduce((sum,s)=> sum + (s.exp*10) + (db.bonusCoins?.[s.id]||0) - ((db.penaltyCount[s.id]||0)*penaltyUnit), 0)
-      + safeArray(db.donations).reduce((sum,d)=>sum+(d.amount||0),0) + (db.manualRepOffset||0);
+    
+    // ⭐ 점수 중복 상승 버그 수정 (attendRepTotal 삭제)
+    const raw = allStats.reduce((sum,s)=>
+      sum + (s.exp*10) + (db.bonusCoins?.[s.id]||0) - ((db.penaltyCount[s.id]||0)*penaltyUnit), 0)
+      + safeArray(db.donations).reduce((sum,d)=>sum+(d.amount||0),0)
+      + (db.manualRepOffset||0);
+      
     let r = Math.max(0, Math.min(raw, target));
     const step = Math.max(1, target/5);
     const level= Math.min(Math.floor(r/step), 5);
-    const pct = level>=5 ? 100 : ((r%step)/step)*100;
+    const pct  = level>=5 ? 100 : ((r%step)/step)*100;
     return { classReputation:r, evolutionLevel:level, progressPercent:pct };
-  }, [allStats, db.donations, db.settings, db.manualRepOffset]);
+  }, [allStats, db.penaltyCount, db.bonusCoins, db.donations, db.settings, db.manualRepOffset]);
 
-  // ⭐ V10.8에서 압축하다가 실수로 누락되었던 필수 데이터 복구!
   const sortedDashboardStats = useMemo(() => {
     if (db.settings?.showCumulativeStats) return [...allStats].sort((a,b)=>a.id-b.id);
     const order={crisis:0,pending:1,normal:2};
@@ -473,139 +480,314 @@ export default function App() {
   const randomPraise  = selRefPraises.length ? selRefPraises[Math.floor(Math.random()*selRefPraises.length)] : null;
 
   // ══════════════════════════════════════════════════════════
-  // 🎬 핸들러 (⭐ V10.8 신규 기능 포함)
+  // 🎬 핸들러
   // ══════════════════════════════════════════════════════════
 
-  // ── 출석 & 마음 날씨 연동 ────────────────────────────────
-  const handleAttendanceStep1 = (sid) => {
-    const s = allStats.find(x => x.id === sid);
-    if (s.attendedToday) { // 이미 출석했다면 바로 취소 로직으로
-      if (window.confirm("출석을 취소하시겠습니까?")) toggleAttendance(sid, null);
-    } else { // 미출석 상태라면 날씨 선택 팝업 띄움
-      setMoodModalStudent(sid);
-    }
+  // ── 인증 ──────────────────────────────────────────────────
+  const handleLogin = () => {
+    const masterPw = db.settings?.masterPw||"6505";
+    const helpPw   = db.settings?.helpRoomPw||"1111";
+    if (password===masterPw) {
+      saveAuth('teacher'); setIsAuthenticated('teacher');
+      setShowModal(null); setPassword(""); setActiveTab('admin');
+    } else if (password===helpPw) {
+      saveAuth('inspector'); setIsAuthenticated('inspector');
+      setShowModal(null); setPassword(""); setActiveTab('helproom');
+    } else { alert("비밀번호가 틀렸습니다."); setPassword(""); }
+  };
+  const handleLogout = () => { clearAuth(); setIsAuthenticated(false); setActiveTab('dashboard'); };
+  const revokeAllSessions = () => {
+    if (!window.confirm("모든 기기의 세션을 강제 종료할까요?")) return;
+    sync({ settings:{...db.settings,authRevokedAt:Date.now()} });
+    clearAuth(); setIsAuthenticated(false); setActiveTab('dashboard');
   };
 
-  const toggleAttendance = (sid, moodEmoji) => {
+  // ── 타이머 ────────────────────────────────────────────────
+  const startStopwatch = () => sync({ timer:{mode:'class_sw',startedAt:Date.now(),endTime:null,duration:null,isRunning:true,pausedElapsed:null,pausedRemaining:null} });
+  const startCountdown = (min) => { const ms=min*60000; sync({ timer:{mode:'class_cd',startedAt:Date.now(),endTime:Date.now()+ms,duration:ms,isRunning:true,pausedElapsed:null,pausedRemaining:null} }); };
+  const startBreak     = (min) => { const ms=min*60000; sync({ timer:{mode:'break',startedAt:Date.now(),endTime:Date.now()+ms,duration:ms,isRunning:true,pausedElapsed:null,pausedRemaining:null} }); playSound('chime'); };
+  const pauseTimer = () => {
+    const t=db.timer; if (!t||!t.isRunning) return;
+    if (t.mode==='class_sw') sync({ timer:{...t,isRunning:false,pausedElapsed:Date.now()-t.startedAt+(t.pausedElapsed||0)} });
+    else sync({ timer:{...t,isRunning:false,pausedRemaining:Math.max(0,t.endTime-Date.now())} });
+  };
+  const resumeTimer = () => {
+    const t=db.timer; if (!t||t.isRunning) return;
+    if (t.mode==='class_sw') sync({ timer:{...t,isRunning:true,startedAt:Date.now()-(t.pausedElapsed||0),pausedElapsed:null} });
+    else sync({ timer:{...t,isRunning:true,endTime:Date.now()+(t.pausedRemaining||0),pausedRemaining:null} });
+  };
+  const resetTimer = () => sync({ timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null} });
+
+  // ── 출석 (출석 시 코인 +1, 명성은 자동 반영) ──────────────────
+  const toggleAttendance = (sid) => {
     const todayIdx = getTodayWeekdayIdx();
     if (todayIdx < 0) return;
-    const weekKey = getWeekKey();
-    const todayStr = formatDate();
-    const currentAtt = safeArray(db.attendance?.[weekKey]?.[sid]);
-    const isCancel = moodEmoji === null;
-    const logKey = `${weekKey}_${sid}_${todayIdx}`;
+    const weekKey  = getWeekKey();
+    const current  = safeArray(db.attendance?.[weekKey]?.[sid]);
+    const alreadyIn= current.includes(todayIdx);
+    const logKey   = `${weekKey}_${sid}_${todayIdx}`;
 
-    let updates = {};
-    if (isCancel) {
-      updates.attendance = { ...db.attendance, [weekKey]: { ...db.attendance[weekKey], [sid]: currentAtt.filter(d => d !== todayIdx) } };
-      updates.bonusCoins = { ...db.bonusCoins, [sid]: Math.max(0, (db.bonusCoins[sid]||0) - ATTEND_COIN_PER_DAY) };
-      updates.attendCoinLog = { ...db.attendCoinLog, [logKey]: undefined };
-      updates.moodLog = { ...db.moodLog, [todayStr]: { ...db.moodLog[todayStr], [sid]: undefined } };
+    let newDays, coinLogUpdates={};
+
+    if (alreadyIn) {
+      // 출석 취소: 코인 차감 (코인이 깎이면 명성도 자동으로 내려갑니다)
+      newDays = current.filter(d => d !== todayIdx);
+      if (db.attendCoinLog?.[logKey]) {
+        const newBonus = { ...db.bonusCoins, [sid]: Math.max(0,(db.bonusCoins?.[sid]||0) - ATTEND_COIN_PER_DAY) };
+        coinLogUpdates = { bonusCoins: newBonus, attendCoinLog: { ...db.attendCoinLog, [logKey]: undefined } };
+      }
     } else {
+      // 출석 체크: 코인 지급 (코인이 지급되면 명성도 자동으로 올라갑니다)
+      newDays = [...current, todayIdx];
       playSound('attend');
-      setAttendAnim({ id:sid }); setTimeout(() => setAttendAnim(null), 1500);
-      updates.attendance = { ...db.attendance, [weekKey]: { ...(db.attendance[weekKey]||{}), [sid]: [...currentAtt, todayIdx] } };
-      updates.bonusCoins = { ...db.bonusCoins, [sid]: (db.bonusCoins[sid]||0) + ATTEND_COIN_PER_DAY };
-      updates.attendCoinLog = { ...(db.attendCoinLog||{}), [logKey]: true };
-      updates.moodLog = { ...db.moodLog, [todayStr]: { ...(db.moodLog[todayStr]||{}), [sid]: moodEmoji } };
+      setAttendAnim({ id:sid, ts:Date.now() });
+      setTimeout(() => setAttendAnim(null), 1500);
+      if (!db.attendCoinLog?.[logKey]) {
+        const newBonus = { ...db.bonusCoins, [sid]: (db.bonusCoins?.[sid]||0) + ATTEND_COIN_PER_DAY };
+        coinLogUpdates = { bonusCoins: newBonus, attendCoinLog: { ...(db.attendCoinLog||{}), [logKey]: true } };
+      }
     }
-    sync(updates);
-    setMoodModalStudent(null);
+
+    const newAttendance = { ...db.attendance, [weekKey]: { ...(db.attendance?.[weekKey]||{}), [sid]: newDays } };
+    
+    // 개근 체크
+    const totalCount = Math.min(5, newDays.length + (db.extraAttendDays||0));
+    let perfectUpdates = {};
+    if (!alreadyIn && totalCount>=5 && !db.attendanceBonus?.[weekKey]?.[sid]) {
+      const pb = { ...db.bonusCoins, ...(coinLogUpdates.bonusCoins||{}), [sid]: ((coinLogUpdates.bonusCoins||db.bonusCoins)?.[sid]||0) + 3 };
+      const pab= { ...(db.attendanceBonus||{}), [weekKey]:{ ...(db.attendanceBonus?.[weekKey]||{}), [sid]:true } };
+      perfectUpdates = { bonusCoins: pb, attendanceBonus: pab };
+      playSound('jackpot');
+    }
+    
+    sync({ attendance: newAttendance, ...coinLogUpdates, ...perfectUpdates });
   };
 
-  // ── 칭찬/답장/공감 (⭐ 감사의 씨앗) ───────────────────────
+  // ── 공휴일 보정 ───────────────────────────────────────────
+  const teacherAddHoliday = () => {
+    const weekKey  = getWeekKey();
+    const newExtra = (db.extraAttendDays||0) + 1;
+    let bonusCoins = { ...db.bonusCoins };
+    let attBonus   = { ...db.attendanceBonus };
+    allStats.forEach(s => {
+      const days = safeArray(db.attendance?.[weekKey]?.[s.id]).length;
+      const tot  = Math.min(5, days + newExtra);
+      if (tot>=5 && !db.attendanceBonus?.[weekKey]?.[s.id]) {
+        bonusCoins[s.id] = (bonusCoins[s.id]||0) + 3;
+        if (!attBonus[weekKey]) attBonus[weekKey]={};
+        attBonus[weekKey][s.id] = true;
+      }
+    });
+    sync({ extraAttendDays:newExtra, bonusCoins, attendanceBonus:attBonus });
+    alert(`공휴일 보정 완료! 이번 주 보정값: +${newExtra}일`);
+  };
+
+  // ── 칭찬 ──────────────────────────────────────────────────
   const submitPraise = () => {
-    if (!praiseTarget || !praiseFrom || !praiseTag || !praiseText.trim()) { alert("대상 역량 내용을 모두 입력해 주세요."); return; }
+    if (!praiseTarget||!praiseTag||!praiseText.trim()) { alert("대상, 역량, 내용을 모두 입력해 주세요."); return; }
     const isTheme  = praiseTag===db.settings?.weeklyTheme;
     const basic    = db.settings?.pointConfig?.praiseBasic||10;
     const bonus    = db.settings?.pointConfig?.praiseBonus||15;
     const coins    = isTheme ? basic+bonus : basic;
-    
-    // ⭐ 'me'라는 글자가 들어오면 숫자로 바꾸지 않고 그대로 저장하도록 수정
-    const finalToId = praiseTarget === 'me' ? 'me' : toInt(praiseTarget);
-    const finalFromId = praiseFrom === 'me' ? 'me' : toInt(praiseFrom);
-    
-    const newP = { id:Date.now(), toId:finalToId, fromId:finalFromId, tag:praiseTag, text:praiseText.trim(), date:formatDate(), coins, thankCount:0, replies:[] };
-    let updates = { approvedPraises:[...safeArray(db.approvedPraises),newP] };
-    
-    if (finalToId !== 'me') updates.bonusCoins = { ...db.bonusCoins, [finalToId]:(db.bonusCoins?.[finalToId]||0)+coins };
-    
+    const newP     = { id:Date.now(), toId:praiseTarget==='me'?'me':toInt(praiseTarget), tag:praiseTag, text:praiseText.trim(), date:formatDate(), coins };
+    let updates    = { approvedPraises:[...safeArray(db.approvedPraises),newP] };
+    if (praiseTarget!=='me') updates.bonusCoins = { ...db.bonusCoins, [praiseTarget]:(db.bonusCoins?.[praiseTarget]||0)+coins };
     sync(updates);
     playSound('good');
     alert(`온기 우체통 전달 완료! 🌸${isTheme?` (테마 보너스 +${bonus}🪙 포함)`:''}`);
-    setShowPraiseModal(false); setPraiseTarget(""); setPraiseFrom(""); setPraiseTag(""); setPraiseText("");
+    setShowPraiseModal(false); setPraiseTarget(""); setPraiseTag(""); setPraiseText("");
   };
 
-  // ── 빛나는 실수 (⭐ 성찰의 재해석) ───────────────────────
-  const submitMistake = () => {
-    if (!mistakeText || !mistakeLesson) return alert("실수 내용과 배운 점을 모두 적어주세요!");
-    const newM = { id:Date.now(), text:mistakeText, lesson:mistakeLesson, date:formatDate(), likes:0 };
-    sync({ mistakes: [newM, ...safeArray(db.mistakes)].slice(0, 30) });
-    alert("멋진 실패입니다! 이 실수가 당신을 더 빛나게 할 거예요. ✨");
-    setShowMistakeModal(false); setMistakeText(""); setMistakeLesson("");
+  // ── 성찰 ──────────────────────────────────────────────────
+  const submitReflection = () => {
+    if (!refTarget||!refTag||!refText.trim()) { alert("대상, 역량, 다짐을 모두 입력해 주세요."); return; }
+    const newR = { id:Date.now(), studentId:toInt(refTarget), tag:refTag, text:refText.trim(), date:formatDate() };
+    sync({ studentStatus:{...db.studentStatus,[refTarget]:'pending'}, pendingReflections:[...safeArray(db.pendingReflections),newR] });
+    playSound('good');
+    alert("성찰 다짐이 제출되었습니다! 선생님의 승인을 기다려 주세요. 💪");
+    setRefTarget(""); setRefTag(""); setRefText("");
   };
 
-// =========== [2부 코드의 끝] ===========
-// ── 기타 필수 핸들러 (인증, 타이머, 도움실, 관리실 등) ────────
-  const handleLogin = () => {
-    const masterPw = db.settings?.masterPw||"6505";
-    const helpPw   = db.settings?.helpRoomPw||"1111";
-    if (password===masterPw) { saveAuth('teacher'); setIsAuthenticated('teacher'); setShowModal(null); setPassword(""); setActiveTab('admin'); }
-    else if (password===helpPw) { saveAuth('inspector'); setIsAuthenticated('inspector'); setShowModal(null); setPassword(""); setActiveTab('helproom'); }
-    else { alert("비밀번호가 틀렸습니다."); setPassword(""); }
+  // ── 위기 지정 ─────────────────────────────────────────────
+  const handleGivePenalty = (sid) => {
+    if (!window.confirm("이 학생을 위기 상태로 지정할까요?")) return;
+    sync({
+      studentStatus: { ...db.studentStatus, [sid]:'crisis' },
+      penaltyCount:  { ...db.penaltyCount,  [sid]:(db.penaltyCount[sid]||0)+1 },
+      allTime: { ...db.allTime, penalty:{ ...(db.allTime?.penalty||{}), [sid]:(db.allTime?.penalty?.[sid]||0)+1 } }
+    });
+    playSound('bad');
   };
-  const handleLogout = () => { clearAuth(); setIsAuthenticated(false); setActiveTab('dashboard'); };
-  const revokeAllSessions = () => { if(!window.confirm("모든 세션을 종료할까요?")) return; sync({ settings:{...db.settings,authRevokedAt:Date.now()} }); clearAuth(); setIsAuthenticated(false); setActiveTab('dashboard'); };
-  const startStopwatch = () => sync({ timer:{mode:'class_sw',startedAt:Date.now(),endTime:null,duration:null,isRunning:true,pausedElapsed:null,pausedRemaining:null} });
-  const startCountdown = (min) => { const ms=min*60000; sync({ timer:{mode:'class_cd',startedAt:Date.now(),endTime:Date.now()+ms,duration:ms,isRunning:true,pausedElapsed:null,pausedRemaining:null} }); };
-  const startBreak     = (min) => { const ms=min*60000; sync({ timer:{mode:'break',startedAt:Date.now(),endTime:Date.now()+ms,duration:ms,isRunning:true,pausedElapsed:null,pausedRemaining:null} }); playSound('chime'); };
-  const pauseTimer = () => { const t=db.timer; if(!t||!t.isRunning) return; if(t.mode==='class_sw') sync({ timer:{...t,isRunning:false,pausedElapsed:Date.now()-t.startedAt+(t.pausedElapsed||0)} }); else sync({ timer:{...t,isRunning:false,pausedRemaining:Math.max(0,t.endTime-Date.now())} }); };
-  const resumeTimer = () => { const t=db.timer; if(!t||t.isRunning) return; if(t.mode==='class_sw') sync({ timer:{...t,isRunning:true,startedAt:Date.now()-(t.pausedElapsed||0),pausedElapsed:null} }); else sync({ timer:{...t,isRunning:true,endTime:Date.now()+(t.pausedRemaining||0),pausedRemaining:null} }); };
-  const resetTimer = () => sync({ timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null} });
-  const teacherAddHoliday = () => { const wk=getWeekKey(); const newExtra=(db.extraAttendDays||0)+1; let b={...db.bonusCoins}; let a={...db.attendanceBonus}; allStats.forEach(s=>{ const d=safeArray(db.attendance?.[wk]?.[s.id]).length; const t=Math.min(5,d+newExtra); if(t>=5&&!db.attendanceBonus?.[wk]?.[s.id]){ b[s.id]=(b[s.id]||0)+3; if(!a[wk]) a[wk]={}; a[wk][s.id]=true; }}); sync({ extraAttendDays:newExtra, bonusCoins:b, attendanceBonus:a }); alert(`공휴일 보정 +${newExtra}일 적용 완료!`); };
-  const handleGivePenalty = (sid) => { if(!window.confirm("위기 상태로 지정할까요?")) return; sync({ studentStatus:{...db.studentStatus,[sid]:'crisis'}, penaltyCount:{...db.penaltyCount,[sid]:(db.penaltyCount[sid]||0)+1}, allTime:{...db.allTime,penalty:{...(db.allTime?.penalty||{}),[sid]:(db.allTime?.penalty?.[sid]||0)+1}} }); playSound('bad'); };
-  const handleExpAdjust = (sid, d) => { const n=Math.max(0,(db.roleExp[sid]||0)+d); let u={roleExp:{...db.roleExp,[sid]:n}}; if(d>0) u.allTime={...db.allTime,exp:{...(db.allTime?.exp||{}),[sid]:(db.allTime?.exp?.[sid]||0)+d}}; sync(u); if(d>0) playSound('good'); };
-  const handleDonate = (sid, amt) => { const u=activeStudents.find(s=>s.id===sid); if(!u||u.coins<amt) return alert("잔액 부족"); if(!window.confirm(`기부할까요?`)) return; sync({ usedCoins:{...db.usedCoins,[sid]:(db.usedCoins[sid]||0)+amt}, donations:[...safeArray(db.donations),{id:Date.now(),name:u.name,amount:amt,date:formatDate()}], allTime:{...db.allTime,donate:{...(db.allTime?.donate||{}),[sid]:(db.allTime?.donate?.[sid]||0)+amt}} }); playSound('jackpot'); alert("기부 완료!"); };
-  const handleFund = (fId, sid, amt) => { const u=activeStudents.find(s=>s.id===sid); if(!u||u.coins<amt) return alert("잔액 부족"); const f=safeArray(db.funding).find(x=>x.id===fId); if(!f||!window.confirm(`투자할까요?`)) return; sync({ funding:safeArray(db.funding).map(x=>x.id===fId?{...x,current:toInt(x.current)+amt}:x), usedCoins:{...db.usedCoins,[sid]:(db.usedCoins[sid]||0)+amt}, allTime:{...db.allTime,fund:{...(db.allTime?.fund||{}),[sid]:(db.allTime?.fund?.[sid]||0)+amt}} }); playSound('buy'); alert("투자 완료!"); };
-  const submitArtisanItem = () => { if(!artisanTarget||!artisanItemName.trim()||!artisanItemPrice) return alert("입력 필요"); const a=allStats.find(s=>s.id==artisanTarget); if(!a) return; sync({ pendingShopItems:[...safeArray(db.pendingShopItems),{id:Date.now(),name:artisanItemName.trim(),price:toInt(artisanItemPrice),creator:a.name,creatorId:a.id}] }); alert("결재 요청 완료!"); setArtisanTarget(""); setArtisanItemName(""); setArtisanItemPrice(""); };
-  const addCoopScore = (amt, qKey) => { const td=formatDate(); if(db.questLog?.[td]?.[qKey]) return alert("오늘은 이미 이 퀘스트를 달성했습니다!"); sync({ manualRepOffset:(db.manualRepOffset||0)+amt, questLog:{...db.questLog,[td]:{...(db.questLog?.[td]||{}),[qKey]:true}} }); playSound('good'); };
-  const adjustGoodWeek = (d) => sync({ coopQuest:{...db.coopQuest,goodWeek:Math.max(0,Math.min(5,(db.coopQuest?.goodWeek||0)+d))} });
-  const completeGoodWeek = () => { const r=db.coopQuest?.q4||100; sync({ manualRepOffset:(db.manualRepOffset||0)+r, coopQuest:{...db.coopQuest,goodWeek:0} }); playSound('jackpot'); alert(`명성 +${r}p!`); };
-  const handleStartTimeAttack = () => { if(!taTitle.trim()) return alert("제목 입력"); sync({ timeAttack:{isActive:true,title:taTitle,rewardRep:toInt(taReward,100),endTime:Date.now()+toInt(taMins,10)*60000,cleared:[]} }); playSound('chime'); };
-  const handleCompleteTimeAttack = () => { const r=db.timeAttack?.rewardRep||100; sync({ timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]}, manualRepOffset:(db.manualRepOffset||0)+r }); playSound('jackpot'); alert(`성공! 명성 +${r}p`); };
-  const handleFailTimeAttack = () => { sync({ timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]} }); playSound('bad'); };
-  const toggleTimeAttackClear = (sid) => { const c=safeArray(db.timeAttack?.cleared).map(Number); sync({ timeAttack:{...db.timeAttack,cleared:c.includes(Number(sid))?c.filter(id=>id!==Number(sid)):[...c,Number(sid)]} }); };
-  const handleAddStudent = () => { if(!newStudentName.trim()) return alert("이름 입력"); const mId=safeStudents.reduce((m,s)=>Math.max(m,s.id),0); sync({ students:[...safeStudents,{id:mId+1,name:newStudentName.trim(),role:'',group:toInt(newStudentGroup,1),isLeader:false,enneagram:newStudentEnneagram}] }); setNewStudentName(""); setNewStudentGroup("1"); setNewStudentEnneagram(""); };
-  const handleRemoveStudent = (sid) => { const s=safeStudents.find(x=>x.id===sid); if(!s||!window.confirm(`삭제할까요?`)) return; sync({ students:safeStudents.filter(x=>x.id!==sid) }); };
-  const handleStudentFieldChange = (sid,f,v) => sync({ students:safeStudents.map(s=>s.id===sid?{...s,[f]:v}:s) });
+
+  // ── 직업 점수 ─────────────────────────────────────────────
+  const handleExpAdjust = (sid, delta) => {
+    const newVal = Math.max(0,(db.roleExp[sid]||0)+delta);
+    let updates  = { roleExp:{ ...db.roleExp,[sid]:newVal } };
+    if (delta>0) updates.allTime={ ...db.allTime, exp:{ ...(db.allTime?.exp||{}), [sid]:(db.allTime?.exp?.[sid]||0)+delta } };
+    sync(updates);
+    if (delta>0) playSound('good');
+  };
+
+  // ── 기부 & 펀딩 ──────────────────────────────────────────
+  const handleDonate = (sid,amount) => {
+    const user=activeStudents.find(s=>s.id===sid); if (!user) return;
+    if (user.coins<amount) return alert("코인이 부족합니다.");
+    if (!window.confirm(`${user.name}의 코인 ${amount}🪙을 학급 명성에 기부할까요?`)) return;
+    sync({
+      usedCoins:{ ...db.usedCoins,[sid]:(db.usedCoins[sid]||0)+amount },
+      donations:[ ...safeArray(db.donations),{ id:Date.now(),name:user.name,amount,date:formatDate() } ],
+      allTime:{ ...db.allTime, donate:{ ...(db.allTime?.donate||{}), [sid]:(db.allTime?.donate?.[sid]||0)+amount } }
+    });
+    playSound('jackpot'); alert(`${user.name}의 따뜻한 기부가 완료되었습니다! 🌸`);
+  };
+  const handleFund = (fundId,sid,amount) => {
+    const user=activeStudents.find(s=>s.id===sid); if(!user) return;
+    if (user.coins<amount) return alert("코인이 부족합니다.");
+    const fund=safeArray(db.funding).find(f=>f.id===fundId); if(!fund) return;
+    if (!window.confirm(`${user.name}의 코인 ${amount}🪙을 "${fund.name}" 펀딩에 투자할까요?`)) return;
+    sync({
+      funding:safeArray(db.funding).map(f=>f.id===fundId?{...f,current:toInt(f.current)+amount}:f),
+      usedCoins:{ ...db.usedCoins,[sid]:(db.usedCoins[sid]||0)+amount },
+      allTime:{ ...db.allTime, fund:{ ...(db.allTime?.fund||{}), [sid]:(db.allTime?.fund?.[sid]||0)+amount } }
+    });
+    playSound('buy'); alert("투자 완료! 🚀");
+  };
+
+  // ── 장인 아이템 ──────────────────────────────────────────
+  const submitArtisanItem = () => {
+    if (!artisanTarget||!artisanItemName.trim()||!artisanItemPrice) { alert("장인, 이름, 가격을 모두 입력하세요."); return; }
+    const artisan=allStats.find(s=>s.id==artisanTarget); if(!artisan) return;
+    sync({ pendingShopItems:[...safeArray(db.pendingShopItems),{ id:Date.now(),name:artisanItemName.trim(),price:toInt(artisanItemPrice),creator:artisan.name,creatorId:artisan.id }] });
+    alert(`"${artisanItemName}" 아이템이 결재 요청되었습니다!`);
+    setArtisanTarget(""); setArtisanItemName(""); setArtisanItemPrice("");
+  };
+
+  // ── 공동 퀘스트 ──────────────────────────────────────────
+  const addCoopScore = (amount, questKey) => {
+    const today = formatDate();
+    if (db.questLog?.[today]?.[questKey]) return alert("오늘은 이미 이 퀘스트를 달성했습니다!");
+    sync({ 
+      manualRepOffset: (db.manualRepOffset||0) + amount,
+      questLog: { ...db.questLog, [today]: { ...(db.questLog?.[today]||{}), [questKey]: true } }
+    }); 
+    playSound('good'); 
+  };
+  const adjustGoodWeek  = (d)      => sync({ coopQuest:{ ...db.coopQuest, goodWeek:Math.max(0,Math.min(5,(db.coopQuest?.goodWeek||0)+d)) } });
+  const completeGoodWeek= ()       => {
+    const reward=db.coopQuest?.q4||100;
+    sync({ manualRepOffset:(db.manualRepOffset||0)+reward, coopQuest:{ ...db.coopQuest,goodWeek:0 } });
+    playSound('jackpot'); alert(`🌟 사이좋은 일주일 달성! 학급 명성 +${reward}p!`);
+  };
+
+  // ── 타임어택 ─────────────────────────────────────────────
+  const handleStartTimeAttack = () => {
+    if (!taTitle.trim()) return alert("미션 제목을 입력하세요.");
+    sync({ timeAttack:{ isActive:true, title:taTitle, rewardRep:toInt(taReward,100), endTime:Date.now()+toInt(taMins,10)*60000, cleared:[] } });
+    playSound('chime');
+  };
+  const handleCompleteTimeAttack = () => {
+    const r=db.timeAttack?.rewardRep||100;
+    sync({ timeAttack:{ isActive:false,title:"",rewardRep:100,endTime:null,cleared:[] }, manualRepOffset:(db.manualRepOffset||0)+r });
+    playSound('jackpot'); alert(`🎉 타임어택 성공! 학급 명성 +${r}p!`);
+  };
+  const handleFailTimeAttack = () => { sync({ timeAttack:{ isActive:false,title:"",rewardRep:100,endTime:null,cleared:[] } }); playSound('bad'); alert("타임어택이 종료되었습니다."); };
+  const toggleTimeAttackClear = (sid) => {
+    const cleared=safeArray(db.timeAttack?.cleared).map(Number);
+    sync({ timeAttack:{ ...db.timeAttack, cleared:cleared.includes(Number(sid))?cleared.filter(id=>id!==Number(sid)):[...cleared,Number(sid)] } });
+  };
+
+  // ── 학생 관리 ─────────────────────────────────────────────
+  const handleAddStudent = () => {
+    if (!newStudentName.trim()) return alert("학생 이름을 입력하세요.");
+    const maxId=safeStudents.reduce((m,s)=>Math.max(m,s.id),0);
+    sync({ students:[...safeStudents,{ id:maxId+1,name:newStudentName.trim(),role:'',group:toInt(newStudentGroup,1),isLeader:false,enneagram:newStudentEnneagram }] });
+    setNewStudentName(""); setNewStudentGroup("1"); setNewStudentEnneagram("");
+    alert(`${newStudentName} 학생이 추가되었습니다.`);
+  };
+  const handleRemoveStudent = (sid) => {
+    const s=safeStudents.find(s=>s.id===sid); if(!s) return;
+    if (!window.confirm(`${s.name} 학생을 삭제할까요?`)) return;
+    sync({ students:safeStudents.filter(s=>s.id!==sid) });
+  };
+  const handleStudentFieldChange = (sid,field,value) => sync({ students:safeStudents.map(s=>s.id===sid?{...s,[field]:value}:s) });
+
+  // ── 누가기록 ──────────────────────────────────────────────
   const openNoteModal = (sid) => { setShowNoteModal(sid); setNoteText(""); };
-  const submitNote = () => { if(!noteText.trim()||!showNoteModal) return; sync({ notes:{...db.notes,[showNoteModal]:[...safeArray(db.notes?.[showNoteModal]),{id:Date.now(),text:noteText.trim(),date:formatDate()}]} }); setShowNoteModal(null); setNoteText(""); };
-  const deleteNote = (sid,nId) => { if(!window.confirm("삭제할까요?")) return; sync({ notes:{...db.notes,[sid]:safeArray(db.notes?.[sid]).filter(n=>n.id!==nId)} }); };
-  const toggleCumulativeStats = () => sync({ settings:{...db.settings,showCumulativeStats:!db.settings?.showCumulativeStats} });
-  const exportStudent = (sid) => { const s=allStats.find(x=>x.id==sid); if(!s) return; const p=safeArray(db.approvedPraises).filter(x=>x.toId==s.id); const r=safeArray(db.pendingReflections).filter(x=>x.studentId==s.id); const txt=[`=== ${s.name} SEL 리포트 ===`,`에니어그램:${s.enneagram} | 완수:${s.exp} | 코인:${s.coins} | 출석:${s.weeklyCount}/5`,`[칭찬]`,...p.map(x=>`- ${x.text}`),`[성찰]`,...r.map(x=>`- ${x.text}`),`[누가기록]`,...s.notes.map(x=>`- ${x.text}`)].join('\n'); navigator.clipboard?.writeText(txt).then(()=>alert("복사 완료")); };
-  const exportAll = () => { const txt=allStats.map(s=>`\n=== ${s.name} ===\n완수:${s.exp} | 코인:${s.coins}\n칭찬: ${safeArray(db.approvedPraises).filter(p=>p.toId==s.id).map(p=>p.text).join(', ')}`).join('\n'); navigator.clipboard?.writeText(txt).then(()=>alert("전체 복사 완료")); };
-  const closeSemester = () => { if(window.prompt("1학기 마감: '마감' 입력")!=="마감") return; sync({ roleExp:{},bonusCoins:{},usedCoins:{},penaltyCount:{},studentStatus:{},pendingReflections:[],pendingPraises:[],shopItems:[],pendingShopItems:[],funding:[],purchaseHistory:[],donations:[],manualRepOffset:0,attendance:{},attendanceBonus:{},attendCoinLog:{},questLog:{},moodLog:{},mistakes:[],coopQuest:{...db.coopQuest,goodWeek:0},timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]},timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null},extraAttendDays:0 }); alert("마감 완료."); };
-  const factoryReset = () => { if(window.prompt("공장 초기화: '전체초기화' 입력")!=="전체초기화") return; sync({ roleExp:{},bonusCoins:{},usedCoins:{},penaltyCount:{},studentStatus:{},pendingReflections:[],pendingPraises:[],approvedPraises:[],shopItems:[],pendingShopItems:[],funding:[],purchaseHistory:[],donations:[],manualRepOffset:0,allTime:{exp:{},penalty:{},donate:{},fund:{}},attendance:{},attendanceBonus:{},attendCoinLog:{},streakWeeks:{},notes:{},questLog:{},moodLog:{},mistakes:[],coopQuest:{q1Name:"다 함께 바른 생활",q1:50,q2Name:"환대와 응원",q2:20,q3Name:"전담수업 태도 우수",q3:20,q5Name:"청소 만점",q5:10,q4Name:"사이좋은 일주일",q4:100,goodWeek:0},timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]},timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null},extraAttendDays:0 }); alert("초기화 완료."); };
+  const submitNote    = () => {
+    if (!noteText.trim()||!showNoteModal) return;
+    sync({ notes:{ ...db.notes,[showNoteModal]:[...safeArray(db.notes?.[showNoteModal]),{ id:Date.now(),text:noteText.trim(),date:formatDate() }] } });
+    setShowNoteModal(null); setNoteText("");
+  };
+  const deleteNote = (sid,noteId) => {
+    if (!window.confirm("이 기록을 삭제할까요?")) return;
+    sync({ notes:{ ...db.notes,[sid]:safeArray(db.notes?.[sid]).filter(n=>n.id!==noteId) } });
+  };
 
-  // ══════════════════════════════════════════════════════════════
-  // 🖼️ RENDER (UI 구현)
-  // ══════════════════════════════════════════════════════════════
+  // ── 기타 ──────────────────────────────────────────────────
+  const toggleCumulativeStats = () => sync({ settings:{ ...db.settings,showCumulativeStats:!db.settings?.showCumulativeStats } });
+
+  const exportStudent = (sid) => {
+    const s=allStats.find(x=>x.id==sid); if(!s) return;
+    const praises=safeArray(db.approvedPraises).filter(p=>p.toId==s.id);
+    const refs   =safeArray(db.pendingReflections).filter(r=>r.studentId==s.id);
+    const lines  =[
+      `=== ${s.name} SEL 리포트 (${formatDate()}) ===`,
+      `에니어그램: ${s.enneagram?ENNEAGRAM_DATA[s.enneagram]?.name:'미입력'}`,
+      `숙련도:${s.exp}회(${s.mastery.label}) | 코인:${s.coins}🪙 | 출석:${s.weeklyCount}/5 | 위기:${s.atPen}회`,
+      ``,`[칭찬 ${praises.length}건]`,
+      ...praises.map(p=>`- [${SEL_OPTIONS.find(o=>o.name===p.tag)?.short}] "${p.text}" (${p.date})`),
+      ``,`[성찰 ${refs.length}건]`,
+      ...refs.map(r=>`- [${SEL_OPTIONS.find(o=>o.name===r.tag)?.short}] "${r.text}" (${r.date})`),
+      ``,`[누가기록 ${s.notes.length}건]`,
+      ...s.notes.map(n=>`- (${n.date}) ${n.text}`)
+    ];
+    const text=lines.join('\n');
+    navigator.clipboard?.writeText(text).then(()=>alert(`${s.name} 리포트 복사 완료!`)).catch(()=>alert(text));
+  };
+  const exportAll = () => {
+    const lines=allStats.map(s=>{
+      const praises=safeArray(db.approvedPraises).filter(p=>p.toId==s.id);
+      return [`\n=== ${s.name} ===`,`숙련도:${s.exp} | 코인:${s.coins}🪙 | 출석:${s.weeklyCount}/5`,`칭찬(${praises.length}건): ${praises.map(p=>`"${p.text}"`).join(', ')}`].join('\n');
+    });
+    const text=`달보드레 전체 리포트 (${formatDate()})\n`+lines.join('\n');
+    navigator.clipboard?.writeText(text).then(()=>alert("전체 반 리포트 복사 완료!")).catch(()=>alert(text));
+  };
+
+  const closeSemester = () => {
+    if (window.prompt("1학기 마감 실행: '마감'을 입력하세요.")!=="마감") return;
+    sync({ roleExp:{},bonusCoins:{},usedCoins:{},penaltyCount:{},studentStatus:{},pendingReflections:[],pendingPraises:[],shopItems:[],pendingShopItems:[],funding:[],purchaseHistory:[],donations:[],manualRepOffset:0,attendance:{},attendanceBonus:{},attendCoinLog:{},questLog:{},coopQuest:{...db.coopQuest,goodWeek:0},timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]},timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null},extraAttendDays:0 });
+    alert("1학기 마감 완료. 누적 데이터는 보존됩니다.");
+  };
+  const factoryReset = () => {
+    if (window.prompt("전체 초기화: '전체초기화'를 입력하세요.")!=="전체초기화") return;
+    sync({ roleExp:{},bonusCoins:{},usedCoins:{},penaltyCount:{},studentStatus:{},pendingReflections:[],pendingPraises:[],approvedPraises:[],shopItems:[],pendingShopItems:[],funding:[],purchaseHistory:[],donations:[],manualRepOffset:0,allTime:{exp:{},penalty:{},donate:{},fund:{}},attendance:{},attendanceBonus:{},attendCoinLog:{},streakWeeks:{},notes:{},questLog:{},coopQuest:{q1Name:"다 함께 바른 생활",q1:50,q2Name:"환대와 응원",q2:20,q3Name:"전담수업 태도 우수",q3:20,q5Name:"청소 만점",q5:10,q4Name:"사이좋은 일주일",q4:100,goodWeek:0},timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]},timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null},extraAttendDays:0 });
+    alert("공장 초기화 완료.");
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // 🖼️ RENDER
+  // ══════════════════════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-amber-50/50 pb-32 font-sans text-slate-800 transition-all">
+    <div className="min-h-screen bg-amber-50/50 pb-32 font-sans text-slate-800">
 
-      {/* ═══ HEADER: 5:5 세계수 & 타이머 ═══ */}
+      {/* ═══ HEADER ═══ */}
       <header className="bg-[#FFF5E1] px-6 pt-6 pb-8 md:px-12 md:pt-10 md:pb-12 relative overflow-hidden border-b-4 border-white flex flex-col gap-8">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white rounded-full blur-[120px] opacity-70 pointer-events-none"/>
 
+        {/* 타이틀 행 (목표 달성 배지 완전 삭제 완료) */}
         <div className="max-w-[1400px] w-full mx-auto relative z-10 flex items-center justify-between">
           <h1 className="text-amber-800 font-black text-2xl flex items-center gap-3">
             <Sparkles className="text-amber-500 w-8 h-8"/> {db.settings?.title}
           </h1>
         </div>
 
+        {/* 5:5 2분할 레이아웃 (좌: 점수+세계수+게이지 / 우: 타이머) */}
         <div className="max-w-[1400px] w-full mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+
           {/* 좌측: 점수 + 세계수 + 게이지 */}
           <div className="flex flex-col gap-8 w-full justify-center">
+            
+            {/* 1층: 점수 & 세계수 (자연스럽게 점수 옆으로 이동) */}
             <div className="flex flex-row items-center gap-8 pl-2">
               <div className="flex items-baseline">
                 <span className="text-[130px] md:text-[160px] font-black text-[#6B4423] drop-shadow-md tracking-tighter leading-none">
@@ -614,26 +796,14 @@ export default function App() {
                 <span className="text-5xl md:text-6xl font-black text-amber-500 ml-2">p</span>
               </div>
               
-              {/* 세계수 및 ⭐ V10.8 반딧불이(하트) 효과 */}
+              {/* 세계수 애니메이션 */}
               <div className="drop-shadow-2xl relative pb-4">
                 <div className="absolute inset-0 bg-yellow-200 blur-3xl opacity-30 rounded-full"/>
                 {renderEvolution(evolutionLevel)}
-                {/* 반딧불이 렌더링 */}
-                {Array.from({ length: fireflyCount }).map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="absolute rounded-full bg-pink-400 opacity-80 mix-blend-screen shadow-[0_0_8px_rgba(244,114,182,0.8)]"
-                    style={{
-                      width: `${Math.random() * 4 + 3}px`, height: `${Math.random() * 4 + 3}px`,
-                      top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%`,
-                      animation: `flyToScore ${Math.random() * 3 + 2}s infinite alternate ease-in-out`,
-                      animationDelay: `${Math.random() * 2}s`
-                    }}
-                  />
-                ))}
               </div>
             </div>
 
+            {/* 2층: 게이지 & 기부 마키 */}
             <div className="w-full space-y-4">
               <div className="w-full h-14 bg-white/70 rounded-full overflow-hidden shadow-inner border-4 border-amber-200 relative">
                 <div className={`h-full transition-all duration-1000 ${evolutionLevel>=5?'bg-gradient-to-r from-yellow-300 via-amber-400 to-red-500 animate-pulse':'bg-gradient-to-r from-yellow-300 to-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)]'}`} style={{ width:`${progressPercent}%` }}/>
@@ -641,7 +811,9 @@ export default function App() {
                   {EVOLUTION_TITLES[evolutionLevel]} <span className="text-sm ml-2 opacity-70">({evolutionLevel}/5)</span>
                 </div>
               </div>
+              
               <div className="flex items-center gap-2">
+                {/* 별 아이콘이 글자와 함께 스크롤되도록 수정 (겹침 원천 차단) */}
                 <div className="flex-1 overflow-hidden text-xs font-bold text-amber-700 bg-white/60 px-5 py-3 rounded-full border border-amber-200 shadow-sm relative">
                   <div className="animate-[shimmer_25s_linear_infinite] whitespace-nowrap inline-flex items-center w-max">
                     <Sparkles className="w-4 h-4 text-amber-500 mr-2 shrink-0"/>
@@ -655,7 +827,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* 우측: 타이머 */}
+          {/* 우측: 타이머 위젯 (공간을 50%나 차지하여 스케치처럼 거대해짐) */}
           <div className="w-full h-full">
             <TimerWidget
               status={timerStatus} display={timerDisplay} timer={db.timer} warningLevel={breakWarningLevel}
@@ -669,7 +841,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* 온기 우체통 마키 */}
+      {/* 온기 마키 */}
       <div className="bg-pink-100 text-pink-700 py-3 overflow-hidden shadow-sm border-b-2 border-pink-200 relative z-20">
         <div className="whitespace-nowrap animate-[shimmer_35s_linear_infinite] flex gap-20 text-sm font-black">
           <span className="flex gap-4 items-center">
@@ -685,7 +857,7 @@ export default function App() {
         {activeTab==='dashboard' && (
           <div className="space-y-10 animate-in fade-in duration-500">
 
-            {/* 1층: 공동 퀘스트 & 타임어택 */}
+            {/* 공동 퀘스트 + 타임어택 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div className="bg-white p-8 rounded-[40px] border-2 border-blue-100 shadow-sm flex flex-col justify-between">
                 <h3 className="text-lg font-black text-blue-600 mb-5 flex items-center gap-2"><Zap className="w-6 h-6"/> 학급 공동 퀘스트</h3>
@@ -699,6 +871,7 @@ export default function App() {
                   <button disabled={db.questLog?.[formatDate()]?.q3} onClick={()=>addCoopScore(db.coopQuest?.q3||20, 'q3')} className={`py-4 rounded-2xl font-black text-base border active:scale-95 truncate px-3 ${db.questLog?.[formatDate()]?.q3 ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
                     {db.coopQuest?.q3Name||"전담 우수"} {db.questLog?.[formatDate()]?.q3 ? '(완료)' : `+${db.coopQuest?.q3||20}`}
                   </button>
+                  {/* ⭐ V10.6: 청소 만점 버튼 추가 (오른쪽 절반) */}
                   <button disabled={db.questLog?.[formatDate()]?.q5} onClick={()=>addCoopScore(db.coopQuest?.q5||10, 'q5')} className={`py-4 rounded-2xl font-black text-base border active:scale-95 truncate px-3 ${db.questLog?.[formatDate()]?.q5 ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'}`}>
                     {db.coopQuest?.q5Name||"청소 만점"} {db.questLog?.[formatDate()]?.q5 ? '(완료)' : `+${db.coopQuest?.q5||10}`}
                   </button>
@@ -737,71 +910,57 @@ export default function App() {
               </div>
             </div>
 
-            {/* 2층: 펀딩 진행 상황 & ⭐ V10.8 우리 반 온기 피드 */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              
-              {/* 왼쪽: 펀딩 위젯 */}
-              <div className="lg:col-span-5 bg-white p-8 rounded-[40px] shadow-sm border-2 border-blue-100 flex flex-col">
-                <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-3"><Target className="w-7 h-7 text-blue-500"/> 크라우드 펀딩 현황</h3>
-                {safeArray(db.funding).filter(f => f && f.name).length > 0 ? (
-                  <div className="flex flex-col gap-6 overflow-y-auto custom-scrollbar pr-2 max-h-[300px]">
-                    {safeArray(db.funding).filter(f => f && f.name).map(f => {
-                      const percent = Math.min((toInt(f.current) / toInt(f.target, 1)) * 100, 100);
-                      return (
-                        <div key={f.id} className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-3xl border border-blue-200 shadow-sm relative overflow-hidden">
-                          <div className="flex justify-between items-end mb-4 relative z-10">
-                            <h4 className="text-lg font-black text-blue-900 truncate pr-4">{String(f.name)}</h4>
-                            <span className="text-sm font-black text-blue-600 bg-white px-3 py-1.5 rounded-full border border-blue-200 shadow-sm">{Math.floor(percent)}%</span>
-                          </div>
-                          <div className="flex justify-between text-sm font-bold mb-3 text-blue-700 relative z-10"><span>현재 {toInt(f.current)}🪙</span><span>목표 {toInt(f.target)}🪙</span></div>
-                          <div className="w-full h-4 bg-white rounded-full overflow-hidden border border-blue-200 shadow-inner relative z-10">
-                            <div className="h-full bg-blue-500 transition-all duration-1000 relative" style={{ width: `${percent}%` }}><div className="absolute inset-0 bg-white/20 animate-pulse"></div></div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-slate-400 font-bold text-center py-10">진행 중인 펀딩이 없습니다.</p>
-                )}
-              </div>
-
-              {/* 오른쪽: 온기 피드 (새로운 기능) */}
-              <div className="lg:col-span-7 bg-pink-50 p-8 rounded-[40px] shadow-sm border-2 border-pink-200 flex flex-col">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-black text-pink-800 flex items-center gap-3"><Heart className="w-7 h-7 text-pink-500 fill-pink-500"/> 우리 반 온기 피드</h3>
-                  <div className="flex gap-4">
-                    <span className="text-xs font-black text-pink-600 bg-white px-3 py-1.5 rounded-xl border border-pink-200 shadow-sm">👑 베풂왕: {topGivers.join(', ')||'아직 없음'}</span>
-                    <span className="text-xs font-black text-pink-600 bg-white px-3 py-1.5 rounded-xl border border-pink-200 shadow-sm">👑 사랑왕: {topReceivers.join(', ')||'아직 없음'}</span>
-                  </div>
-                </div>
-                
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 space-y-4 max-h-[300px]">
-                  {praiseFeed.length > 0 ? praiseFeed.map(p => {
-                    const fromName = p.fromId === 'me' ? '비밀천사' : (allStats.find(s=>s.id==p.fromId)?.name || '알 수 없음');
-                    const toName = p.toId === 'me' ? '나 자신' : (allStats.find(s=>s.id==p.toId)?.name || '알 수 없음');
-                    const selShort = SEL_OPTIONS.find(o=>o.name===p.tag)?.short || p.tag;
+            {/* ⭐ V10.7: 대시보드 펀딩 진행 현황 위젯 */}
+            {safeArray(db.funding).filter(f => f && f.name).length > 0 && (
+              <div className="bg-white p-8 rounded-[40px] shadow-sm border-2 border-blue-100 mb-8">
+                <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-3">
+                  <Target className="w-7 h-7 text-blue-500"/> 진행 중인 크라우드 펀딩
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {safeArray(db.funding).filter(f => f && f.name).map(f => {
+                    const percent = Math.min((toInt(f.current) / toInt(f.target, 1)) * 100, 100);
                     return (
-                      <div key={p.id} className="bg-white p-5 rounded-3xl shadow-sm border border-pink-100 animate-in fade-in">
-                        <div className="flex justify-between items-start mb-2">
-                          <p className="text-sm font-black text-slate-700"><span className="text-pink-500">{fromName}</span> 👉 <span className="text-pink-500">{toName}</span></p>
-                          <span className="text-[10px] font-black text-pink-600 bg-pink-100 px-2 py-1 rounded-md">{selShort}</span>
+                      <div key={f.id} className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-3xl border border-blue-200 shadow-sm relative overflow-hidden">
+                        <div className="flex justify-between items-end mb-4 relative z-10">
+                          <h4 className="text-lg font-black text-blue-900 truncate pr-4">{String(f.name)}</h4>
+                          <span className="text-sm font-black text-blue-600 bg-white px-3 py-1.5 rounded-full border border-blue-200 shadow-sm">
+                            {Math.floor(percent)}%
+                          </span>
                         </div>
-                        <p className="text-base font-bold text-slate-600 mb-4">"{p.text}"</p>
-                        <div className="flex justify-between items-center">
-                          <span className="text-[11px] text-slate-400 font-bold">{p.date}</span>
-                          <button onClick={() => handleLikePraise(p.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-pink-50 hover:bg-pink-100 text-pink-600 rounded-full text-xs font-black transition-colors border border-pink-200 active:scale-95">
-                            <Heart className="w-3.5 h-3.5 fill-pink-500"/> 공감 {p.thankCount || 0}
-                          </button>
+                        <div className="flex justify-between text-sm font-bold mb-3 text-blue-700 relative z-10">
+                          <span>현재 {toInt(f.current)}🪙</span>
+                          <span>목표 {toInt(f.target)}🪙</span>
+                        </div>
+                        <div className="w-full h-4 bg-white rounded-full overflow-hidden border border-blue-200 shadow-inner relative z-10">
+                          <div className="h-full bg-blue-500 transition-all duration-1000 relative" style={{ width: `${percent}%` }}>
+                             <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                          </div>
                         </div>
                       </div>
                     );
-                  }) : (
-                    <p className="text-pink-400/70 font-bold text-center py-10 mt-10">아직 등록된 온기 메시지가 없습니다.<br/>우체통에 첫 메시지를 남겨보세요!</p>
-                  )}
+                  })}
                 </div>
               </div>
+            )}
 
+            {/* 명예의 전당 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[
+                { title:'🏆 역할 완수 TOP 5', data:topExp,    unit:'회',  color:'blue',  icon:<CheckCircle2 className="w-7 h-7"/>, key:'atExp' },
+                { title:'🏆 기부 천사 TOP 5', data:topDonate, unit:'🪙',  color:'amber', icon:<Coins className="w-7 h-7"/>,       key:'atDonate' },
+                { title:'🏆 펀딩 기여 TOP 5', data:topFund,   unit:'🪙',  color:'pink',  icon:<Target className="w-7 h-7"/>,      key:'atFund' }
+              ].map(c=>(
+                <div key={c.title} className={`bg-gradient-to-br from-${c.color}-50 to-${c.color}-100 p-8 rounded-[40px] shadow-sm border border-${c.color}-200`}>
+                  <h4 className={`text-xl font-black text-${c.color}-800 mb-6 flex items-center gap-3`}>{c.icon} {c.title}</h4>
+                  <ul className="space-y-4">
+                    {c.data.length ? c.data.map((s,i)=>(
+                      <li key={s.id} className={`text-lg font-black text-${c.color}-900 bg-white/70 px-5 py-3 rounded-[20px] flex justify-between shadow-sm`}>
+                        <span>{i+1}. {s.name}</span><span className={`text-${c.color}-600`}>{s[c.key]}{c.unit}</span>
+                      </li>
+                    )) : <li className={`text-base font-bold text-${c.color}-400 text-center py-6`}>데이터가 없습니다.</li>}
+                  </ul>
+                </div>
+              ))}
             </div>
 
             {/* 학생 카드 헤더 */}
@@ -822,7 +981,6 @@ export default function App() {
               {sortedDashboardStats.map(s => {
                 const isTaCleared = safeArray(db.timeAttack?.cleared).map(Number).includes(Number(s.id));
                 const isAnim      = attendAnim?.id===s.id;
-                
                 return (
                   <div key={s.id} className={`p-6 rounded-[40px] border-4 shadow-sm transition-all relative flex flex-col bg-white hover:shadow-xl hover:-translate-y-1 ${s.status==='crisis'?'border-slate-300 bg-slate-100 opacity-60 grayscale':s.status==='pending'?'border-orange-300 bg-orange-50':'border-white hover:border-amber-300'}`}>
 
@@ -864,24 +1022,24 @@ export default function App() {
                         {s.group}모둠 · {s.role}
                       </p>
 
-                      {/* ⭐ V10.8: 출석 버튼 클릭 시 마음 날씨 팝업 연결 */}
+                      {/* fix1: 출석 버튼 — 개근/별 표시 짤림 방지 */}
                       <button
-                        onClick={()=>handleAttendanceStep1(s.id)}
+                        onClick={()=>toggleAttendance(s.id)}
                         disabled={s.status==='crisis' || getTodayWeekdayIdx()<0 || (!isAttendanceOpen() && !s.attendedToday)}
-                        className={`text-left transition-all ${(s.status==='crisis' || (!isAttendanceOpen() && !s.attendedToday)) ? 'cursor-not-allowed opacity-50' : 'hover:bg-amber-50 active:scale-95'} rounded-xl py-1 px-1 w-full relative`}
-                        title={!isAttendanceOpen() && !s.attendedToday ? "출석 마감" : s.attendedToday ? "출석 취소" : "출석 체크 (마음 날씨 선택)"}
+                        className={`text-left transition-all ${(s.status==='crisis' || (!isAttendanceOpen() && !s.attendedToday)) ? 'cursor-not-allowed opacity-50' : 'hover:bg-amber-50 active:scale-95'} rounded-xl py-1 px-1 w-full`}
+                        title={!isAttendanceOpen() && !s.attendedToday ? "출석 마감" : s.attendedToday ? "출석 취소" : "출석 체크"}
                       >
                         <div className="flex items-center gap-2 w-full min-w-0">
-                          {/* 출석 체크 및 날씨 아이콘 */}
-                          {s.attendedToday && (
-                            <span className="text-xl shrink-0" title="오늘의 마음 날씨">{s.todayMood ? s.todayMood : '✓'}</span>
-                          )}
+                          {/* 체크 아이콘 */}
+                          {s.attendedToday && <span className="text-green-500 text-xl shrink-0">✓</span>}
+                          {/* 이름 */}
                           <span className={`font-black text-2xl tracking-tight truncate ${s.exp>=20&&s.status!=='crisis'?'text-amber-700':s.attendedToday?'text-slate-800':'text-slate-400'}`}>
                             {s.name}
                           </span>
+                          {/* 모둠장 왕관 */}
                           {s.isLeader && <Crown className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0 mb-0.5"/>}
                         </div>
-                        
+                        {/* fix1: 출석/개근 뱃지를 별도 줄로 분리해 짤림 방지 */}
                         <div className="flex items-center gap-1.5 mt-1 ml-1">
                           <span className="text-xs font-bold text-slate-500 bg-white border border-slate-200 px-2 py-0.5 rounded-md whitespace-nowrap">{s.weeklyCount}/5</span>
                           <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md whitespace-nowrap">⭐{s.streak}</span>
@@ -921,94 +1079,59 @@ export default function App() {
           </div>
         )}
 
-        {/* ═══ PAGE 2: 성찰과 성장 (⭐ 빛나는 실수 포함) ═══ */}
+        {/* ═══ PAGE 2: 성찰 ═══ */}
         {activeTab==='reflection' && (
-          <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in">
-            
-            {/* 좌우 분할: [기존 위기 성찰] vs [새로운 빛나는 실수] */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              
-              {/* 왼쪽: 기존 성찰 센터 */}
-              <div className="bg-white p-10 md:p-12 rounded-[60px] shadow-xl border-4 border-emerald-100 text-center relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-64 h-64 bg-emerald-50 rounded-full blur-3xl opacity-60 pointer-events-none"/>
-                <BookOpen className="w-20 h-20 text-emerald-400 mx-auto mb-6 relative z-10"/>
-                <h2 className="text-3xl md:text-4xl font-black mb-4 text-emerald-900 relative z-10">성찰과 회복 센터 🌱</h2>
-                <p className="text-emerald-600 font-bold mb-8 text-base relative z-10">내 마음을 돌아보고 더 단단한 나로 성장해요.</p>
-                <div className="text-left space-y-8 bg-emerald-50/60 p-8 rounded-[40px] border-2 border-emerald-100 shadow-inner relative z-10">
-                  <div>
-                    <label className="block text-sm font-black mb-3 text-emerald-800 bg-emerald-100 inline-block px-4 py-1.5 rounded-full">1. 누가 성찰하나요?</label>
-                    <select value={refTarget} onChange={e=>setRefTarget(e.target.value)} className="w-full p-5 rounded-3xl border-2 border-white font-black bg-white text-lg outline-none focus:border-emerald-300 shadow-sm">
-                      <option value="">이름을 선택하세요 (위기 친구만)</option>
-                      {allStats.filter(s=>s.status==='crisis').map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                  </div>
-                  {refTarget && (
-                    <div className="bg-gradient-to-r from-pink-50 to-rose-50 border-2 border-pink-200 p-6 rounded-[24px] text-pink-800 shadow-sm animate-in fade-in">
-                      <h4 className="text-base font-black mb-3 flex items-center gap-2"><Heart className="w-5 h-5 fill-pink-400"/> 다시 일어서는 용기!</h4>
-                      <p className="text-sm font-bold bg-white p-4 rounded-2xl border border-pink-100 shadow-sm">넌 우리 반의 보물이야. 스스로 다독이고 다시 시작해봐!</p>
-                    </div>
-                  )}
-                  <div>
-                    <label className="block text-sm font-black mb-3 text-emerald-800 bg-emerald-100 inline-block px-4 py-1.5 rounded-full">2. 필요한 역량은?</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {SEL_OPTIONS.map(opt=>(
-                        <button key={opt.id} onClick={()=>setRefTag(opt.name)} className={`p-4 rounded-2xl border-2 font-black text-xs text-left transition-all shadow-sm ${refTag===opt.name?'bg-emerald-500 border-emerald-500 text-white':'bg-white border-white text-slate-500 hover:-translate-y-1'}`}>{opt.short}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-black mb-3 text-emerald-800 bg-emerald-100 inline-block px-4 py-1.5 rounded-full">3. 마음 다짐 적기</label>
-                    <textarea value={refText} onChange={e=>setRefText(e.target.value)} rows="5" className="w-full p-6 rounded-[24px] border-2 border-white font-black bg-white resize-none text-base outline-none focus:border-emerald-300 shadow-sm" placeholder="무엇을 느꼈고, 어떻게 다르게 행동할까요?"/>
-                  </div>
-                  <button onClick={submitReflection} className="w-full bg-emerald-600 text-white py-5 rounded-[24px] font-black text-xl shadow-xl hover:bg-emerald-700 active:scale-95 flex justify-center items-center gap-3">
-                    <Send className="w-6 h-6"/> 제출하고 위기 탈출
-                  </button>
+          <div className="max-w-4xl mx-auto animate-in zoom-in-95">
+            <div className="bg-white p-12 md:p-16 rounded-[60px] shadow-xl border-4 border-emerald-100 text-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-64 h-64 bg-emerald-50 rounded-full blur-3xl opacity-60 pointer-events-none"/>
+              <BookOpen className="w-24 h-24 text-emerald-400 mx-auto mb-8 relative z-10"/>
+              <h2 className="text-4xl md:text-5xl font-black mb-6 text-emerald-900 relative z-10">성찰과 회복 센터 🌱</h2>
+              <p className="text-emerald-600 font-bold mb-12 text-lg relative z-10">내 마음을 돌아보고 더 단단한 나로 성장하는 공간입니다.</p>
+              <div className="text-left space-y-10 bg-emerald-50/60 p-10 md:p-12 rounded-[40px] border-2 border-emerald-100 shadow-inner relative z-10">
+                <div>
+                  <label className="block text-base font-black mb-4 text-emerald-800 bg-emerald-100 inline-block px-5 py-2 rounded-full">1. 누가 성찰하나요?</label>
+                  <select value={refTarget} onChange={e=>setRefTarget(e.target.value)} className="w-full p-6 rounded-3xl border-2 border-white font-black bg-white text-xl outline-none focus:border-emerald-300 shadow-sm">
+                    <option value="">이름을 선택하세요 (위기 친구들만 보입니다)</option>
+                    {allStats.filter(s=>s.status==='crisis').map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
                 </div>
-              </div>
-
-              {/* 오른쪽: ⭐ V10.8 빛나는 실수 자랑 게시판 */}
-              <div className="bg-white p-10 md:p-12 rounded-[60px] shadow-xl border-4 border-yellow-100 text-center relative overflow-hidden flex flex-col">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-50 rounded-full blur-3xl opacity-60 pointer-events-none"/>
-                <Sparkles className="w-20 h-20 text-yellow-400 mx-auto mb-6 relative z-10"/>
-                <h2 className="text-3xl md:text-4xl font-black mb-4 text-yellow-900 relative z-10">빛나는 실수 게시판 ✨</h2>
-                <p className="text-yellow-600 font-bold mb-8 text-base relative z-10">실패는 성장의 증거! 멋진 실패를 칭찬해 주세요.</p>
-                
-                <div className="flex-1 overflow-y-auto custom-scrollbar pr-4 space-y-4 text-left relative z-10 max-h-[500px]">
-                  {safeArray(db.mistakes).length > 0 ? safeArray(db.mistakes).map(m => (
-                    <div key={m.id} className="bg-yellow-50 p-6 rounded-[30px] border border-yellow-200 shadow-sm relative">
-                      <p className="text-sm font-black text-yellow-700 mb-2">오늘 나의 실수는...</p>
-                      <p className="text-base font-bold text-slate-700 mb-4 bg-white p-4 rounded-2xl">"{m.text}"</p>
-                      <p className="text-sm font-black text-emerald-600 mb-2">이걸 통해 배운 점은!</p>
-                      <p className="text-base font-bold text-slate-700 mb-4 bg-white p-4 rounded-2xl">"{m.lesson}"</p>
-                      <div className="flex justify-between items-center mt-2">
-                        <span className="text-xs text-slate-400 font-bold">{m.date}</span>
-                        <button onClick={() => {
-                          const updated = safeArray(db.mistakes).map(x => x.id === m.id ? { ...x, likes: (x.likes||0)+1 } : x);
-                          sync({ mistakes: updated }); playSound('good');
-                        }} className="flex items-center gap-1.5 px-4 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded-full text-xs font-black transition-colors shadow-sm active:scale-95">
-                          👏 멋진 실패야! {m.likes || 0}
-                        </button>
-                      </div>
-                    </div>
-                  )) : (
-                    <p className="text-yellow-500/70 font-bold text-center py-20">아직 등록된 실수가 없습니다.<br/>오늘의 멋진 도전을 들려주세요!</p>
-                  )}
+                {refTarget && (
+                  <div className="bg-gradient-to-r from-pink-50 to-rose-50 border-2 border-pink-200 p-8 rounded-[30px] text-pink-800 shadow-sm animate-in fade-in">
+                    <h4 className="text-lg font-black mb-4 flex items-center gap-2"><Heart className="w-6 h-6 fill-pink-400"/> 다시 일어서는 용기를 응원합니다.</h4>
+                    {randomPraise ? (
+                      <p className="text-base font-bold leading-relaxed bg-white p-6 rounded-2xl border border-pink-100 shadow-sm">
+                        "예전에 친구가 <b>{SEL_OPTIONS.find(o=>o.name===randomPraise.tag)?.short}</b> 역량으로 널 칭찬했었어! 👉 <span className="text-pink-600">"{randomPraise.text}"</span>"
+                      </p>
+                    ) : (
+                      <p className="text-base font-bold bg-white p-6 rounded-2xl border border-pink-100 shadow-sm">"넌 우리 반의 소중한 보물이야. 천천히 스스로를 다독이고 다시 시작해봐요!"</p>
+                    )}
+                  </div>
+                )}
+                <div>
+                  <label className="block text-base font-black mb-4 text-emerald-800 bg-emerald-100 inline-block px-5 py-2 rounded-full">2. 어떤 역량이 필요할까요?</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {SEL_OPTIONS.map(opt=>(
+                      <button key={opt.id} onClick={()=>setRefTag(opt.name)} className={`p-5 rounded-2xl border-2 font-black text-sm text-left transition-all shadow-sm ${refTag===opt.name?'bg-emerald-500 border-emerald-500 text-white scale-105':'bg-white border-white text-slate-500 hover:-translate-y-1'}`}>{opt.name}</button>
+                    ))}
+                  </div>
                 </div>
-
-                <button onClick={() => setShowMistakeModal(true)} className="w-full bg-yellow-400 text-yellow-900 py-5 rounded-[24px] font-black text-xl shadow-xl hover:bg-yellow-500 active:scale-95 flex justify-center items-center gap-3 mt-6 relative z-10">
-                  <Plus className="w-6 h-6"/> 나의 실수 자랑하기
+                <div>
+                  <label className="block text-base font-black mb-4 text-emerald-800 bg-emerald-100 inline-block px-5 py-2 rounded-full">3. 마음의 다짐 적기</label>
+                  <textarea value={refText} onChange={e=>setRefText(e.target.value)} rows="7" className="w-full p-8 rounded-[30px] border-2 border-white font-black bg-white resize-none text-base outline-none focus:border-emerald-300 shadow-sm" placeholder={refTag?SEL_GUIDES[refTag]:"위에서 역량을 먼저 선택해 주세요."}/>
+                </div>
+                <button onClick={submitReflection} className="w-full bg-emerald-600 text-white py-6 rounded-[30px] font-black text-2xl shadow-xl hover:bg-emerald-700 active:scale-95 flex justify-center items-center gap-3 mt-4">
+                  <Send className="w-7 h-7"/> 다짐 제출하고 위기 탈출하기
                 </button>
               </div>
-
             </div>
           </div>
         )}
-// =========== [3부 코드의 끝] ===========
-{/* ═══ PAGE 3: 도움실 ═══ */}
+
+        {/* ═══ PAGE 3: 도움실 ═══ */}
         {activeTab==='helproom' && (
           <div className="bg-white rounded-[50px] shadow-sm border-4 border-indigo-50 flex flex-col lg:flex-row min-h-[800px] animate-in fade-in overflow-hidden">
 
-            {/* 도움실 사이드바 */}
+            {/* fix5: 도움실 사이드바에 '명단 및 직업' 탭 추가 */}
             <aside className="w-full lg:w-80 bg-indigo-50/50 p-10 border-r-2 border-white flex flex-col gap-5 shrink-0">
               <div className="text-center mb-8">
                 <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border-4 border-indigo-100">
@@ -1119,7 +1242,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* 3-3 명단 및 직업 */}
+              {/* fix5: 3-3 명단 및 직업 (도움실로 이전) */}
               {helpSubTab==='roster' && (
                 <div className="space-y-8 animate-in fade-in">
                   <h3 className="text-3xl font-black text-slate-800 border-l-8 border-blue-500 pl-6 mb-6">👥 명단 및 직업 관리</h3>
@@ -1299,6 +1422,7 @@ export default function App() {
                 <h3 className="text-3xl font-black text-white">관리자 센터</h3>
                 <p className="text-slate-400 text-xs font-bold mt-2 tracking-widest">MASTER MODE</p>
               </div>
+              {/* fix5: 관리실에서 '명단 및 직업' 탭 제거 */}
               {[
                 { key:'mission',    icon:<Zap className="w-6 h-6"/>,        label:'결재 및 퀘스트', danger:false },
                 { key:'shopAdmin',  icon:<Store className="w-6 h-6"/>,      label:'상점/펀딩 관리',  danger:false },
@@ -1490,7 +1614,8 @@ export default function App() {
                       {selectedReportStudent ? (() => {
                         const s=allStats.find(x=>x.id==selectedReportStudent);
                         if(!s) return <div className="h-full flex flex-col items-center justify-center text-slate-400 font-black"><AlertTriangle className="w-16 h-16 mb-4 opacity-30 text-red-500"/>삭제된 학생 데이터입니다.</div>;
-                        const counts={}; SEL_OPTIONS.forEach(o=>counts[o.name]=0);
+                        const counts={};
+                        SEL_OPTIONS.forEach(o=>counts[o.name]=0);
                         safeArray(db.approvedPraises).forEach(p=>{ if(p.toId==s.id&&counts[p.tag]!==undefined) counts[p.tag]++; });
                         const max=Math.max(...Object.values(counts),5);
                         return (
@@ -1658,7 +1783,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* 4-6 리셋/마감 (⭐ 퀘스트 및 날씨 기록 초기화 연동) */}
+              {/* 4-6 리셋/마감 */}
               {adminSubTab==='reset' && (
                 <div className="animate-in fade-in space-y-8">
                   <h3 className="text-3xl font-black text-slate-800 border-l-8 border-red-500 pl-6 mb-8">데이터 초기화 및 1학기 마감</h3>
@@ -1685,66 +1810,7 @@ export default function App() {
 
       {/* ═══ 모달 영역 ═══ */}
 
-      {/* ⭐ V10.8 신규: 마음 날씨 출석 모달 */}
-      {moodModalStudent && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-[5005] p-4">
-          <div className="bg-white p-10 rounded-[50px] w-full max-w-3xl shadow-2xl animate-in zoom-in-95 border-4 border-emerald-100 text-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-50 rounded-full blur-3xl opacity-50 pointer-events-none"/>
-            <h3 className="text-4xl font-black text-emerald-800 mb-2 relative z-10 flex items-center justify-center gap-3">
-              <Sun className="w-10 h-10 text-emerald-500"/> 오늘의 마음 날씨는 어떤가요?
-            </h3>
-            <p className="text-emerald-600 font-bold mb-10 relative z-10 text-lg">날씨를 선택하면 출석이 완료되고 코인이 지급됩니다.</p>
-            
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 relative z-10">
-              {MOOD_OPTIONS.map(m => (
-                <button 
-                  key={m.name} 
-                  onClick={() => toggleAttendance(moodModalStudent, m.emoji)}
-                  className={`flex flex-col items-center justify-center p-6 rounded-[30px] border-4 transition-all shadow-sm hover:scale-105 hover:-translate-y-2 active:scale-95 bg-white ${m.color} hover:shadow-xl`}
-                >
-                  <div className="text-5xl mb-4 drop-shadow-md">{m.emoji}</div>
-                  <div className="font-black text-xl">{m.name}</div>
-                  <div className="text-[11px] font-bold mt-3 opacity-80 leading-snug">{m.message}</div>
-                </button>
-              ))}
-            </div>
-            
-            <button onClick={() => setMoodModalStudent(null)} className="mt-10 px-10 py-4 bg-slate-100 text-slate-500 rounded-full font-black text-lg hover:bg-slate-200 transition-colors relative z-10">
-              다음에 선택하기 (취소)
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ⭐ V10.8 신규: 빛나는 실수 자랑 모달 */}
-      {showMistakeModal && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-[5006] p-4">
-          <div className="bg-gradient-to-b from-yellow-50 to-white p-12 rounded-[50px] w-full max-w-xl shadow-2xl animate-in zoom-in-95 border-4 border-yellow-300">
-            <h3 className="text-4xl font-black text-yellow-800 mb-3 flex items-center justify-center gap-3">
-              <Sparkles className="w-10 h-10 text-yellow-500"/> 나의 빛나는 실수 자랑하기
-            </h3>
-            <p className="text-yellow-600 font-bold mb-8 text-center text-sm bg-white py-2 px-4 rounded-full shadow-sm border border-yellow-200">
-              실패는 성공을 위한 연습일 뿐! 당당하게 자랑해봐요.
-            </p>
-            <div className="space-y-6 mb-8">
-              <div>
-                <label className="block text-sm font-black mb-2 text-yellow-800 ml-2">1. 오늘 어떤 실수를 했나요?</label>
-                <textarea value={mistakeText} onChange={e=>setMistakeText(e.target.value)} rows="3" placeholder="수학 시간에 문제를 틀렸어..." className="w-full p-5 rounded-[24px] border-2 border-yellow-200 font-bold text-lg outline-none focus:border-yellow-400 shadow-inner resize-none"/>
-              </div>
-              <div>
-                <label className="block text-sm font-black mb-2 text-emerald-700 ml-2">2. 이 실수를 통해 무엇을 배웠나요?</label>
-                <textarea value={mistakeLesson} onChange={e=>setMistakeLesson(e.target.value)} rows="3" placeholder="하지만 포기하지 않고 다시 풀었더니 이해가 됐어!" className="w-full p-5 rounded-[24px] border-2 border-emerald-200 font-bold text-lg outline-none focus:border-emerald-400 shadow-inner resize-none"/>
-              </div>
-            </div>
-            <div className="flex gap-4">
-              <button onClick={() => setShowMistakeModal(false)} className="flex-1 py-5 bg-slate-100 text-slate-500 rounded-[24px] font-black text-xl hover:bg-slate-200 transition-colors">취소</button>
-              <button onClick={submitMistake} className="flex-1 py-5 bg-yellow-400 text-yellow-900 rounded-[24px] font-black text-xl shadow-xl hover:bg-yellow-500 active:scale-95 transition-transform">당당하게 올리기</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 온기 우체통 (⭐ V10.8: 발신자 선택 추가) */}
+      {/* 온기 우체통 */}
       {showPraiseModal && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-[5001] p-4">
           <div className="bg-white p-12 rounded-[50px] w-full max-w-xl shadow-2xl animate-in zoom-in-95 border-4 border-pink-100 relative overflow-hidden">
@@ -1755,24 +1821,16 @@ export default function App() {
               <p className="text-xs font-bold text-pink-500 mt-2">이 테마의 역량으로 칭찬을 보내면 보너스 코인(+15🪙)이 지급됩니다!</p>
             </div>
             <div className="space-y-6 mb-10 relative z-10">
-              <div className="flex gap-4">
-                {/* 발신자 선택 추가 */}
-                <select value={praiseFrom} onChange={e=>setPraiseFrom(e.target.value)} className="flex-1 p-5 rounded-3xl bg-pink-50 border border-pink-200 font-black text-lg outline-none focus:border-pink-400 shadow-sm text-pink-900">
-                  <option value="">누가 보내나요?</option>
-                  <option value="me">익명 (비밀 천사 👼)</option>
-                  {activeStudents.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-                <select value={praiseTarget} onChange={e=>setPraiseTarget(e.target.value)} className="flex-1 p-5 rounded-3xl bg-white border-2 border-slate-200 font-black text-lg outline-none focus:border-pink-400 shadow-sm">
-                  <option value="">누구에게 보낼까요?</option>
-                  <option value="me" className="text-pink-600">🙋 나 자신에게</option>
-                  {activeStudents.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-              <select value={praiseTag} onChange={e=>setPraiseTag(e.target.value)} className="w-full p-5 rounded-3xl bg-white border-2 border-slate-200 font-black text-xl outline-none focus:border-pink-400 shadow-sm">
+              <select value={praiseTarget} onChange={e=>setPraiseTarget(e.target.value)} className="w-full p-6 rounded-3xl bg-white border-2 border-slate-200 font-black text-xl outline-none focus:border-pink-400 shadow-sm">
+                <option value="">누구를 칭찬할까요?</option>
+                <option value="me" className="text-pink-600">🙋 나 자신 (스스로 대견할 때!)</option>
+                {activeStudents.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <select value={praiseTag} onChange={e=>setPraiseTag(e.target.value)} className="w-full p-6 rounded-3xl bg-white border-2 border-slate-200 font-black text-xl outline-none focus:border-pink-400 shadow-sm">
                 <option value="">어떤 역량인가요?</option>
                 {SEL_OPTIONS.map(opt=><option key={opt.name} value={opt.name}>{opt.name}</option>)}
               </select>
-              <textarea value={praiseText} onChange={e=>setPraiseText(e.target.value)} rows="4" placeholder={praiseTag?PRAISE_GUIDES[praiseTag]:"위에서 역량을 먼저 선택해 주세요! 💌"} className="w-full p-6 rounded-[30px] bg-pink-50/50 border-2 border-pink-200 font-black text-lg outline-none focus:border-pink-400 text-pink-900 shadow-inner resize-none placeholder:text-pink-300"/>
+              <textarea value={praiseText} onChange={e=>setPraiseText(e.target.value)} rows="5" placeholder={praiseTag?PRAISE_GUIDES[praiseTag]:"위에서 역량을 먼저 선택해 주세요! 💌"} className="w-full p-6 rounded-[30px] bg-pink-50/50 border-2 border-pink-200 font-black text-lg outline-none focus:border-pink-400 text-pink-900 shadow-inner resize-none placeholder:text-pink-300"/>
             </div>
             <div className="flex gap-4 relative z-10">
               <button onClick={()=>setShowPraiseModal(false)} className="flex-1 py-6 bg-slate-100 text-slate-500 rounded-[30px] font-black text-xl hover:bg-slate-200 transition-colors">취소</button>
@@ -1850,7 +1908,7 @@ export default function App() {
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t-4 border-amber-100 px-6 py-4 flex justify-around items-center z-[4000] shadow-[0_-15px_50px_rgba(0,0,0,0.08)] pb-8 print:hidden">
         {[
           { id:'dashboard',  icon:<Target className="w-8 h-8 md:w-10 md:h-10"/>,   label:db.settings?.menuNames?.[0]||"현황판",      color:"text-blue-500" },
-          { id:'reflection', icon:<BookOpen className="w-8 h-8 md:w-10 md:h-10"/>,  label:db.settings?.menuNames?.[1]||"성찰과 성장", color:"text-emerald-500" }, // ⭐ 수정됨
+          { id:'reflection', icon:<BookOpen className="w-8 h-8 md:w-10 md:h-10"/>,  label:db.settings?.menuNames?.[1]||"성찰과 회복", color:"text-emerald-500" },
           { id:'helproom',   icon:<Users className="w-8 h-8 md:w-10 md:h-10"/>,     label:db.settings?.menuNames?.[2]||"도움실",      color:"text-indigo-500" },
           { id:'admin',      icon:<Settings className="w-8 h-8 md:w-10 md:h-10"/>,  label:db.settings?.menuNames?.[3]||"관리실",      color:"text-slate-600" }
         ].map(item=>(
@@ -1901,7 +1959,7 @@ export default function App() {
 }
 
 // ══════════════════════════════════════════════════════════════
-// ⏱ 타이머 위젯 컴포넌트
+// ⏱ 타이머 위젯
 // ══════════════════════════════════════════════════════════════
 function TimerWidget({ status, display, timer, warningLevel, breakInput, setBreakInput, defaultBreakMin, onStopwatch, onCountdown, onPause, onResume, onReset, onBreak, lockEditing, unlockEditing }) {
   const isBreak  = status==='break';
