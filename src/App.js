@@ -457,6 +457,21 @@ export default function App() {
     return { classReputation:r, evolutionLevel:level, progressPercent:pct };
   }, [allStats, db.donations, db.settings, db.manualRepOffset]);
 
+  // ⭐ V10.8에서 압축하다가 실수로 누락되었던 필수 데이터 복구!
+  const sortedDashboardStats = useMemo(() => {
+    if (db.settings?.showCumulativeStats) return [...allStats].sort((a,b)=>a.id-b.id);
+    const order={crisis:0,pending:1,normal:2};
+    return [...allStats].sort((a,b)=>order[a.status]!==order[b.status]?order[a.status]-order[b.status]:a.id-b.id);
+  },[allStats,db.settings?.showCumulativeStats]);
+
+  const groupedByGroupStats = useMemo(()=>[...allStats].sort((a,b)=>a.group-b.group||a.id-b.id),[allStats]);
+  const topExp    = useMemo(()=>[...allStats].sort((a,b)=>b.atExp-a.atExp).filter(s=>s.atExp>0).slice(0,5),[allStats]);
+  const topDonate = useMemo(()=>[...allStats].sort((a,b)=>b.atDonate-a.atDonate).filter(s=>s.atDonate>0).slice(0,5),[allStats]);
+  const topFund   = useMemo(()=>[...allStats].sort((a,b)=>b.atFund-a.atFund).filter(s=>s.atFund>0).slice(0,5),[allStats]);
+  const isShopOpen= useMemo(()=>db.settings?.forceShopOpen||new Date().getDay()===4,[db.settings?.forceShopOpen]);
+  const selRefPraises = useMemo(()=>!refTarget?[]:safeArray(db.approvedPraises).filter(p=>p.toId==refTarget),[refTarget,db.approvedPraises]);
+  const randomPraise  = selRefPraises.length ? selRefPraises[Math.floor(Math.random()*selRefPraises.length)] : null;
+
   // ══════════════════════════════════════════════════════════
   // 🎬 핸들러 (⭐ V10.8 신규 기능 포함)
   // ══════════════════════════════════════════════════════════
@@ -500,22 +515,25 @@ export default function App() {
 
   // ── 칭찬/답장/공감 (⭐ 감사의 씨앗) ───────────────────────
   const submitPraise = () => {
-    if (!praiseTarget || !praiseFrom || !praiseTag || !praiseText.trim()) return alert("모든 항목을 채워주세요.");
-    const isTheme = praiseTag === db.settings?.weeklyTheme;
-    const coins = isTheme ? (db.settings.pointConfig.praiseBasic + db.settings.pointConfig.praiseBonus) : db.settings.pointConfig.praiseBasic;
-    const newP = { id:Date.now(), toId:toInt(praiseTarget), fromId:toInt(praiseFrom), tag:praiseTag, text:praiseText.trim(), date:formatDate(), coins, thankCount:0, replies:[] };
-    sync({ 
-      approvedPraises: [...safeArray(db.approvedPraises), newP],
-      bonusCoins: { ...db.bonusCoins, [praiseTarget]: (db.bonusCoins[praiseTarget]||0) + coins }
-    });
-    alert("칭찬의 씨앗을 심었습니다! 묘목이 무럭무럭 자랄 거예요.");
-    setShowPraiseModal(false); setPraiseTarget(""); setPraiseFrom(""); setPraiseText("");
-  };
-
-  const handleLikePraise = (pId) => {
-    const updated = safeArray(db.approvedPraises).map(p => p.id === pId ? { ...p, thankCount: (p.thankCount||0) + 1 } : p);
-    sync({ approvedPraises: updated });
+    if (!praiseTarget || !praiseFrom || !praiseTag || !praiseText.trim()) { alert("대상 역량 내용을 모두 입력해 주세요."); return; }
+    const isTheme  = praiseTag===db.settings?.weeklyTheme;
+    const basic    = db.settings?.pointConfig?.praiseBasic||10;
+    const bonus    = db.settings?.pointConfig?.praiseBonus||15;
+    const coins    = isTheme ? basic+bonus : basic;
+    
+    // ⭐ 'me'라는 글자가 들어오면 숫자로 바꾸지 않고 그대로 저장하도록 수정
+    const finalToId = praiseTarget === 'me' ? 'me' : toInt(praiseTarget);
+    const finalFromId = praiseFrom === 'me' ? 'me' : toInt(praiseFrom);
+    
+    const newP = { id:Date.now(), toId:finalToId, fromId:finalFromId, tag:praiseTag, text:praiseText.trim(), date:formatDate(), coins, thankCount:0, replies:[] };
+    let updates = { approvedPraises:[...safeArray(db.approvedPraises),newP] };
+    
+    if (finalToId !== 'me') updates.bonusCoins = { ...db.bonusCoins, [finalToId]:(db.bonusCoins?.[finalToId]||0)+coins };
+    
+    sync(updates);
     playSound('good');
+    alert(`온기 우체통 전달 완료! 🌸${isTheme?` (테마 보너스 +${bonus}🪙 포함)`:''}`);
+    setShowPraiseModal(false); setPraiseTarget(""); setPraiseFrom(""); setPraiseTag(""); setPraiseText("");
   };
 
   // ── 빛나는 실수 (⭐ 성찰의 재해석) ───────────────────────
