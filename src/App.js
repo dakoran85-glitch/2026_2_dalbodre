@@ -398,10 +398,21 @@ export default function App() {
     return () => clearInterval(iv);
   }, [db.timer]);
 
-  // ── SYNC ──────────────────────────────────────────────────
+  // ── SYNC (빈 객체 및 출석 취소 버그 완벽 패치) ──────────────────
   const sync = async (updates) => {
     setDb(prev => { const next={...prev,...updates}; dbRef.current=next; return next; });
-    try { await fetch(`${DATABASE_URL}${DB_PATH}.json`,{method:'PATCH',body:JSON.stringify(updates)}); } catch(_) {}
+    
+    const dbUpdates = {};
+    for (const key in updates) {
+      if (updates[key] !== null && typeof updates[key] === 'object' && Object.keys(updates[key]).length === 0 && !Array.isArray(updates[key])) {
+        dbUpdates[key] = null; 
+      } else {
+        dbUpdates[key] = updates[key];
+      }
+    }
+    
+    const finalJson = JSON.stringify(dbUpdates, (k, v) => v === undefined ? null : v);
+    try { await fetch(`${DATABASE_URL}${DB_PATH}.json`,{method:'PATCH',body:finalJson}); } catch(_) {}
   };
 
   // ══════════════════════════════════════════════════════════
