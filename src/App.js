@@ -18,8 +18,8 @@ const AUTH_KEY = "dalbodre_auth_v10";
 const ATTENDANCE_DEADLINE = { hour: 8, minute: 30 };
 const DEFAULT_BREAK_MS = 10 * 60 * 1000;
 // 출석 1회당 코인 & 학급 명성 반영량
-const ATTEND_COIN_PER_DAY = 2;   // 출석 1회 → 개인 코인 +2
-const ATTEND_REP_PER_DAY  = 5;   // 출석 1회 → 학급 명성 +5
+const ATTEND_COIN_PER_DAY = 1;   // 출석 1회 → 개인 코인 +1
+const ATTEND_REP_PER_DAY  = 1;   // 출석 1회 → 학급 명성 +1
 
 // ══════════════════════════════════════════════════════════════
 // 🧰 UTILS
@@ -440,19 +440,19 @@ export default function App() {
   const { classReputation, evolutionLevel, progressPercent } = useMemo(() => {
     const target      = db.settings?.targetScore || 5000;
     const penaltyUnit = db.settings?.pointConfig?.penalty || 20;
-    // fix2: 출석 명성 반영 (attendCoinLog 키 개수 × ATTEND_REP_PER_DAY)
-    const attendRepTotal = Object.keys(db.attendCoinLog || {}).length * ATTEND_REP_PER_DAY;
+    
+    // ⭐ 점수 중복 상승 버그 수정 (attendRepTotal 삭제)
     const raw = allStats.reduce((sum,s)=>
       sum + (s.exp*10) + (db.bonusCoins?.[s.id]||0) - ((db.penaltyCount[s.id]||0)*penaltyUnit), 0)
       + safeArray(db.donations).reduce((sum,d)=>sum+(d.amount||0),0)
-      + (db.manualRepOffset||0)
-      + attendRepTotal;
+      + (db.manualRepOffset||0);
+      
     let r = Math.max(0, Math.min(raw, target));
     const step = Math.max(1, target/5);
     const level= Math.min(Math.floor(r/step), 5);
     const pct  = level>=5 ? 100 : ((r%step)/step)*100;
     return { classReputation:r, evolutionLevel:level, progressPercent:pct };
-  }, [allStats, db.penaltyCount, db.bonusCoins, db.donations, db.settings, db.manualRepOffset, db.attendCoinLog]);
+  }, [allStats, db.penaltyCount, db.bonusCoins, db.donations, db.settings, db.manualRepOffset]);
 
   const sortedDashboardStats = useMemo(() => {
     if (db.settings?.showCumulativeStats) return [...allStats].sort((a,b)=>a.id-b.id);
@@ -753,65 +753,64 @@ export default function App() {
     <div className="min-h-screen bg-amber-50/50 pb-32 font-sans text-slate-800">
 
       {/* ═══ HEADER ═══ */}
-      <header className="bg-[#FFF5E1] px-6 pt-6 pb-8 md:px-12 md:pt-10 md:pb-12 relative overflow-hidden border-b-4 border-white flex flex-col gap-6">
+      <header className="bg-[#FFF5E1] px-6 pt-6 pb-8 md:px-12 md:pt-10 md:pb-12 relative overflow-hidden border-b-4 border-white flex flex-col gap-8">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white rounded-full blur-[120px] opacity-70 pointer-events-none"/>
 
-        {/* 타이틀 행 */}
+        {/* 타이틀 행 (목표 달성 배지 완전 삭제 완료) */}
         <div className="max-w-[1400px] w-full mx-auto relative z-10 flex items-center justify-between">
-          <h1 className="text-amber-800 font-black text-xl flex items-center gap-2">
-            <Sparkles className="text-amber-500 w-6 h-6"/> {db.settings?.title}
+          <h1 className="text-amber-800 font-black text-2xl flex items-center gap-3">
+            <Sparkles className="text-amber-500 w-8 h-8"/> {db.settings?.title}
           </h1>
-          {/* fix4: 타이머 위젯 위의 "목표 달성까지 5000p" 제거 → 타이틀 행 오른쪽에만 작게 표시 */}
-          <div className="bg-white/60 px-4 py-1.5 rounded-full border-2 border-white shadow-sm backdrop-blur-sm flex items-center gap-2">
-            <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">목표 달성까지</span>
-            <span className="text-base font-black text-amber-900">{Math.max(0,(db.settings?.targetScore||5000)-classReputation)}p</span>
-          </div>
         </div>
 
-        {/* fix3: 점수(좌) + 세계수(우측에 붙여 오른쪽 정렬) + 타이머(우) */}
-        <div className="max-w-[1400px] w-full mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-end">
+        {/* 5:5 2분할 레이아웃 (좌: 점수+세계수+게이지 / 우: 타이머) */}
+        <div className="max-w-[1400px] w-full mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
-          {/* 좌측: 점수 + 게이지 */}
-          <div className="lg:col-span-5 flex flex-col gap-6">
-            {/* 점수 */}
-            <div className="flex items-baseline gap-3">
-              <span className="text-[110px] md:text-[140px] font-black text-[#6B4423] drop-shadow-md tracking-tighter leading-[0.85]">
-                {classReputation}
-              </span>
-              <span className="text-5xl md:text-6xl font-black text-amber-500">p</span>
+          {/* 좌측: 점수 + 세계수 + 게이지 */}
+          <div className="flex flex-col gap-8 w-full justify-center">
+            
+            {/* 1층: 점수 & 세계수 (자연스럽게 점수 옆으로 이동) */}
+            <div className="flex flex-row items-center gap-8 pl-2">
+              <div className="flex items-baseline">
+                <span className="text-[130px] md:text-[160px] font-black text-[#6B4423] drop-shadow-md tracking-tighter leading-none">
+                  {classReputation}
+                </span>
+                <span className="text-5xl md:text-6xl font-black text-amber-500 ml-2">p</span>
+              </div>
+              
+              {/* 세계수 애니메이션 */}
+              <div className="drop-shadow-2xl relative pb-4">
+                <div className="absolute inset-0 bg-yellow-200 blur-3xl opacity-30 rounded-full"/>
+                {renderEvolution(evolutionLevel)}
+              </div>
             </div>
-            {/* 게이지 */}
-            <div className="w-full space-y-3">
-              <div className="w-full h-12 bg-white/70 rounded-full overflow-hidden shadow-inner border-4 border-amber-200 relative">
-                <div className={`h-full transition-all duration-1000 ${evolutionLevel>=5?'bg-gradient-to-r from-yellow-300 via-amber-400 to-red-500 animate-pulse':'bg-gradient-to-r from-yellow-300 to-amber-500'}`} style={{ width:`${progressPercent}%` }}/>
-                <div className="absolute inset-0 flex items-center justify-center font-black text-amber-900 text-base md:text-lg tracking-widest drop-shadow-md">
-                  {EVOLUTION_TITLES[evolutionLevel]} <span className="text-xs ml-2 opacity-70">({evolutionLevel}/5)</span>
+
+            {/* 2층: 게이지 & 기부 마키 */}
+            <div className="w-full space-y-4">
+              <div className="w-full h-14 bg-white/70 rounded-full overflow-hidden shadow-inner border-4 border-amber-200 relative">
+                <div className={`h-full transition-all duration-1000 ${evolutionLevel>=5?'bg-gradient-to-r from-yellow-300 via-amber-400 to-red-500 animate-pulse':'bg-gradient-to-r from-yellow-300 to-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.6)]'}`} style={{ width:`${progressPercent}%` }}/>
+                <div className="absolute inset-0 flex items-center justify-center font-black text-amber-900 text-lg tracking-widest drop-shadow-md">
+                  {EVOLUTION_TITLES[evolutionLevel]} <span className="text-sm ml-2 opacity-70">({evolutionLevel}/5)</span>
                 </div>
               </div>
+              
               <div className="flex items-center gap-2">
-                <div className="flex-1 overflow-hidden whitespace-nowrap text-xs font-bold text-amber-700 bg-white/60 px-4 py-2 rounded-full border border-amber-200 flex items-center shadow-sm">
-                  <Sparkles className="w-4 h-4 text-amber-500 mr-1.5 shrink-0"/>
-                  <span className="animate-[shimmer_25s_linear_infinite] inline-block w-full">
-                    기부 전당: {safeArray(db.donations).map(d=>`${d.name}(${d.amount}p)`).join(' 🌸 ')||'따뜻한 마음을 기다려요!'}
-                  </span>
+                {/* 별 아이콘이 글자와 함께 스크롤되도록 수정 (겹침 원천 차단) */}
+                <div className="flex-1 overflow-hidden text-xs font-bold text-amber-700 bg-white/60 px-5 py-3 rounded-full border border-amber-200 shadow-sm relative">
+                  <div className="animate-[shimmer_25s_linear_infinite] whitespace-nowrap inline-flex items-center w-max">
+                    <Sparkles className="w-4 h-4 text-amber-500 mr-2 shrink-0"/>
+                    기부 명예의 전당: {safeArray(db.donations).map(d=>`${d.name}(${d.amount}p)`).join(' 🌸 ')||'따뜻한 마음을 기다려요!'}
+                  </div>
                 </div>
-                <span className="text-xs font-black text-orange-600 bg-white px-4 py-2 rounded-full shadow-sm border border-orange-200 shrink-0">
-                  목표 {db.settings?.targetScore||5000}p
+                <span className="text-xs font-black text-orange-600 bg-white px-5 py-3 rounded-full shadow-sm border border-orange-200 shrink-0">
+                  최종 목표: {db.settings?.targetScore||5000}p
                 </span>
               </div>
             </div>
           </div>
 
-          {/* fix3: 세계수 — 점수 오른쪽에 자연스럽게 배치 */}
-          <div className="lg:col-span-2 flex items-end justify-center lg:justify-start pb-2">
-            <div className="drop-shadow-2xl relative">
-              <div className="absolute inset-0 bg-yellow-200 blur-3xl opacity-30 rounded-full"/>
-              {renderEvolution(evolutionLevel)}
-            </div>
-          </div>
-
-          {/* 우측: 타이머 위젯 (fix4: 타이머 자체는 변경 없음, 헤더의 목표p 배지만 제거) */}
-          <div className="lg:col-span-5 h-full">
+          {/* 우측: 타이머 위젯 (공간을 50%나 차지하여 스케치처럼 거대해짐) */}
+          <div className="w-full h-full">
             <TimerWidget
               status={timerStatus} display={timerDisplay} timer={db.timer} warningLevel={breakWarningLevel}
               breakInput={breakInput} setBreakInput={setBreakInput}
