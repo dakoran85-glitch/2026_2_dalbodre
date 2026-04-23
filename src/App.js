@@ -415,6 +415,14 @@ export default function App() {
     try { await fetch(`${DATABASE_URL}${DB_PATH}.json`,{method:'PATCH',body:finalJson}); } catch(_) {}
   };
 
+  // ⭐ V10.9: 점수 변동 기록(로그) 남기기 함수
+  const logPoint = (sid, amount, reason) => {
+    const newLog = { id: Date.now(), sid, name: allStats.find(s=>s.id===sid)?.name, amount, reason, date: formatDate() };
+    sync({ pointLogs: [newLog, ...safeArray(db.pointLogs)].slice(0, 50) }); // 최근 50개만 보관
+  };
+
+  useEffect(() => {
+
   // ══════════════════════════════════════════════════════════
   // 🧮 파생 상태
   // ══════════════════════════════════════════════════════════
@@ -584,18 +592,50 @@ export default function App() {
 
   // ── 칭찬 ──────────────────────────────────────────────────
   const submitPraise = () => {
-    if (!praiseTarget||!praiseTag||!praiseText.trim()) { alert("대상, 역량, 내용을 모두 입력해 주세요."); return; }
-    const isTheme  = praiseTag===db.settings?.weeklyTheme;
-    const basic    = db.settings?.pointConfig?.praiseBasic||10;
-    const bonus    = db.settings?.pointConfig?.praiseBonus||15;
-    const coins    = isTheme ? basic+bonus : basic;
-    const newP     = { id:Date.now(), toId:praiseTarget==='me'?'me':toInt(praiseTarget), tag:praiseTag, text:praiseText.trim(), date:formatDate(), coins };
-    let updates    = { approvedPraises:[...safeArray(db.approvedPraises),newP] };
-    if (praiseTarget!=='me') updates.bonusCoins = { ...db.bonusCoins, [praiseTarget]:(db.bonusCoins?.[praiseTarget]||0)+coins };
-    sync(updates);
-    playSound('good');
-    alert(`온기 우체통 전달 완료! 🌸${isTheme?` (테마 보너스 +${bonus}🪙 포함)`:''}`);
-    setShowPraiseModal(false); setPraiseTarget(""); setPraiseTag(""); setPraiseText("");
+    if (!praiseTarget || !praiseFrom || !praiseTag || !praiseText.trim()) { alert("항목을 모두 입력해 주세요."); return; }
+    const finalToId = praiseTarget === 'me' ? 'me' : toInt(praiseTarget);
+    const finalFromId = praiseFrom === 'me' ? 'me' : toInt(praiseFrom);
+    
+    // ⭐ 즉시 지급되지 않고 대기열(pendingPraises)로 이동
+    const newP = { 
+      id: Date.now(), toId: finalToId, fromId: finalFromId, 
+      tag: praiseTag, text: praiseText.trim(), date: formatDate(), status: 'pending' 
+    };
+    
+    sync({ pendingPraises: [...safeArray(db.pendingPraises), newP] });
+    playSound('good'); 
+    alert("감찰사의 승인 후 칭찬이 전달되고 코인이 지급됩니다! 🕊️");
+    setShowPraiseModal(false); setPraiseTarget(""); setPraiseFrom(""); setPraiseTag(""); setPraiseText("");
+  };
+
+  // ⭐ V10.9: 감찰사 칭찬 승인/반려 함수
+  const approvePraise = (pId, isApprove) => {
+    const p = safeArray(db.pendingPraises).find(x => x.id === pId);
+    if (!p) return;
+    
+    if (isApprove) {
+      const isTheme = p.tag === db.settings?.weeklyTheme;
+      const basic = db.settings?.pointConfig?.praiseBasic||10;
+      const bonus = db.settings?.pointConfig?.praiseBonus||15;
+      const coins = isTheme ? (basic + bonus) : basic;
+      
+      let updates = {
+        approvedPraises: [...safeArray(db.approvedPraises), { ...p, status: 'approved', coins, thankCount: 0 }],
+        pendingPraises: safeArray(db.pendingPraises).filter(x => x.id !== pId)
+      };
+      
+      if (p.toId !== 'me') {
+        updates.bonusCoins = { ...db.bonusCoins, [p.toId]: (db.bonusCoins?.[p.toId]||0) + coins };
+        logPoint(p.toId, coins, `칭찬 수신(${SEL_OPTIONS.find(o=>o.name===p.tag)?.short || p.tag})`); // 점수 로그 기록
+      }
+      sync(updates);
+      playSound('jackpot');
+      alert("칭찬이 승인되어 피드에 등록되었습니다!");
+    } else {
+      sync({ pendingPraises: safeArray(db.pendingPraises).filter(x => x.id !== pId) });
+      playSound('bad');
+      alert("칭찬이 반려되었습니다.");
+    }
   };
 
   // ── 성찰 ──────────────────────────────────────────────────
@@ -1170,39 +1210,61 @@ export default function App() {
               </div>
 
               {/* 3-1 감찰사 본부 */}
-              {helpSubTab==='inspector' && (
+             {helpSubTab==='inspector' && (
                 <div className="space-y-8 animate-in fade-in">
-                  <h3 className="text-3xl font-black text-slate-800 mb-6 flex items-center gap-3 bg-indigo-100 inline-block px-6 py-3 rounded-full border border-indigo-200"><Briefcase className="text-indigo-600 w-8 h-8"/> 감찰사 자치 본부</h3>
-                  <div className="bg-white border-2 border-indigo-50 rounded-[40px] overflow-hidden shadow-sm">
-                    <table className="w-full text-left">
-                      <thead className="bg-indigo-50/50 text-sm font-black text-indigo-400 uppercase tracking-widest border-b border-indigo-100">
-                        <tr><th className="p-6">학생 이름</th><th className="p-6">모둠 배치</th><th className="p-6 text-center">모둠장 여부</th><th className="p-6">1인 1역 직업 배정</th></tr>
-                      </thead>
-                      <tbody className="divide-y divide-indigo-50/50">
-                        {allStats.map(s=>(
-                          <tr key={s.id} className="hover:bg-indigo-50/20 transition-colors">
-                            <td className="p-6 font-black text-xl text-slate-700">{s.name}</td>
-                            <td className="p-6">
-                              <select value={s.group} onChange={e=>handleStudentFieldChange(s.id,'group',toInt(e.target.value))} className="p-4 rounded-xl bg-slate-50 border border-slate-200 font-bold outline-none shadow-sm w-full max-w-[150px] text-base">
-                                {[1,2,3,4,5,6].map(g=><option key={g} value={g}>{g}모둠</option>)}
-                              </select>
-                            </td>
-                            <td className="p-6 text-center">
-                              <button onClick={()=>handleStudentFieldChange(s.id,'isLeader',!s.isLeader)} className={`px-5 py-3 rounded-xl font-black text-sm shadow-sm transition-colors ${s.isLeader?'bg-amber-400 text-white':'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>
-                                {s.isLeader?<><Crown className="w-5 h-5 inline fill-white mr-1"/> 모둠장</>:'일반 모둠원'}
-                              </button>
-                            </td>
-                            <td className="p-6">
-                              <select value={s.role} onChange={e=>handleStudentFieldChange(s.id,'role',e.target.value)} className="w-full p-4 rounded-xl bg-slate-50 border border-slate-200 font-bold outline-none shadow-sm text-base">
-                                <option value="">직업 없음</option>
-                                {safeArray(db.rolesList).map(r=><option key={r} value={r}>{r}</option>)}
-                              </select>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  
+                  {/* 파트 1: 칭찬 승인 업무 */}
+                  <div className="bg-white p-10 rounded-[40px] border-2 border-indigo-100 shadow-sm">
+                    <h3 className="text-2xl font-black text-indigo-800 mb-6 flex items-center gap-3">
+                      <ShieldCheck className="w-7 h-7 text-indigo-500"/> 온기 우체통 승인 센터
+                    </h3>
+                    <div className="space-y-4">
+                      {safeArray(db.pendingPraises).length > 0 ? safeArray(db.pendingPraises).map(p => {
+                        const fromName = p.fromId === 'me' ? '비밀천사' : (allStats.find(s=>s.id==p.fromId)?.name || '알 수 없음');
+                        const toName = p.toId === 'me' ? '나 자신' : (allStats.find(s=>s.id==p.toId)?.name || '알 수 없음');
+                        const selShort = SEL_OPTIONS.find(o=>o.name===p.tag)?.short || p.tag;
+                        return (
+                          <div key={p.id} className="bg-indigo-50 p-6 rounded-3xl border border-indigo-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div className="flex-1">
+                              <p className="text-sm font-black text-indigo-600 mb-2 bg-white inline-block px-3 py-1 rounded-lg shadow-sm border border-indigo-100">
+                                {fromName} 👉 {toName} ({selShort})
+                              </p>
+                              <p className="text-lg font-bold text-slate-700 bg-white p-4 rounded-2xl">"{p.text}"</p>
+                            </div>
+                            <div className="flex gap-2 shrink-0">
+                              <button onClick={() => approvePraise(p.id, true)} className="bg-green-500 text-white px-6 py-4 rounded-2xl font-black shadow-md hover:bg-green-600 active:scale-95 transition-transform">승인</button>
+                              <button onClick={() => approvePraise(p.id, false)} className="bg-red-400 text-white px-6 py-4 rounded-2xl font-black shadow-md hover:bg-red-500 active:scale-95 transition-transform">반려</button>
+                            </div>
+                          </div>
+                        )
+                      }) : <p className="text-center py-10 text-slate-400 font-bold bg-slate-50 rounded-3xl border-dashed border-2 border-slate-200">승인 대기 중인 칭찬이 없습니다.</p>}
+                    </div>
                   </div>
+
+                  {/* 파트 2: 점수 변동 내역 (민원 해결용) */}
+                  <div className="bg-white p-10 rounded-[40px] border-2 border-slate-100 shadow-sm">
+                    <h3 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3">
+                      <History className="w-7 h-7 text-slate-500"/> 점수 변동 기록장 <span className="text-sm font-bold text-slate-400">(최근 50건)</span>
+                    </h3>
+                    <div className="overflow-x-auto bg-slate-50 rounded-3xl border border-slate-200">
+                      <table className="w-full text-left">
+                        <thead className="bg-slate-100 text-sm font-black text-slate-500 uppercase tracking-widest">
+                          <tr><th className="p-5 rounded-tl-3xl">일시</th><th className="p-5">학생 이름</th><th className="p-5">변동 코인</th><th className="p-5 rounded-tr-3xl">사유</th></tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {safeArray(db.pointLogs).length > 0 ? safeArray(db.pointLogs).map(l => (
+                            <tr key={l.id} className="hover:bg-white transition-colors text-base font-bold text-slate-700">
+                              <td className="p-5 text-sm text-slate-400">{l.date}</td>
+                              <td className="p-5">{l.name}</td>
+                              <td className={`p-5 font-black ${l.amount > 0 ? 'text-blue-500' : 'text-red-500'}`}>{l.amount > 0 ? `+${l.amount}🪙` : `${l.amount}🪙`}</td>
+                              <td className="p-5">{l.reason}</td>
+                            </tr>
+                          )) : <tr><td colSpan="4" className="p-10 text-center text-slate-400 font-bold">기록된 내역이 없습니다.</td></tr>}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
                 </div>
               )}
 
