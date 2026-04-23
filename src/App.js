@@ -355,8 +355,11 @@ export default function App() {
     return () => { alive = false; clearInterval(iv); };
   }, []);
 
+  // ⭐ V10.12 동기성 방어 엔진 (광클 완벽 방어)
   const sync = async (updates) => {
-    setDb(prev => { const next={...prev,...updates}; dbRef.current=next; return next; });
+    dbRef.current = { ...dbRef.current, ...updates };
+    setDb(dbRef.current);
+    
     const dbUpdates = {};
     for (const key in updates) {
       if (updates[key] !== null && typeof updates[key] === 'object' && Object.keys(updates[key]).length === 0 && !Array.isArray(updates[key])) {
@@ -370,8 +373,9 @@ export default function App() {
   };
 
   const logPoint = (sid, amount, reason) => {
-    const newLog = { id: Date.now(), sid, name: allStats.find(s=>s.id===sid)?.name, amount, reason, date: formatDate() };
-    sync({ pointLogs: [newLog, ...safeArray(db.pointLogs)].slice(0, 50) });
+    const curDb = dbRef.current;
+    const newLog = { id: Date.now() + Math.random(), sid, name: allStats.find(s=>s.id===sid)?.name, amount, reason, date: formatDate() };
+    sync({ pointLogs: [newLog, ...safeArray(curDb.pointLogs)].slice(0, 50) });
   };
 
   useEffect(() => {
@@ -540,19 +544,27 @@ export default function App() {
   // 🎬 핸들러
   // ══════════════════════════════════════════════════════════
   const handleLogin = () => { 
-    const masterPw = db.settings?.masterPw||"6505"; const helpPw = db.settings?.helpRoomPw||"1111"; 
+    const curDb = dbRef.current;
+    const masterPw = curDb.settings?.masterPw||"6505"; const helpPw = curDb.settings?.helpRoomPw||"1111"; 
     if (password===masterPw) { saveAuth('teacher'); setIsAuthenticated('teacher'); setShowModal(null); setPassword(""); setActiveTab('admin'); } 
     else if (password===helpPw) { saveAuth('inspector'); setIsAuthenticated('inspector'); setShowModal(null); setPassword(""); setActiveTab('helproom'); } 
     else { alert("비밀번호가 틀렸습니다."); setPassword(""); } 
   };
+  
   const handleLogout = () => { clearAuth(); setIsAuthenticated(false); setActiveTab('dashboard'); };
-  const revokeAllSessions = () => { if(!window.confirm("모든 세션을 종료할까요?")) return; sync({ settings:{...db.settings,authRevokedAt:Date.now()} }); clearAuth(); setIsAuthenticated(false); setActiveTab('dashboard'); };
+  
+  const revokeAllSessions = () => { 
+    const curDb = dbRef.current;
+    if(!window.confirm("모든 세션을 종료할까요?")) return; 
+    sync({ settings:{...curDb.settings,authRevokedAt:Date.now()} }); 
+    clearAuth(); setIsAuthenticated(false); setActiveTab('dashboard'); 
+  };
   
   const startStopwatch = () => sync({ timer:{mode:'class_sw',startedAt:Date.now(),endTime:null,duration:null,isRunning:true,pausedElapsed:null,pausedRemaining:null} });
   const startCountdown = (min) => { const ms=min*60000; sync({ timer:{mode:'class_cd',startedAt:Date.now(),endTime:Date.now()+ms,duration:ms,isRunning:true,pausedElapsed:null,pausedRemaining:null} }); };
   const startBreak     = (min) => { const ms=min*60000; sync({ timer:{mode:'break',startedAt:Date.now(),endTime:Date.now()+ms,duration:ms,isRunning:true,pausedElapsed:null,pausedRemaining:null} }); playSound('chime'); };
-  const pauseTimer = () => { const t=db.timer; if(!t||!t.isRunning) return; if(t.mode==='class_sw') sync({ timer:{...t,isRunning:false,pausedElapsed:Date.now()-t.startedAt+(t.pausedElapsed||0)} }); else sync({ timer:{...t,isRunning:false,pausedRemaining:Math.max(0,t.endTime-Date.now())} }); };
-  const resumeTimer = () => { const t=db.timer; if(!t||t.isRunning) return; if(t.mode==='class_sw') sync({ timer:{...t,isRunning:true,startedAt:Date.now()-(t.pausedElapsed||0),pausedElapsed:null} }); else sync({ timer:{...t,isRunning:true,endTime:Date.now()+(t.pausedRemaining||0),pausedRemaining:null} }); };
+  const pauseTimer = () => { const curDb = dbRef.current; const t=curDb.timer; if(!t||!t.isRunning) return; if(t.mode==='class_sw') sync({ timer:{...t,isRunning:false,pausedElapsed:Date.now()-t.startedAt+(t.pausedElapsed||0)} }); else sync({ timer:{...t,isRunning:false,pausedRemaining:Math.max(0,t.endTime-Date.now())} }); };
+  const resumeTimer = () => { const curDb = dbRef.current; const t=curDb.timer; if(!t||t.isRunning) return; if(t.mode==='class_sw') sync({ timer:{...t,isRunning:true,startedAt:Date.now()-(t.pausedElapsed||0),pausedElapsed:null} }); else sync({ timer:{...t,isRunning:true,endTime:Date.now()+(t.pausedRemaining||0),pausedRemaining:null} }); };
   const resetTimer = () => sync({ timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null} });
 
   const handleAttendanceStep1 = (sid) => {
@@ -565,9 +577,10 @@ export default function App() {
   };
 
   const toggleAttendance = (sid, moodEmoji) => {
+    const curDb = dbRef.current;
     const todayIdx = getTodayWeekdayIdx(); if (todayIdx < 0) return;
     const weekKey = getWeekKey(); const todayStr = formatDate();
-    const currentAtt = safeArray(db.attendance?.[weekKey]?.[sid]);
+    const currentAtt = safeArray(curDb.attendance?.[weekKey]?.[sid]);
     const isCancel = moodEmoji === null;
     const logKey = `${weekKey}_${sid}_${todayIdx}`;
     const alreadyIn = currentAtt.includes(todayIdx);
@@ -575,72 +588,90 @@ export default function App() {
     let updates = {};
     if (isCancel) {
       if (!alreadyIn) return;
-      updates.attendance = { ...db.attendance, [weekKey]: { ...db.attendance[weekKey], [sid]: currentAtt.filter(d => d !== todayIdx) } };
-      updates.bonusCoins = { ...db.bonusCoins, [sid]: Math.max(0, (db.bonusCoins[sid]||0) - ATTEND_COIN_PER_DAY) };
-      updates.attendCoinLog = { ...db.attendCoinLog, [logKey]: undefined };
-      updates.moodLog = { ...db.moodLog, [todayStr]: { ...db.moodLog[todayStr], [sid]: undefined } };
+      updates.attendance = { ...curDb.attendance, [weekKey]: { ...curDb.attendance[weekKey], [sid]: currentAtt.filter(d => d !== todayIdx) } };
+      updates.bonusCoins = { ...curDb.bonusCoins, [sid]: Math.max(0, (curDb.bonusCoins[sid]||0) - ATTEND_COIN_PER_DAY) };
+      updates.attendCoinLog = { ...curDb.attendCoinLog, [logKey]: undefined };
+      updates.moodLog = { ...curDb.moodLog, [todayStr]: { ...curDb.moodLog[todayStr], [sid]: undefined } };
     } else {
       if (alreadyIn) { setMoodModalStudent(null); return; }
       playSound('attend'); setAttendAnim({ id:sid }); setTimeout(() => setAttendAnim(null), 1500);
       const newDays = [...currentAtt, todayIdx];
-      updates.attendance = { ...db.attendance, [weekKey]: { ...(db.attendance[weekKey]||{}), [sid]: newDays } };
-      updates.attendCoinLog = { ...(db.attendCoinLog||{}), [logKey]: true };
-      updates.moodLog = { ...db.moodLog, [todayStr]: { ...(db.moodLog[todayStr]||{}), [sid]: moodEmoji } };
+      updates.attendance = { ...curDb.attendance, [weekKey]: { ...(curDb.attendance[weekKey]||{}), [sid]: newDays } };
+      updates.attendCoinLog = { ...(curDb.attendCoinLog||{}), [logKey]: true };
+      updates.moodLog = { ...curDb.moodLog, [todayStr]: { ...(curDb.moodLog[todayStr]||{}), [sid]: moodEmoji } };
       
-      const totalCount = Math.min(5, newDays.length + (db.extraAttendDays||0));
+      const totalCount = Math.min(5, newDays.length + (curDb.extraAttendDays||0));
       let bonusToAdd = ATTEND_COIN_PER_DAY;
-      if (totalCount >= 5 && !db.attendanceBonus?.[weekKey]?.[sid]) {
+      if (totalCount >= 5 && !curDb.attendanceBonus?.[weekKey]?.[sid]) {
          bonusToAdd += 3;
-         updates.attendanceBonus = { ...(db.attendanceBonus||{}), [weekKey]:{ ...(db.attendanceBonus?.[weekKey]||{}), [sid]:true } };
+         updates.attendanceBonus = { ...(curDb.attendanceBonus||{}), [weekKey]:{ ...(curDb.attendanceBonus?.[weekKey]||{}), [sid]:true } };
          setTimeout(() => playSound('jackpot'), 500);
       }
-      updates.bonusCoins = { ...db.bonusCoins, [sid]: (db.bonusCoins[sid]||0) + bonusToAdd };
+      updates.bonusCoins = { ...curDb.bonusCoins, [sid]: (curDb.bonusCoins[sid]||0) + bonusToAdd };
     }
     sync(updates); setMoodModalStudent(null);
   };
 
   const teacherAddHoliday = () => { 
-    const wk=getWeekKey(); const newExtra=(db.extraAttendDays||0)+1; 
-    let b={...db.bonusCoins}; let a={...db.attendanceBonus}; 
-    allStats.forEach(s=>{ const d=safeArray(db.attendance?.[wk]?.[s.id]).length; const t=Math.min(5,d+newExtra); if(t>=5&&!db.attendanceBonus?.[wk]?.[s.id]){ b[s.id]=(b[s.id]||0)+3; if(!a[wk]) a[wk]={}; a[wk][s.id]=true; }}); 
+    const curDb = dbRef.current;
+    const wk=getWeekKey(); const newExtra=(curDb.extraAttendDays||0)+1; 
+    let b={...curDb.bonusCoins}; let a={...curDb.attendanceBonus}; 
+    allStats.forEach(s=>{ const d=safeArray(curDb.attendance?.[wk]?.[s.id]).length; const t=Math.min(5,d+newExtra); if(t>=5&&!curDb.attendanceBonus?.[wk]?.[s.id]){ b[s.id]=(b[s.id]||0)+3; if(!a[wk]) a[wk]={}; a[wk][s.id]=true; }}); 
     sync({ extraAttendDays:newExtra, bonusCoins:b, attendanceBonus:a }); alert(`공휴일 보정 +${newExtra}일 적용 완료!`); 
   };
   
   const handleGivePenalty = (sid) => { 
+    const curDb = dbRef.current;
     if(!window.confirm("위기 상태로 지정할까요?")) return; 
-    sync({ studentStatus:{...db.studentStatus,[sid]:'crisis'}, penaltyCount:{...db.penaltyCount,[sid]:(db.penaltyCount[sid]||0)+1}, allTime:{...db.allTime,penalty:{...(db.allTime?.penalty||{}),[sid]:(db.allTime?.penalty?.[sid]||0)+1}} }); 
+    sync({ studentStatus:{...curDb.studentStatus,[sid]:'crisis'}, penaltyCount:{...curDb.penaltyCount,[sid]:(curDb.penaltyCount[sid]||0)+1}, allTime:{...curDb.allTime,penalty:{...(curDb.allTime?.penalty||{}),[sid]:(curDb.allTime?.penalty?.[sid]||0)+1}} }); 
     playSound('bad'); 
   };
   
   const handleExpAdjust = (sid, d) => { 
-    const n=Math.max(0,(db.roleExp[sid]||0)+d); let u={roleExp:{...db.roleExp,[sid]:n}}; if(d>0) u.allTime={...db.allTime,exp:{...(db.allTime?.exp||{}),[sid]:(db.allTime?.exp?.[sid]||0)+d}}; sync(u); if(d>0) playSound('good'); 
+    const curDb = dbRef.current;
+    const n=Math.max(0,(curDb.roleExp[sid]||0)+d); let u={roleExp:{...curDb.roleExp,[sid]:n}}; if(d>0) u.allTime={...curDb.allTime,exp:{...(curDb.allTime?.exp||{}),[sid]:(curDb.allTime?.exp?.[sid]||0)+d}}; sync(u); if(d>0) playSound('good'); 
   };
   
   const handleDonate = (sid, amt) => { 
-    const u=activeStudents.find(s=>s.id===sid); if(!u||u.coins<amt) return alert("잔액 부족"); if(!window.confirm(`기부할까요?`)) return; 
-    sync({ usedCoins:{...db.usedCoins,[sid]:(db.usedCoins[sid]||0)+amt}, donations:[...safeArray(db.donations),{id:Date.now(),name:u.name,amount:amt,date:formatDate()}], allTime:{...db.allTime,donate:{...(db.allTime?.donate||{}),[sid]:(db.allTime?.donate?.[sid]||0)+amt}} }); playSound('jackpot'); alert("기부 완료!"); 
+    const curDb = dbRef.current;
+    const u=allStats.find(s=>s.id===sid); 
+    const currentCoins = Math.max(0, ((curDb.roleExp[sid]||0)*10) + (curDb.bonusCoins?.[sid]||0) - (curDb.usedCoins?.[sid]||0));
+    if(!u||currentCoins<amt) return alert("잔액 부족"); 
+    if(!window.confirm(`기부할까요?`)) return; 
+    sync({ usedCoins:{...curDb.usedCoins,[sid]:(curDb.usedCoins[sid]||0)+amt}, donations:[...safeArray(curDb.donations),{id:Date.now(),name:u.name,amount:amt,date:formatDate()}], allTime:{...curDb.allTime,donate:{...(curDb.allTime?.donate||{}),[sid]:(curDb.allTime?.donate?.[sid]||0)+amt}} }); 
+    logPoint(sid, -amt, `명예의 기부처`);
+    playSound('jackpot'); alert("기부 완료!"); 
   };
   
   const handleFund = (fId, sid, amt) => { 
-    const u=activeStudents.find(s=>s.id===sid); if(!u||u.coins<amt) return alert("잔액 부족"); const f=safeArray(db.funding).find(x=>x.id===fId); if(!f||!window.confirm(`투자할까요?`)) return; 
-    sync({ funding:safeArray(db.funding).map(x=>x.id===fId?{...x,current:toInt(x.current)+amt}:x), usedCoins:{...db.usedCoins,[sid]:(db.usedCoins[sid]||0)+amt}, allTime:{...db.allTime,fund:{...(db.allTime?.fund||{}),[sid]:(db.allTime?.fund?.[sid]||0)+amt}} }); playSound('buy'); alert("투자 완료!"); 
+    const curDb = dbRef.current;
+    const u=allStats.find(s=>s.id===sid); 
+    const currentCoins = Math.max(0, ((curDb.roleExp[sid]||0)*10) + (curDb.bonusCoins?.[sid]||0) - (curDb.usedCoins?.[sid]||0));
+    if(!u||currentCoins<amt) return alert("잔액 부족"); 
+    const f=safeArray(curDb.funding).find(x=>x.id===fId); 
+    if(!f||!window.confirm(`투자할까요?`)) return; 
+    sync({ funding:safeArray(curDb.funding).map(x=>x.id===fId?{...x,current:toInt(x.current)+amt}:x), usedCoins:{...curDb.usedCoins,[sid]:(curDb.usedCoins[sid]||0)+amt}, allTime:{...curDb.allTime,fund:{...(curDb.allTime?.fund||{}),[sid]:(curDb.allTime?.fund?.[sid]||0)+amt}} }); 
+    logPoint(sid, -amt, `펀딩 투자(${f.name})`);
+    playSound('buy'); alert("투자 완료!"); 
   };
 
   const executeRescue = () => {
+    const curDb = dbRef.current;
     if (!rescuer || !rescueTarget) return alert("학생을 모두 선택해 주세요.");
     if (rescuer === rescueTarget) return alert("자기 자신을 구제할 수는 없습니다.");
     
-    const cost = db.settings?.pointConfig?.rescueCost || 50;
+    const cost = curDb.settings?.pointConfig?.rescueCost || 50;
     const rUser = allStats.find(s=>s.id == rescuer);
     const tUser = allStats.find(s=>s.id == rescueTarget);
+    const currentCoins = Math.max(0, ((curDb.roleExp[rUser.id]||0)*10) + (curDb.bonusCoins?.[rUser.id]||0) - (curDb.usedCoins?.[rUser.id]||0));
     
-    if (rUser.coins < cost) return alert(`${rUser.name} 학생의 코인이 부족합니다. (${cost}🪙 필요)`);
+    if (currentCoins < cost) return alert(`${rUser.name} 학생의 코인이 부족합니다. (${cost}🪙 필요)`);
     if (tUser.status !== 'crisis') return alert(`${tUser.name} 학생은 현재 위기 상태가 아닙니다.`);
     if (!window.confirm(`${rUser.name}의 코인 ${cost}🪙을 사용하여 ${tUser.name} 학생을 구제할까요?`)) return;
 
     sync({
-      usedCoins: { ...db.usedCoins, [rescuer]: (db.usedCoins[rescuer]||0) + cost },
-      studentStatus: { ...db.studentStatus, [rescueTarget]: 'normal' }
+      usedCoins: { ...curDb.usedCoins, [rescuer]: (curDb.usedCoins[rescuer]||0) + cost },
+      studentStatus: { ...curDb.studentStatus, [rescueTarget]: 'normal' }
     });
     logPoint(rescuer, -cost, `내 친구 보호막(${tUser.name} 구제)`);
     playSound('jackpot');
@@ -649,35 +680,37 @@ export default function App() {
   };
   
   const submitArtisanItem = () => { 
+    const curDb = dbRef.current;
     if(!artisanTarget||!artisanItemName.trim()||!artisanItemPrice) return alert("입력 필요"); const a=allStats.find(s=>s.id==artisanTarget); if(!a) return; 
-    sync({ pendingShopItems:[...safeArray(db.pendingShopItems),{id:Date.now(),name:artisanItemName.trim(),price:toInt(artisanItemPrice),creator:a.name,creatorId:a.id}] }); alert("결재 요청 완료!"); setArtisanTarget(""); setArtisanItemName(""); setArtisanItemPrice(""); 
+    sync({ pendingShopItems:[...safeArray(curDb.pendingShopItems),{id:Date.now(),name:artisanItemName.trim(),price:toInt(artisanItemPrice),creator:a.name,creatorId:a.id}] }); alert("결재 요청 완료!"); setArtisanTarget(""); setArtisanItemName(""); setArtisanItemPrice(""); 
   };
   
-  const addCoopScore = (amt, qKey) => { const td=formatDate(); if(db.questLog?.[td]?.[qKey]) return alert("오늘은 이미 이 퀘스트를 달성했습니다!"); sync({ manualRepOffset:(db.manualRepOffset||0)+amt, questLog:{...db.questLog,[td]:{...(db.questLog?.[td]||{}),[qKey]:true}} }); playSound('good'); };
-  const adjustGoodWeek = (d) => sync({ coopQuest:{...db.coopQuest,goodWeek:Math.max(0,Math.min(5,(db.coopQuest?.goodWeek||0)+d))} });
-  const completeGoodWeek = () => { const r=db.coopQuest?.q4||100; sync({ manualRepOffset:(db.manualRepOffset||0)+r, coopQuest:{...db.coopQuest,goodWeek:0} }); playSound('jackpot'); alert(`명성 +${r}p!`); };
+  const addCoopScore = (amt, qKey) => { const curDb = dbRef.current; const td=formatDate(); if(curDb.questLog?.[td]?.[qKey]) return alert("오늘은 이미 이 퀘스트를 달성했습니다!"); sync({ manualRepOffset:(curDb.manualRepOffset||0)+amt, questLog:{...curDb.questLog,[td]:{...(curDb.questLog?.[td]||{}),[qKey]:true}} }); playSound('good'); };
+  const adjustGoodWeek = (d) => { const curDb = dbRef.current; sync({ coopQuest:{...curDb.coopQuest,goodWeek:Math.max(0,Math.min(5,(curDb.coopQuest?.goodWeek||0)+d))} }); };
+  const completeGoodWeek = () => { const curDb = dbRef.current; if((curDb.coopQuest?.goodWeek||0) < 5) return; const r=curDb.coopQuest?.q4||100; sync({ manualRepOffset:(curDb.manualRepOffset||0)+r, coopQuest:{...curDb.coopQuest,goodWeek:0} }); playSound('jackpot'); alert(`명성 +${r}p!`); };
   
-  const handleStartTimeAttack = () => { if(!taTitle.trim()) return alert("제목 입력"); sync({ timeAttack:{isActive:true,title:taTitle,rewardRep:toInt(taReward,100),endTime:Date.now()+toInt(taMins,10)*60000,cleared:[]} }); playSound('chime'); };
-  const handleCompleteTimeAttack = () => { const r=db.timeAttack?.rewardRep||100; sync({ timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]}, manualRepOffset:(db.manualRepOffset||0)+r }); playSound('jackpot'); alert(`성공! 명성 +${r}p`); };
-  const handleFailTimeAttack = () => { sync({ timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]} }); playSound('bad'); };
-  const toggleTimeAttackClear = (sid) => { const c=safeArray(db.timeAttack?.cleared).map(Number); sync({ timeAttack:{...db.timeAttack,cleared:c.includes(Number(sid))?c.filter(id=>id!==Number(sid)):[...c,Number(sid)]} }); };
+  const handleStartTimeAttack = () => { const curDb = dbRef.current; if(!taTitle.trim()) return alert("제목 입력"); sync({ timeAttack:{isActive:true,title:taTitle,rewardRep:toInt(taReward,100),endTime:Date.now()+toInt(taMins,10)*60000,cleared:[]} }); playSound('chime'); };
+  const handleCompleteTimeAttack = () => { const curDb = dbRef.current; if(!curDb.timeAttack?.isActive) return; const r=curDb.timeAttack?.rewardRep||100; sync({ timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]}, manualRepOffset:(curDb.manualRepOffset||0)+r }); playSound('jackpot'); alert(`성공! 명성 +${r}p`); };
+  const handleFailTimeAttack = () => { const curDb = dbRef.current; if(!curDb.timeAttack?.isActive) return; sync({ timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]} }); playSound('bad'); };
+  const toggleTimeAttackClear = (sid) => { const curDb = dbRef.current; const c=safeArray(curDb.timeAttack?.cleared).map(Number); sync({ timeAttack:{...curDb.timeAttack,cleared:c.includes(Number(sid))?c.filter(id=>id!==Number(sid)):[...c,Number(sid)]} }); };
   
-  const handleAddStudent = () => { if(!newStudentName.trim()) return alert("이름 입력"); const mId=safeStudents.reduce((m,s)=>Math.max(m,s.id),0); sync({ students:[...safeStudents,{id:mId+1,name:newStudentName.trim(),role:'',group:toInt(newStudentGroup,1),isLeader:false,enneagram:newStudentEnneagram}] }); setNewStudentName(""); setNewStudentGroup("1"); setNewStudentEnneagram(""); };
+  const handleAddStudent = () => { const curDb = dbRef.current; if(!newStudentName.trim()) return alert("이름 입력"); const mId=safeStudents.reduce((m,s)=>Math.max(m,s.id),0); sync({ students:[...safeStudents,{id:mId+1,name:newStudentName.trim(),role:'',group:toInt(newStudentGroup,1),isLeader:false,enneagram:newStudentEnneagram}] }); setNewStudentName(""); setNewStudentGroup("1"); setNewStudentEnneagram(""); };
   const handleRemoveStudent = (sid) => { const s=safeStudents.find(x=>x.id===sid); if(!s||!window.confirm(`삭제할까요?`)) return; sync({ students:safeStudents.filter(x=>x.id!==sid) }); };
   const handleStudentFieldChange = (sid,f,v) => sync({ students:safeStudents.map(s=>s.id===sid?{...s,[f]:v}:s) });
   
   const openNoteModal = (sid) => { setShowNoteModal(sid); setNoteText(""); };
-  const submitNote = () => { if(!noteText.trim()||!showNoteModal) return; sync({ notes:{...db.notes,[showNoteModal]:[...safeArray(db.notes?.[showNoteModal]),{id:Date.now(),text:noteText.trim(),date:formatDate()}]} }); setShowNoteModal(null); setNoteText(""); };
-  const deleteNote = (sid,nId) => { if(!window.confirm("삭제할까요?")) return; sync({ notes:{...db.notes,[sid]:safeArray(db.notes?.[sid]).filter(n=>n.id!==nId)} }); };
+  const submitNote = () => { const curDb = dbRef.current; if(!noteText.trim()||!showNoteModal) return; sync({ notes:{...curDb.notes,[showNoteModal]:[...safeArray(curDb.notes?.[showNoteModal]),{id:Date.now(),text:noteText.trim(),date:formatDate()}]} }); setShowNoteModal(null); setNoteText(""); };
+  const deleteNote = (sid,nId) => { const curDb = dbRef.current; if(!window.confirm("삭제할까요?")) return; sync({ notes:{...curDb.notes,[sid]:safeArray(curDb.notes?.[sid]).filter(n=>n.id!==nId)} }); };
   
-  const toggleCumulativeStats = () => sync({ settings:{...db.settings,showCumulativeStats:!db.settings?.showCumulativeStats} });
+  const toggleCumulativeStats = () => { const curDb = dbRef.current; sync({ settings:{...curDb.settings,showCumulativeStats:!curDb.settings?.showCumulativeStats} }); };
   
-  const exportStudent = (sid) => { const s=allStats.find(x=>x.id==sid); if(!s) return; const p=safeArray(db.approvedPraises).filter(x=>x.toId==s.id); const r=safeArray(db.pendingReflections).filter(x=>x.studentId==s.id); const txt=[`=== ${s.name} SEL 리포트 ===`,`에니어그램:${s.enneagram} | 완수:${s.exp} | 코인:${s.coins} | 출석:${s.weeklyCount}/5`,`[칭찬]`,...p.map(x=>`- ${x.text}`),`[성찰]`,...r.map(x=>`- ${x.text}`),`[누가기록]`,...s.notes.map(x=>`- ${x.text}`)].join('\n'); navigator.clipboard?.writeText(txt).then(()=>alert("복사 완료")); };
-  const exportAll = () => { const txt=allStats.map(s=>`\n=== ${s.name} ===\n완수:${s.exp} | 코인:${s.coins}\n칭찬: ${safeArray(db.approvedPraises).filter(p=>p.toId==s.id).map(p=>p.text).join(', ')}`).join('\n'); navigator.clipboard?.writeText(txt).then(()=>alert("전체 복사 완료")); };
-  const closeSemester = () => { if(window.prompt("1학기 마감: '마감' 입력")!=="마감") return; sync({ roleExp:{},bonusCoins:{},usedCoins:{},penaltyCount:{},studentStatus:{},pendingReflections:[],pendingPraises:[],shopItems:[],pendingShopItems:[],funding:[],purchaseHistory:[],donations:[],manualRepOffset:0,attendance:{},attendanceBonus:{},attendCoinLog:{},questLog:{},moodLog:{},mistakes:[],pointLogs:[],coopQuest:{...db.coopQuest,goodWeek:0},timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]},timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null},extraAttendDays:0 }); alert("마감 완료."); };
+  const exportStudent = (sid) => { const curDb = dbRef.current; const s=allStats.find(x=>x.id==sid); if(!s) return; const p=safeArray(curDb.approvedPraises).filter(x=>x.toId==s.id); const r=safeArray(curDb.pendingReflections).filter(x=>x.studentId==s.id); const txt=[`=== ${s.name} SEL 리포트 ===`,`에니어그램:${s.enneagram} | 완수:${s.exp} | 코인:${s.coins} | 출석:${s.weeklyCount}/5`,`[칭찬]`,...p.map(x=>`- ${x.text}`),`[성찰]`,...r.map(x=>`- ${x.text}`),`[누가기록]`,...s.notes.map(x=>`- ${x.text}`)].join('\n'); navigator.clipboard?.writeText(txt).then(()=>alert("복사 완료")); };
+  const exportAll = () => { const curDb = dbRef.current; const txt=allStats.map(s=>`\n=== ${s.name} ===\n완수:${s.exp} | 코인:${s.coins}\n칭찬: ${safeArray(curDb.approvedPraises).filter(p=>p.toId==s.id).map(p=>p.text).join(', ')}`).join('\n'); navigator.clipboard?.writeText(txt).then(()=>alert("전체 복사 완료")); };
+  const closeSemester = () => { const curDb = dbRef.current; if(window.prompt("1학기 마감: '마감' 입력")!=="마감") return; sync({ roleExp:{},bonusCoins:{},usedCoins:{},penaltyCount:{},studentStatus:{},pendingReflections:[],pendingPraises:[],shopItems:[],pendingShopItems:[],funding:[],purchaseHistory:[],donations:[],manualRepOffset:0,attendance:{},attendanceBonus:{},attendCoinLog:{},questLog:{},moodLog:{},mistakes:[],pointLogs:[],coopQuest:{...curDb.coopQuest,goodWeek:0},timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]},timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null},extraAttendDays:0 }); alert("마감 완료."); };
   const factoryReset = () => { if(window.prompt("공장 초기화: '전체초기화' 입력")!=="전체초기화") return; sync({ roleExp:{},bonusCoins:{},usedCoins:{},penaltyCount:{},studentStatus:{},pendingReflections:[],pendingPraises:[],approvedPraises:[],shopItems:[],pendingShopItems:[],funding:[],purchaseHistory:[],donations:[],manualRepOffset:0,allTime:{exp:{},penalty:{},donate:{},fund:{}},attendance:{},attendanceBonus:{},attendCoinLog:{},streakWeeks:{},notes:{},questLog:{},moodLog:{},mistakes:[],pointLogs:[],coopQuest:{q1Name:"다 함께 바른 생활",q1:50,q2Name:"환대와 응원",q2:20,q3Name:"전담수업 태도 우수",q3:20,q5Name:"청소 만점",q5:10,q4Name:"사이좋은 일주일",q4:100,goodWeek:0},timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]},timer:{mode:'idle',startedAt:null,endTime:null,duration:null,isRunning:false,pausedElapsed:null,pausedRemaining:null},extraAttendDays:0 }); alert("초기화 완료."); };
 
   const submitPraise = () => {
+    const curDb = dbRef.current;
     if (!praiseTarget || !praiseFrom || !praiseTag || !praiseText.trim()) { alert("항목을 모두 입력해 주세요."); return; }
     const finalToId = praiseTarget === 'me' ? 'me' : toInt(praiseTarget);
     const finalFromId = praiseFrom === 'me' ? 'me' : toInt(praiseFrom);
@@ -687,28 +720,29 @@ export default function App() {
       tag: praiseTag, text: praiseText.trim(), date: formatDate(), status: 'pending' 
     };
     
-    sync({ pendingPraises: [...safeArray(db.pendingPraises), newP] });
+    sync({ pendingPraises: [...safeArray(curDb.pendingPraises), newP] });
     playSound('good'); 
     alert("감찰사의 승인 후 칭찬이 전달되고 코인이 지급됩니다! 🕊️");
     setShowPraiseModal(false); setPraiseTarget(""); setPraiseFrom(""); setPraiseTag(""); setPraiseText("");
   };
 
   const approvePraise = (pId, isApprove) => {
-    const p = safeArray(db.pendingPraises).find(x => x.id === pId);
+    const curDb = dbRef.current;
+    const p = safeArray(curDb.pendingPraises).find(x => x.id === pId);
     if (!p) return;
     
     if (isApprove) {
-      const isTheme = p.tag === db.settings?.dailyTheme;
-      const receiveBasic = db.settings?.pointConfig?.praiseBasic || 10;
-      const receiveTheme = db.settings?.pointConfig?.praiseTheme || 15;
-      const sendReward   = db.settings?.pointConfig?.praiseSend || 2;
+      const isTheme = p.tag === curDb.settings?.dailyTheme;
+      const receiveBasic = curDb.settings?.pointConfig?.praiseBasic || 10;
+      const receiveTheme = curDb.settings?.pointConfig?.praiseTheme || 15;
+      const sendReward   = curDb.settings?.pointConfig?.praiseSend || 2;
       
       const receiverCoins = isTheme ? receiveTheme : receiveBasic;
       
       let updates = {
-        approvedPraises: [...safeArray(db.approvedPraises), { ...p, status: 'approved', coins: receiverCoins, thankCount: 0 }],
-        pendingPraises: safeArray(db.pendingPraises).filter(x => x.id !== pId),
-        bonusCoins: { ...db.bonusCoins }
+        approvedPraises: [...safeArray(curDb.approvedPraises), { ...p, status: 'approved', coins: receiverCoins, thankCount: 0 }],
+        pendingPraises: safeArray(curDb.pendingPraises).filter(x => x.id !== pId),
+        bonusCoins: { ...curDb.bonusCoins }
       };
       
       if (p.toId !== 'me') {
@@ -725,28 +759,31 @@ export default function App() {
       playSound('jackpot');
       alert("칭찬이 승인되어 피드에 등록되었습니다!");
     } else {
-      sync({ pendingPraises: safeArray(db.pendingPraises).filter(x => x.id !== pId) });
+      sync({ pendingPraises: safeArray(curDb.pendingPraises).filter(x => x.id !== pId) });
       playSound('bad');
       alert("칭찬이 반려되었습니다.");
     }
   };
 
   const handleLikePraise = (pId) => {
-    const updated = safeArray(db.approvedPraises).map(p => p.id === pId ? { ...p, thankCount: (p.thankCount||0) + 1 } : p);
+    const curDb = dbRef.current;
+    const updated = safeArray(curDb.approvedPraises).map(p => p.id === pId ? { ...p, thankCount: (p.thankCount||0) + 1 } : p);
     sync({ approvedPraises: updated }); playSound('good');
   };
 
   const submitReflection = () => {
+    const curDb = dbRef.current;
     if (!refTarget||!refTag||!refText.trim()) { alert("대상, 역량, 다짐을 모두 입력해 주세요."); return; }
     const newR = { id:Date.now(), studentId:toInt(refTarget), tag:refTag, text:refText.trim(), date:formatDate() };
-    sync({ studentStatus:{...db.studentStatus,[refTarget]:'pending'}, pendingReflections:[...safeArray(db.pendingReflections),newR] });
+    sync({ studentStatus:{...curDb.studentStatus,[refTarget]:'pending'}, pendingReflections:[...safeArray(curDb.pendingReflections),newR] });
     playSound('good'); alert("성찰 다짐이 제출되었습니다!"); setRefTarget(""); setRefTag(""); setRefText("");
   };
 
   const submitMistake = () => {
+    const curDb = dbRef.current;
     if (!mistakeText || !mistakeLesson) return alert("실수 내용과 배운 점을 모두 적어주세요!");
     const newM = { id:Date.now(), text:mistakeText, lesson:mistakeLesson, date:formatDate(), likes:0 };
-    sync({ mistakes: [newM, ...safeArray(db.mistakes)].slice(0, 30) });
+    sync({ mistakes: [newM, ...safeArray(curDb.mistakes)].slice(0, 30) });
     alert("멋진 실패입니다! 이 실수가 당신을 더 빛나게 할 거예요. ✨");
     setShowMistakeModal(false); setMistakeText(""); setMistakeLesson("");
   };
