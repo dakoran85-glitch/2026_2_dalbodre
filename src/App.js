@@ -511,6 +511,19 @@ export default function App() {
     };
   }, [db.approvedPraises, db.mistakes, allStats]);
 
+// 1. 반딧불이 애니메이션 상태를 독립적으로 밖으로 뺍니다.
+  const fireflies = useMemo(() => {
+    return Array.from({ length: fireflyCount }).map(() => ({
+      width: Math.random() * 4 + 3,
+      height: Math.random() * 4 + 3,
+      top: Math.random() * 100,
+      left: Math.random() * 100,
+      duration: Math.random() * 3 + 2,
+      delay: Math.random() * 2
+    }));
+  }, [fireflyCount]);
+
+  // 2. 명성치 계산 (중복 없이 한 번만!)
   const { classReputation, evolutionLevel, progressPercent } = useMemo(() => {
     const target = db.settings?.targetScore || 5000;
     const penaltyUnit = db.settings?.pointConfig?.penalty || 20;
@@ -522,6 +535,8 @@ export default function App() {
     const pct = level>=5 ? 100 : ((r%step)/step)*100;
     return { classReputation:r, evolutionLevel:level, progressPercent:pct };
   }, [allStats, db.donations, db.settings, db.manualRepOffset]);
+  
+  // (이 아래로 기존의 const moodChartData = useMemo(...) 가 이어지면 됩니다.)
 
   const moodChartData = useMemo(() => {
     const todayStr = formatDate();
@@ -590,10 +605,23 @@ export default function App() {
     let updates = {};
     if (isCancel) {
       if (!alreadyIn) return;
-      updates.attendance = { ...curDb.attendance, [weekKey]: { ...curDb.attendance[weekKey], [sid]: currentAtt.filter(d => d !== todayIdx) } };
+      // 🔥 [수정 부분] attendance와 moodLog의 빈 값 예외 처리 및 null 적용
+      updates.attendance = { 
+        ...curDb.attendance, 
+        [weekKey]: { 
+          ...(curDb.attendance?.[weekKey] || {}), 
+          [sid]: currentAtt.filter(d => d !== todayIdx) 
+        } 
+      };
       updates.bonusCoins = { ...curDb.bonusCoins, [sid]: Math.max(0, (curDb.bonusCoins[sid]||0) - ATTEND_COIN_PER_DAY) };
-      updates.attendCoinLog = { ...curDb.attendCoinLog, [logKey]: undefined };
-      updates.moodLog = { ...curDb.moodLog, [todayStr]: { ...curDb.moodLog[todayStr], [sid]: undefined } };
+      updates.attendCoinLog = { ...curDb.attendCoinLog, [logKey]: null };
+      updates.moodLog = { 
+        ...curDb.moodLog, 
+        [todayStr]: { 
+          ...(curDb.moodLog?.[todayStr] || {}), 
+          [sid]: null 
+        } 
+      };
     } else {
       if (alreadyIn) { setMoodModalStudent(null); return; }
       playSound('attend'); setAttendAnim({ id:sid }); setTimeout(() => setAttendAnim(null), 1500);
@@ -780,13 +808,15 @@ export default function App() {
 
   // ─── [버그수정] 더블클릭 방어 적용된 approvePraise ───
   const approvePraise = (pId, isApprove) => {
-    // 이미 처리 중인 경우 즉시 차단
     if (processingPraiseRef.current.has(pId)) return;
     processingPraiseRef.current.add(pId);
 
     const curDb = dbRef.current;
     const p = safeArray(curDb.pendingPraises).find(x => x.id === pId);
+    
+    // 🔥 [수정 1] 이미 다른 태블릿에서 승인/반려하여 데이터가 사라졌는지 체크 (중복 결재 방어)
     if (!p) {
+      alert("이미 다른 기기에서 승인 또는 처리가 완료된 건입니다! 🕊️");
       processingPraiseRef.current.delete(pId);
       return;
     }
@@ -805,17 +835,22 @@ export default function App() {
         bonusCoins: { ...curDb.bonusCoins }
       };
       
+      // 🔥 [수정 2] 로그를 개별 저장하지 않고 하나의 배열로 모아서 한 번에 DB에 덮어씀 (로그 꼬임 방지)
+      let newLogs = [...safeArray(curDb.pointLogs)];
+      
       if (p.toId !== 'me') {
         updates.bonusCoins[p.toId] = (updates.bonusCoins[p.toId]||0) + receiverCoins;
-        logPoint(p.toId, receiverCoins, `칭찬 수신(${SEL_OPTIONS.find(o=>o.name===p.tag)?.short || p.tag})`);
+        newLogs.unshift({ id: Date.now() + Math.random(), sid: p.toId, name: allStats.find(s=>s.id==p.toId)?.name, amount: receiverCoins, reason: `칭찬 수신(${SEL_OPTIONS.find(o=>o.name===p.tag)?.short || p.tag})`, date: formatDate() });
       }
       
       if (p.fromId && p.fromId !== 'me') {
         updates.bonusCoins[p.fromId] = (updates.bonusCoins[p.fromId]||0) + sendReward;
-        logPoint(p.fromId, sendReward, `칭찬 발신(${SEL_OPTIONS.find(o=>o.name===p.tag)?.short || p.tag})`);
+        newLogs.unshift({ id: Date.now() + Math.random(), sid: p.fromId, name: allStats.find(s=>s.id==p.fromId)?.name, amount: sendReward, reason: `칭찬 발신(${SEL_OPTIONS.find(o=>o.name===p.tag)?.short || p.tag})`, date: formatDate() });
       }
       
-      sync(updates);
+      updates.pointLogs = newLogs.slice(0, 50); // 최신 50개만 유지
+      sync(updates); // 한 번에 서버로 전송
+      
       playSound('jackpot');
       alert("칭찬이 승인되어 피드에 등록되었습니다!");
     } else {
@@ -824,7 +859,6 @@ export default function App() {
       alert("칭찬이 반려되었습니다.");
     }
 
-    // 처리 완료 후 잠금 해제
     setTimeout(() => processingPraiseRef.current.delete(pId), 2000);
   };
 
@@ -874,9 +908,9 @@ export default function App() {
               <div className="drop-shadow-2xl relative pb-4">
                 <div className="absolute inset-0 bg-yellow-200 blur-3xl opacity-30 rounded-full"/>
                 {renderEvolution(evolutionLevel)}
-                {Array.from({ length: fireflyCount }).map((_, i) => (
+                {fireflies.map((f, i) => (
                   <div key={i} className="absolute rounded-full bg-pink-400 opacity-80 mix-blend-screen shadow-[0_0_8px_rgba(244,114,182,0.8)]"
-                    style={{ width: `${Math.random() * 4 + 3}px`, height: `${Math.random() * 4 + 3}px`, top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%`, animation: `flyToScore ${Math.random() * 3 + 2}s infinite alternate ease-in-out`, animationDelay: `${Math.random() * 2}s` }}
+                    style={{ width: `${f.width}px`, height: `${f.height}px`, top: `${f.top}%`, left: `${f.left}%`, animation: `flyToScore ${f.duration}s infinite alternate ease-in-out`, animationDelay: `${f.delay}s` }}
                   />
                 ))}
               </div>
@@ -1005,12 +1039,18 @@ export default function App() {
                 { title:'🏆 기부 천사 TOP 5', data:topDonate, unit:'🪙',  color:'amber', icon:<Coins className="w-7 h-7"/>,       key:'atDonate' },
                 { title:'🏆 펀딩 기여 TOP 5', data:topFund,   unit:'🪙',  color:'pink',  icon:<Target className="w-7 h-7"/>,      key:'atFund' }
               ].map(c=>(
-                <div key={c.title} className={`bg-gradient-to-br from-${c.color}-50 to-${c.color}-100 p-8 rounded-[40px] shadow-sm border border-${c.color}-200`}>
-                  <h4 className={`text-xl font-black text-${c.color}-800 mb-6 flex items-center gap-3`}>{c.icon} {c.title}</h4>
-                  <ul className="space-y-4">
-                    {c.data.length ? c.data.map((s,i)=>(
-                      <li key={s.id} className={`text-lg font-black text-${c.color}-900 bg-white/70 px-5 py-3 rounded-[20px] flex justify-between shadow-sm`}><span>{i+1}. {s.name}</span><span className={`text-${c.color}-600`}>{s[c.key]}{c.unit}</span></li>
-                    )) : <li className={`text-base font-bold text-${c.color}-400 text-center py-6`}>데이터가 없습니다.</li>}
+                {/* 🔥 [수정할 코드] Tailwind가 빌드할 수 있도록 완전한 클래스 문자열 명시 */}
+                {[
+                  { title:'🏆 역할 완수 TOP 5', data:topExp,    unit:'회',  key:'atExp',    icon:<CheckCircle2 className="w-7 h-7"/>, bg:'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200', titleColor:'text-blue-800', textColor:'text-blue-900', valColor:'text-blue-600', emptyColor:'text-blue-400' },
+                  { title:'🏆 기부 천사 TOP 5', data:topDonate, unit:'🪙',  key:'atDonate', icon:<Coins className="w-7 h-7"/>,        bg:'bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200', titleColor:'text-amber-800', textColor:'text-amber-900', valColor:'text-amber-600', emptyColor:'text-amber-400' },
+                  { title:'🏆 펀딩 기여 TOP 5', data:topFund,   unit:'🪙',  key:'atFund',   icon:<Target className="w-7 h-7"/>,       bg:'bg-gradient-to-br from-pink-50 to-pink-100 border-pink-200', titleColor:'text-pink-800', textColor:'text-pink-900', valColor:'text-pink-600', emptyColor:'text-pink-400' }
+                ].map(c=>(
+                  <div key={c.title} className={`${c.bg} p-8 rounded-[40px] shadow-sm border`}>
+                    <h4 className={`${c.titleColor} text-xl font-black mb-6 flex items-center gap-3`}>{c.icon} {c.title}</h4>
+                    <ul className="space-y-4">
+                      {c.data.length ? c.data.map((s,i)=>(
+                        <li key={s.id} className={`${c.textColor} text-lg font-black bg-white/70 px-5 py-3 rounded-[20px] flex justify-between shadow-sm`}><span>{i+1}. {s.name}</span><span className={c.valColor}>{s[c.key]}{c.unit}</span></li>
+                      )) : <li className={`${c.emptyColor} text-base font-bold text-center py-6`}>데이터가 없습니다.</li>}
                   </ul>
                 </div>
               ))}
@@ -1681,7 +1721,7 @@ export default function App() {
                     <div className="bg-red-50 p-6 rounded-3xl border-2 border-red-200"><h4 className="font-black text-red-800 mb-3 flex items-center gap-2 text-lg"><LogOut className="w-6 h-6"/> 보안: 모든 기기 강제 로그아웃</h4><button onClick={revokeAllSessions} className="w-full bg-red-600 text-white py-4 rounded-2xl font-black text-lg shadow-md hover:bg-red-700 transition-colors">모든 세션 즉시 무효화</button></div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t-2 border-slate-100">
                       <div><label className="block text-base font-black text-slate-600 mb-4">대시보드 메인 타이틀</label><input type="text" value={db.settings?.title||""} onChange={e=>sync({ settings:{...db.settings,title:e.target.value} })} onFocus={lockEditing} onBlur={unlockEditing} className="w-full p-6 rounded-3xl bg-slate-50 border border-slate-200 font-black text-xl outline-none focus:border-blue-400 shadow-sm"/></div>
-                      <div><label className="block text-base font-black text-slate-600 mb-4">이 주의 마음성장(SEL) 테마</label><select value={db.settings?.weeklyTheme||""} onChange={e=>sync({ settings:{...db.settings,weeklyTheme:e.target.value} })} className="w-full p-6 rounded-3xl bg-slate-50 border border-slate-200 font-black text-xl outline-none focus:border-blue-400 shadow-sm">{SEL_OPTIONS.map(opt=><option key={opt.id} value={opt.name}>{opt.name}</option>)}</select></div>
+                      <div><label className="block text-base font-black text-slate-600 mb-4">이 주의 마음성장(SEL) 테마</label><select value={db.settings?.dailyTheme||""} onChange={e=>sync({ settings:{...db.settings, dailyTheme:e.target.value, themeDate: formatDate()} })} className="w-full p-6 rounded-3xl bg-slate-50 border border-slate-200 font-black text-xl outline-none focus:border-blue-400 shadow-sm">{SEL_OPTIONS.map(opt=><option key={opt.id} value={opt.name}>{opt.name}</option>)}</select></div>
                       <div><label className="block text-base font-black text-slate-600 mb-4">쉬는 시간 기본 세팅(분)</label><input type="number" value={Math.floor((db.settings?.defaultBreakMs||DEFAULT_BREAK_MS)/60000)} onChange={e=>sync({ settings:{...db.settings,defaultBreakMs:toInt(e.target.value,10)*60000} })} onFocus={lockEditing} onBlur={unlockEditing} className="w-full p-6 rounded-3xl bg-slate-50 border border-slate-200 font-black text-xl outline-none focus:border-blue-400 shadow-sm"/></div>
                     </div>
                     <div className="pt-8 border-t-2 border-slate-100"><button onClick={toggleCumulativeStats} className={`w-full py-5 rounded-2xl font-black text-xl transition-all shadow-md flex items-center justify-center gap-3 ${db.settings?.showCumulativeStats?'bg-blue-600 text-white':'bg-white text-slate-500 border-2 border-slate-300 hover:border-blue-300'}`}><Eye className="w-6 h-6"/> 누적 스탯 표시: {db.settings?.showCumulativeStats?'ON (공개 중)':'OFF (비공개)'}</button></div>
