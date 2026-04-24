@@ -355,7 +355,6 @@ export default function App() {
     return () => { alive = false; clearInterval(iv); };
   }, []);
 
-  // ⭐ V10.12 동기성 방어 엔진 (광클 완벽 방어)
   const sync = async (updates) => {
     dbRef.current = { ...dbRef.current, ...updates };
     setDb(dbRef.current);
@@ -690,8 +689,58 @@ export default function App() {
   const completeGoodWeek = () => { const curDb = dbRef.current; if((curDb.coopQuest?.goodWeek||0) < 5) return; const r=curDb.coopQuest?.q4||100; sync({ manualRepOffset:(curDb.manualRepOffset||0)+r, coopQuest:{...curDb.coopQuest,goodWeek:0} }); playSound('jackpot'); alert(`명성 +${r}p!`); };
   
   const handleStartTimeAttack = () => { const curDb = dbRef.current; if(!taTitle.trim()) return alert("제목 입력"); sync({ timeAttack:{isActive:true,title:taTitle,rewardRep:toInt(taReward,100),endTime:Date.now()+toInt(taMins,10)*60000,cleared:[]} }); playSound('chime'); };
-  const handleCompleteTimeAttack = () => { const curDb = dbRef.current; if(!curDb.timeAttack?.isActive) return; const r=curDb.timeAttack?.rewardRep||100; sync({ timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]}, manualRepOffset:(curDb.manualRepOffset||0)+r }); playSound('jackpot'); alert(`성공! 명성 +${r}p`); };
-  const handleFailTimeAttack = () => { const curDb = dbRef.current; if(!curDb.timeAttack?.isActive) return; sync({ timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]} }); playSound('bad'); };
+  
+  const handleCompleteTimeAttack = () => { 
+    const curDb = dbRef.current; if(!curDb.timeAttack?.isActive) return; 
+    const r = curDb.timeAttack?.rewardRep || 100; 
+    const clearedIds = safeArray(curDb.timeAttack?.cleared).map(Number);
+    const clearedCount = clearedIds.length;
+    const totalRep = r * clearedCount;
+    
+    let newBonusCoins = { ...curDb.bonusCoins };
+    let newLogs = [...safeArray(curDb.pointLogs)];
+    
+    clearedIds.forEach(sid => {
+      newBonusCoins[sid] = (newBonusCoins[sid] || 0) + r;
+      const stu = safeArray(curDb.students).find(s => s.id === sid);
+      newLogs.unshift({ id: Date.now() + Math.random(), sid, name: stu?.name, amount: r, reason: '타임어택 성공', date: formatDate() });
+    });
+    
+    sync({ 
+      timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]}, 
+      manualRepOffset:(curDb.manualRepOffset||0)+totalRep,
+      bonusCoins: newBonusCoins,
+      pointLogs: newLogs.slice(0, 50)
+    }); 
+    playSound('jackpot'); alert(`🎉 타임어택 성공! 개인별 +${r}🪙, 학급 명성 총 +${totalRep}p 반영! (달성: ${clearedCount}명)`); 
+  };
+
+  const handleFailTimeAttack = () => { 
+    const curDb = dbRef.current; if(!curDb.timeAttack?.isActive) return; 
+    const r = curDb.timeAttack?.rewardRep || 100; 
+    const halfR = Math.round(r / 2);
+    const clearedIds = safeArray(curDb.timeAttack?.cleared).map(Number);
+    const clearedCount = clearedIds.length;
+    const totalRep = halfR * clearedCount;
+    
+    let newBonusCoins = { ...curDb.bonusCoins };
+    let newLogs = [...safeArray(curDb.pointLogs)];
+    
+    clearedIds.forEach(sid => {
+      newBonusCoins[sid] = (newBonusCoins[sid] || 0) + halfR;
+      const stu = safeArray(curDb.students).find(s => s.id === sid);
+      newLogs.unshift({ id: Date.now() + Math.random(), sid, name: stu?.name, amount: halfR, reason: '타임어택 실패(절반보상)', date: formatDate() });
+    });
+
+    sync({ 
+      timeAttack:{isActive:false,title:"",rewardRep:100,endTime:null,cleared:[]},
+      manualRepOffset:(curDb.manualRepOffset||0)+totalRep,
+      bonusCoins: newBonusCoins,
+      pointLogs: newLogs.slice(0, 50)
+    }); 
+    playSound('bad'); alert(`💦 타임어택 실패! 하지만 성공한 ${clearedCount}명에게 절반 보상(개인 +${halfR}🪙, 명성 총 +${totalRep}p)이 지급됩니다.`); 
+  };
+
   const toggleTimeAttackClear = (sid) => { const curDb = dbRef.current; const c=safeArray(curDb.timeAttack?.cleared).map(Number); sync({ timeAttack:{...curDb.timeAttack,cleared:c.includes(Number(sid))?c.filter(id=>id!==Number(sid)):[...c,Number(sid)]} }); };
   
   const handleAddStudent = () => { const curDb = dbRef.current; if(!newStudentName.trim()) return alert("이름 입력"); const mId=safeStudents.reduce((m,s)=>Math.max(m,s.id),0); sync({ students:[...safeStudents,{id:mId+1,name:newStudentName.trim(),role:'',group:toInt(newStudentGroup,1),isLeader:false,enneagram:newStudentEnneagram}] }); setNewStudentName(""); setNewStudentGroup("1"); setNewStudentEnneagram(""); };
@@ -827,7 +876,7 @@ export default function App() {
                 <div className="flex-1 overflow-hidden text-xs font-bold text-amber-700 bg-white/60 px-5 py-3 rounded-full border border-amber-200 shadow-sm relative">
                   <div className="animate-[shimmer_25s_linear_infinite] whitespace-nowrap inline-flex items-center w-max">
                     <Sparkles className="w-4 h-4 text-amber-500 mr-2 shrink-0"/>
-                    기부 명예의 전당: {safeArray(db.donations).map(d=>`${d.name}(${d.amount}p)`).join(' 🌸 ')||'따뜻한 마음을 기다려요!'}
+                    기부 명예 전당: {safeArray(db.donations).map(d=>`${d.name}(${d.amount}p)`).join(' 🌸 ')||'따뜻한 마음을 기다려요!'}
                   </div>
                 </div>
                 <span className="text-xs font-black text-orange-600 bg-white px-5 py-3 rounded-full shadow-sm border border-orange-200 shrink-0">최종 목표: {db.settings?.targetScore||5000}p</span>
@@ -894,8 +943,8 @@ export default function App() {
                       const percent = Math.min((toInt(f.current) / toInt(f.target, 1)) * 100, 100);
                       return (
                         <div key={f.id} className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-3xl border border-blue-200 shadow-sm relative overflow-hidden">
-                          <div className="flex justify-between items-center mb-4 relative z-10">
-                            <h4 className="text-lg font-black text-blue-900 truncate pr-4 pb-1 leading-relaxed">{String(f.name)}</h4>
+                          <div className="flex justify-between items-center mb-4 relative z-10 gap-3">
+                            <h4 className="text-lg font-black text-blue-900 break-keep leading-normal py-1">{String(f.name)}</h4>
                             <span className="text-sm font-black text-blue-600 bg-white px-3 py-1.5 rounded-full border border-blue-200 shadow-sm shrink-0">{Math.floor(percent)}%</span>
                           </div>
                           <div className="flex justify-between text-sm font-bold mb-3 text-blue-700 relative z-10"><span>현재 {toInt(f.current)}🪙</span><span>목표 {toInt(f.target)}🪙</span></div>
@@ -1562,12 +1611,12 @@ export default function App() {
                         { label:'수신 기본(🪙)',       key:'praiseBasic', section:'pointConfig', color:'blue', def:10   },
                         { label:'수신 테마(🪙)',       key:'praiseTheme', section:'pointConfig', color:'pink',   def:15   },
                         { label:'발신 보상(🪙)',       key:'praiseSend',  section:'pointConfig', color:'emerald',def:2    },
-                        { label:'구제 비용(🪙)',       key:'rescueCost',  section:'pointConfig', color:'rose',   def:50   },
+                        { label:'친구 구제비용(🪙)',    key:'rescueCost',  section:'pointConfig', color:'rose',   def:50   },
                         { label:'위기 차감(p)',        key:'penalty',     section:'pointConfig', color:'red',    def:20   }
                       ].map(f=>( 
-                        <div key={f.key} className="bg-white p-3 rounded-2xl shadow-sm flex flex-col justify-between">
-                          <label className={`block text-xs lg:text-sm font-black text-${f.color}-600 mb-2 text-center break-keep`}>{f.label}</label>
-                          <input type="number" value={f.section?(db.settings?.[f.section]?.[f.key]??f.def):(db.settings?.[f.key]??f.def)} onChange={e=>{ const v=toInt(e.target.value,f.def); const next=f.section?{ ...db.settings,[f.section]:{ ...db.settings[f.section],[f.key]:v } }:{ ...db.settings,[f.key]:v }; sync({ settings:next }); }} onFocus={lockEditing} onBlur={unlockEditing} className={`w-full py-3 px-1 rounded-xl border border-${f.color}-200 font-black text-lg text-${f.color}-600 outline-none focus:border-${f.color}-400 text-center`}/>
+                        <div key={f.key} className="bg-white p-4 rounded-2xl shadow-sm flex flex-col justify-between items-center text-center">
+                          <label className={`block text-[13px] font-black text-${f.color}-600 mb-3 break-keep leading-tight`}>{f.label}</label>
+                          <input type="number" value={f.section?(db.settings?.[f.section]?.[f.key]??f.def):(db.settings?.[f.key]??f.def)} onChange={e=>{ const v=toInt(e.target.value,f.def); const next=f.section?{ ...db.settings,[f.section]:{ ...db.settings[f.section],[f.key]:v } }:{ ...db.settings,[f.key]:v }; sync({ settings:next }); }} onFocus={lockEditing} onBlur={unlockEditing} className={`w-full max-w-[80px] p-2 rounded-xl border border-${f.color}-200 font-black text-lg text-${f.color}-600 outline-none focus:border-${f.color}-400 text-center`}/>
                         </div> 
                       ))}
                     </div></div>
