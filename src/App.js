@@ -1408,7 +1408,16 @@ export default function App() {
                       <h4 className="text-xl font-black text-red-800 mb-6 flex items-center gap-2"><Timer className="w-6 h-6"/> 타임어택 발동기</h4>
                       {db.timeAttack?.isActive ? (
                         <div className="space-y-6">
-                          <div className="bg-white p-4 rounded-2xl border border-red-100 text-center shadow-inner"><p className="text-4xl font-black text-red-600 tracking-widest">{timeLeftString}</p></div>
+                          <div className="bg-white p-6 rounded-2xl border border-red-100 shadow-inner flex flex-col items-center">
+                            <p className="text-4xl font-black text-red-600 tracking-widest mb-5">{timeLeftString}</p>
+                            <div className="flex items-center justify-center gap-3 w-full bg-slate-50 p-3 rounded-xl border border-slate-100">
+                              <button onClick={() => sync({ timeAttack: { ...db.timeAttack, endTime: db.timeAttack.endTime - 60000 } })} className="px-3 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-lg font-black text-sm active:scale-95 shadow-sm">-1분</button>
+                              <button onClick={() => sync({ timeAttack: { ...db.timeAttack, endTime: db.timeAttack.endTime + 60000 } })} className="px-3 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-lg font-black text-sm active:scale-95 shadow-sm">+1분</button>
+                              <div className="h-6 w-px bg-slate-300 mx-1"></div>
+                              <span className="text-sm font-bold text-slate-500">1인 보상:</span>
+                              <input type="number" value={db.timeAttack.rewardRep} onChange={(e) => sync({ timeAttack: { ...db.timeAttack, rewardRep: toInt(e.target.value) } })} onFocus={lockEditing} onBlur={unlockEditing} className="w-16 text-center p-2 rounded-lg border border-red-200 font-black text-red-600 outline-none focus:border-red-400 bg-white"/>
+                            </div>
+                          </div>
                           <div className="flex gap-3"><button onClick={handleCompleteTimeAttack} className="flex-1 bg-green-500 text-white py-4 rounded-2xl font-black text-lg shadow-md hover:bg-green-600 active:scale-95 transition-transform">미션 성공 승인</button><button onClick={handleFailTimeAttack} className="flex-1 bg-slate-400 text-white py-4 rounded-2xl font-black text-lg shadow-md hover:bg-slate-500 active:scale-95 transition-transform">실패 종료</button></div>
                         </div>
                       ) : (
