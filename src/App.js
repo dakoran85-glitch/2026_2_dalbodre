@@ -989,19 +989,23 @@ export default function App() {
                     {safeArray(db.funding).filter(f => f && f.name).map(f => {
                       const percent = Math.min((toInt(f.current) / toInt(f.target, 1)) * 100, 100);
                       return (
-                        <div key={f.id} className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-3xl border border-blue-200 shadow-sm relative overflow-hidden">
-                          <div className="flex justify-between items-center mb-4 relative z-10 gap-3 min-h-8">
-                            <h4 className="h-8 flex items-center text-lg font-black text-blue-900 break-keep leading-none">
+                        <div
+                          key={f.id}
+                          className="h-12 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-full border border-blue-200 shadow-sm relative overflow-hidden flex items-center px-6"
+                        >
+                          <div
+                            className="absolute inset-y-0 left-0 bg-blue-100/70 transition-all duration-1000"
+                            style={{ width: `${percent}%` }}
+                          />
+
+                          <div className="relative z-10 w-full flex items-center justify-between gap-3">
+                            <h4 className="text-lg font-black text-blue-900 break-keep leading-none translate-y-[-1px]">
                               {String(f.name)}
                             </h4>
 
-                            <span className="h-7 min-w-12 px-3 flex items-center justify-center text-sm font-black leading-none text-blue-600 bg-white rounded-full border border-blue-200 shadow-sm shrink-0">
+                            <span className="h-7 min-w-12 px-3 flex items-center justify-center text-sm font-black leading-none text-blue-600 bg-white rounded-full border border-blue-200 shadow-sm shrink-0 translate-y-[-1px]">
                               {Math.floor(percent)}%
                             </span>
-                          </div>
-                          <div className="flex justify-between text-sm font-bold mb-3 text-blue-700 relative z-10"><span>현재 {toInt(f.current)}🪙</span><span>목표 {toInt(f.target)}🪙</span></div>
-                          <div className="w-full h-4 bg-white rounded-full overflow-hidden border border-blue-200 shadow-inner relative z-10">
-                            <div className="h-full bg-blue-500 transition-all duration-1000 relative" style={{ width: `${percent}%` }}><div className="absolute inset-0 bg-white/20 animate-pulse"></div></div>
                           </div>
                         </div>
                       );
