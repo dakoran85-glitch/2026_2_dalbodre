@@ -1034,12 +1034,6 @@ export default function App() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {[
-                { title:'🏆 역할 완수 TOP 5', data:topExp,    unit:'회',  color:'blue',  icon:<CheckCircle2 className="w-7 h-7"/>, key:'atExp' },
-                { title:'🏆 기부 천사 TOP 5', data:topDonate, unit:'🪙',  color:'amber', icon:<Coins className="w-7 h-7"/>,       key:'atDonate' },
-                { title:'🏆 펀딩 기여 TOP 5', data:topFund,   unit:'🪙',  color:'pink',  icon:<Target className="w-7 h-7"/>,      key:'atFund' }
-              ].map(c=>(
-                {/* 🔥 [수정할 코드] Tailwind가 빌드할 수 있도록 완전한 클래스 문자열 명시 */}
                 {[
                   { title:'🏆 역할 완수 TOP 5', data:topExp,    unit:'회',  key:'atExp',    icon:<CheckCircle2 className="w-7 h-7"/>, bg:'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200', titleColor:'text-blue-800', textColor:'text-blue-900', valColor:'text-blue-600', emptyColor:'text-blue-400' },
                   { title:'🏆 기부 천사 TOP 5', data:topDonate, unit:'🪙',  key:'atDonate', icon:<Coins className="w-7 h-7"/>,        bg:'bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200', titleColor:'text-amber-800', textColor:'text-amber-900', valColor:'text-amber-600', emptyColor:'text-amber-400' },
