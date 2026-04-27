@@ -492,6 +492,7 @@ export default function App() {
   const topDonate = useMemo(()=>[...allStats].sort((a,b)=>b.atDonate-a.atDonate).filter(s=>s.atDonate>0).slice(0,5),[allStats]);
   const topFund   = useMemo(()=>[...allStats].sort((a,b)=>b.atFund-a.atFund).filter(s=>s.atFund>0).slice(0,5),[allStats]);
   const isShopOpen= useMemo(()=>db.settings?.forceShopOpen||new Date().getDay()===4,[db.settings?.forceShopOpen]);
+  const isAllAttendCompleted = useMemo(()=> db.questLog?.[formatDate()]?.allAttend === true, [db.questLog]);
   
   const { praiseFeed, topGivers, topReceivers, fireflyCount } = useMemo(() => {
     const feed = safeArray(db.approvedPraises).sort((a,b) => b.id - a.id);
