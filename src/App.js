@@ -24,8 +24,8 @@ const ATTEND_REP_PER_DAY  = 1;
 // 🧰 UTILS
 // ══════════════════════════════════════════════════════════════
 const safeArray = (val) => {
-  if (Array.isArray(val)) return val.filter(Boolean);
-  if (typeof val === 'object' && val) return Object.values(val).filter(Boolean);
+  if (Array.isArray(val)) return val.filter(v => v !== null && v !== undefined && v !== '');
+  if (typeof val === 'object' && val) return Object.values(val).filter(v => v !== null && v !== undefined && v !== '');
   return [];
 };
 
@@ -594,53 +594,55 @@ export default function App() {
   };
 
   const toggleAttendance = (sid, moodEmoji) => {
-    const curDb = dbRef.current;
-    const todayIdx = getTodayWeekdayIdx(); if (todayIdx < 0) return;
-    const weekKey = getWeekKey(); const todayStr = formatDate();
-    const currentAtt = safeArray(curDb.attendance?.[weekKey]?.[sid]);
-    const isCancel = moodEmoji === null;
-    const logKey = `${weekKey}_${sid}_${todayIdx}`;
-    const alreadyIn = currentAtt.includes(todayIdx);
+  if (attendLockRef.current.has(sid)) return;
+  attendLockRef.current.add(sid);
+  
+  const curDb = dbRef.current;
+  const todayIdx = getTodayWeekdayIdx(); 
+  if (todayIdx < 0) { attendLockRef.current.delete(sid); return; }
+  
+  const weekKey = getWeekKey();
+  const todayStr = formatDate();
+  const currentAtt = safeArray(curDb.attendance?.[weekKey]?.[sid]); 
+  const isCancel = moodEmoji === null;
+  const alreadyIn = currentAtt.includes(todayIdx);
 
-    let updates = {};
-    if (isCancel) {
-      if (!alreadyIn) return;
-      // 🔥 [수정 부분] attendance와 moodLog의 빈 값 예외 처리 및 null 적용
-      updates.attendance = { 
-        ...curDb.attendance, 
-        [weekKey]: { 
-          ...(curDb.attendance?.[weekKey] || {}), 
-          [sid]: currentAtt.filter(d => d !== todayIdx) 
-        } 
-      };
-      updates.bonusCoins = { ...curDb.bonusCoins, [sid]: Math.max(0, (curDb.bonusCoins[sid]||0) - ATTEND_COIN_PER_DAY) };
-      updates.attendCoinLog = { ...curDb.attendCoinLog, [logKey]: null };
-      updates.moodLog = { 
-        ...curDb.moodLog, 
-        [todayStr]: { 
-          ...(curDb.moodLog?.[todayStr] || {}), 
-          [sid]: null 
-        } 
-      };
-    } else {
-      if (alreadyIn) { setMoodModalStudent(null); return; }
-      playSound('attend'); setAttendAnim({ id:sid }); setTimeout(() => setAttendAnim(null), 1500);
-      const newDays = [...currentAtt, todayIdx];
-      updates.attendance = { ...curDb.attendance, [weekKey]: { ...(curDb.attendance[weekKey]||{}), [sid]: newDays } };
-      updates.attendCoinLog = { ...(curDb.attendCoinLog||{}), [logKey]: true };
-      updates.moodLog = { ...curDb.moodLog, [todayStr]: { ...(curDb.moodLog[todayStr]||{}), [sid]: moodEmoji } };
-      
-      const totalCount = Math.min(5, newDays.length + (curDb.extraAttendDays||0));
-      let bonusToAdd = ATTEND_COIN_PER_DAY;
-      if (totalCount >= 5 && !curDb.attendanceBonus?.[weekKey]?.[sid]) {
-         bonusToAdd += 3;
-         updates.attendanceBonus = { ...(curDb.attendanceBonus||{}), [weekKey]:{ ...(curDb.attendanceBonus?.[weekKey]||{}), [sid]:true } };
-         setTimeout(() => playSound('jackpot'), 500);
-      }
-      updates.bonusCoins = { ...curDb.bonusCoins, [sid]: (curDb.bonusCoins[sid]||0) + bonusToAdd };
+  let updates = {};
+  if (isCancel) {
+    if (!alreadyIn) { attendLockRef.current.delete(sid); return; }
+    // 취소 시: 배열에서 오늘 요일 제거
+    updates.attendance = { ...curDb.attendance, [weekKey]: { ...curDb.attendance[weekKey], [sid]: currentAtt.filter(d => d !== todayIdx) } };
+    updates.bonusCoins = { ...curDb.bonusCoins, [sid]: Math.max(0, (curDb.bonusCoins[sid] || 0) - ATTEND_COIN_PER_DAY) };
+    updates.moodLog = { ...curDb.moodLog, [todayStr]: { ...(curDb.moodLog?.[todayStr] || {}), [sid]: null } };
+    // 명성치 환원 (수동 보정값에서 차감)
+    updates.manualRepOffset = (curDb.manualRepOffset || 0) - ATTEND_REP_PER_DAY;
+  } else {
+    if (alreadyIn) { setMoodModalStudent(null); attendLockRef.current.delete(sid); return; }
+    playSound('attend'); setAttendAnim({ id: sid }); setTimeout(() => setAttendAnim(null), 1500);
+    
+    const newDays = [...currentAtt, todayIdx];
+    updates.attendance = { ...curDb.attendance, [weekKey]: { ...(curDb.attendance[weekKey] || {}), [sid]: newDays } };
+    updates.moodLog = { ...curDb.moodLog, [todayStr]: { ...(curDb.moodLog[todayStr] || {}), [sid]: moodEmoji } };
+    updates.manualRepOffset = (curDb.manualRepOffset || 0) + ATTEND_REP_PER_DAY;
+    
+    let bonusToAdd = ATTEND_COIN_PER_DAY;
+    updates.bonusCoins = { ...curDb.bonusCoins, [sid]: (curDb.bonusCoins[sid] || 0) + bonusToAdd };
+
+    // 🏆 [미션] 8시 28분 59초까지 전원 출석 체크
+    const now = new Date();
+    const isMissionTime = (now.getHours() < 8) || (now.getHours() === 8 && now.getMinutes() < 29);
+    const allActiveIds = activeStudents.map(st => st.id);
+    const curAttendedIds = activeStudents.filter(st => st.attendedToday || st.id === sid).map(st => st.id);
+
+    if (curAttendedIds.length === allActiveIds.length && isMissionTime && !curDb.questLog?.[todayStr]?.allAttend) {
+      updates.questLog = { ...curDb.questLog, [todayStr]: { ...(curDb.questLog?.[todayStr] || {}), allAttend: true } };
+      allActiveIds.forEach(id => { updates.bonusCoins[id] = (updates.bonusCoins[id] || 0) + 10; });
+      setTimeout(() => { setShowAllAttendCelebration(true); playSound('jackpot'); }, 500);
     }
-    sync(updates); setMoodModalStudent(null);
-  };
+  }
+  sync(updates); setMoodModalStudent(null);
+  setTimeout(() => attendLockRef.current.delete(sid), 2000);
+};
 
   const teacherAddHoliday = () => { 
     const curDb = dbRef.current;
@@ -1061,9 +1063,14 @@ export default function App() {
 
             <div className="flex flex-col sm:flex-row justify-between items-center gap-6 border-b-4 border-amber-200/50 pb-8 mt-8">
               <div>
-                <h2 className="text-4xl md:text-5xl font-black text-amber-900 flex items-center gap-4"><Users className="text-amber-500 w-12 h-12"/> 우리 반 꼬마 시민들</h2>
-                <p className="text-base font-bold text-slate-500 mt-3 bg-slate-50 inline-block px-4 py-1.5 rounded-full border border-slate-200">
-                  {getTodayWeekdayIdx()<0?'🔔 주말입니다.':isAttendanceOpen()?'🕗 출석 체크 가능 (08:30 마감)':'⏰ 출석 시간이 마감되었습니다'}
+                <p className={`text-base font-bold mt-3 inline-block px-4 py-1.5 rounded-full border shadow-sm ${isAllAttendCompleted ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white border-pink-600 animate-pulse' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
+                  {isAllAttendCompleted 
+                    ? '🎉 우리 반 출석 미션 대성공! (전원 10🪙 획득)' 
+                    : getTodayWeekdayIdx() < 0 
+                      ? '🔔 주말입니다.' 
+                      : isAttendanceOpen() 
+                        ? '🕗 출석 체크 가능 (08:30 마감)' 
+                        : '⏰ 출석 시간이 마감되었습니다'}
                 </p>
               </div>
               <button onClick={()=>setShowPraiseModal(true)} className="w-full sm:w-auto bg-gradient-to-r from-pink-400 to-rose-500 text-white px-10 py-5 rounded-full font-black text-xl shadow-[0_10px_20px_rgba(244,63,94,0.3)] hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3 border-2 border-pink-300">
