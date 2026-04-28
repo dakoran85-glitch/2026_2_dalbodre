@@ -1559,7 +1559,18 @@ export default function App() {
                           return (
                             <div key={r.id} className="bg-white p-6 rounded-3xl border border-emerald-100 flex justify-between items-start gap-4 shadow-sm">
                               <div><p className="text-sm font-black text-emerald-600 mb-1">{s?.name} · {SEL_OPTIONS.find(o=>o.name===r.tag)?.short} · {r.date}</p><p className="font-bold text-slate-700 whitespace-pre-wrap">{r.text}</p></div>
-                              <div className="flex gap-2 shrink-0"><button onClick={()=>{ sync({ studentStatus:{...db.studentStatus,[r.studentId]:'normal'}, pendingReflections:safeArray(db.pendingReflections).filter(x=>x.id!==r.id) }); playSound('good'); alert(`${s?.name} 학생 성찰 승인! 🌱`); }} className="bg-emerald-500 text-white px-5 py-3 rounded-2xl font-black text-sm hover:bg-emerald-600 shadow-md">승인</button><button onClick={()=>sync({ pendingReflections:safeArray(db.pendingReflections).filter(x=>x.id!==r.id) })} className="bg-slate-200 text-slate-600 px-5 py-3 rounded-2xl font-black text-sm hover:bg-slate-300">반려</button></div>
+                              <div className="flex gap-2 shrink-0">
+                                <button onClick={()=>{ sync({ studentStatus:{...db.studentStatus,[r.studentId]:'normal'}, pendingReflections:safeArray(db.pendingReflections).filter(x=>x.id!==r.id) }); playSound('good'); alert(`${s?.name} 학생 성찰 승인! 🌱`); }} className="bg-emerald-500 text-white px-5 py-3 rounded-2xl font-black text-sm hover:bg-emerald-600 shadow-md">승인</button>
+                                {/* 👇 이 반려 버튼 로직이 수정되었습니다! */}
+                                <button onClick={()=>{ 
+                                  sync({ 
+                                    studentStatus: { ...db.studentStatus, [r.studentId]: 'crisis' }, 
+                                    pendingReflections: safeArray(db.pendingReflections).filter(x=>x.id!==r.id) 
+                                  }); 
+                                  playSound('bad'); 
+                                  alert(`${s?.name} 학생의 성찰 다짐을 반려했습니다.`); 
+                                }} className="bg-slate-200 text-slate-600 px-5 py-3 rounded-2xl font-black text-sm hover:bg-slate-300">반려</button>
+                              </div>
                             </div>
                           );
                         })}
