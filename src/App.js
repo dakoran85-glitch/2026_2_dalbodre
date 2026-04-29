@@ -953,7 +953,6 @@ export default function App() {
       )}
 
       <header className="bg-[#FFF5E1] px-6 pt-6 pb-8 md:px-12 md:pt-10 md:pb-12 relative overflow-hidden border-b-4 border-white flex flex-col gap-8">
-      <header className="bg-[#FFF5E1] px-6 pt-6 pb-8 md:px-12 md:pt-10 md:pb-12 relative overflow-hidden border-b-4 border-white flex flex-col gap-8">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white rounded-full blur-[120px] opacity-70 pointer-events-none"/>
         <div className="max-w-[1400px] w-full mx-auto relative z-10 flex items-center justify-between">
           <h1 className="text-amber-800 font-black text-2xl flex items-center gap-3">
@@ -1443,7 +1442,6 @@ export default function App() {
                     </div>
                     <div className="flex flex-wrap gap-3">
                       {safeArray(db.rolesList).map((r,idx)=>(
-                        // 🔥 고유성을 위해 문자열 자체(r)와 index를 결합하여 안전한 key 생성
                         <div key={`role_${r}_${idx}`} className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border-2 border-indigo-100 shadow-sm hover:border-indigo-300 transition-colors">
                           <span className="font-black text-indigo-900 text-lg">{r}</span>
                           <button onClick={()=>{ if(window.confirm(`'${r}' 직업을 삭제하시겠습니까?`)) sync({ rolesList:safeArray(db.rolesList).filter(role=>role!==r) }); }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4"/></button>
@@ -2015,7 +2013,7 @@ function TimerWidget({ status, display, timer, warningLevel, breakInput, setBrea
         <div className="flex items-center gap-2 flex-wrap">
           {status==='idle' ? (
             <>
-              <div className="flex bg-slate-200/50 p-1 rounded-lg">{[1,3,5,10].map(m=>( <button key={m} onClick={()=>onCountdown(m)} className="px-2.5 py-1.5 bg-white hover:bg-slate-100 rounded text-xs font-black shadow-sm mx-0.5 transition-colors">{m}</button> ))}</div>
+              <div className="flex bg-slate-200/50 p-1 rounded-lg">{[1,3,5,10].map(m=>( <button key={`timer_btn_${m}`} onClick={()=>onCountdown(m)} className="px-2.5 py-1.5 bg-white hover:bg-slate-100 rounded text-xs font-black shadow-sm mx-0.5 transition-colors">{m}</button> ))}</div>
               <button onClick={onStopwatch} className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg text-xs font-black flex items-center gap-1 shadow-sm transition-colors"><Play className="w-3 h-3 fill-white"/> 스톱워치</button>
               <div className="flex gap-1 ml-1 bg-emerald-50 p-1 rounded-lg border border-emerald-100"><input type="number" value={breakInput} onChange={e=>setBreakInput(e.target.value)} onFocus={lockEditing} onBlur={unlockEditing} className="w-10 px-1 py-1 text-xs font-black text-center text-emerald-900 bg-white rounded border border-emerald-200 outline-none focus:border-emerald-500"/><button onClick={()=>onBreak(Math.max(1,toInt(breakInput,defaultBreakMin)))} className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-xs font-black flex items-center gap-1 shadow-sm transition-colors"><Coffee className="w-3 h-3"/> 쉬는시간</button></div>
             </>
