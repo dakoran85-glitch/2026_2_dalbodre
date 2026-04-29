@@ -1401,17 +1401,22 @@ export default function App() {
                               <div key={`mag_mem_${s.id}_${sIdx}`} className="bg-slate-50 p-5 rounded-3xl border border-slate-100 flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                   <div><p className="text-sm font-bold text-slate-400 mb-1">{s.role}</p><p className="font-black text-2xl text-slate-800">{s.name}</p></div>
-                                  {/* 👇 상태 강제 초기화 기능 추가 */}
+  
+                                  {/* 👇 기존 RotateCcw 아이콘 코드를 이 빨간색 버튼 코드로 교체하세요! */}
                                   {(s.status === 'pending' || s.status === 'crisis') && (
-                                    <button 
-                                      onClick={() => { if(window.confirm(`${s.name} 학생의 대기/위기 상태를 해제하고 '보통'으로 변경할까요?`)) sync({ studentStatus: { ...db.studentStatus, [s.id]: 'normal' } }); }}
-                                      className="p-2 bg-white text-blue-500 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors"
-                                      title="상태 강제 해제"
-                                    >
-                                      <RotateCcw className="w-5 h-5"/>
-                                    </button>
-                                  )}
-                                </div>
+                                  <button 
+                                    onClick={() => { 
+                                      if(window.confirm(`${s.name} 학생의 위기/대기 상태를 강제로 해제하시겠습니까?`)) {
+                                        sync({ studentStatus: { ...db.studentStatus, [s.id]: 'normal' } }); 
+                                        playSound('good');
+                                      }
+                                    }}
+                                    className="px-3 py-1.5 bg-red-50 text-red-600 font-black text-xs rounded-xl shadow-sm border border-red-200 hover:bg-red-500 hover:text-white transition-colors flex items-center gap-1"
+                                  > 
+                                    <AlertTriangle className="w-3.5 h-3.5"/> 위기 강제 해제
+                                  </button>
+                                )}
+                              </div>                      
                                 <div className="flex items-center gap-3 bg-white p-2 rounded-[18px] border border-slate-200 shadow-sm">
                                   <button onClick={()=>handleExpAdjust(s.id,-1)} className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"><Minus className="w-6 h-6"/></button>
                                   <span className="w-14 text-center font-black text-blue-600 text-2xl">{s.exp}</span>
