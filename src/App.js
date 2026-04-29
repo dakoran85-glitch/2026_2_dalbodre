@@ -1376,7 +1376,7 @@ export default function App() {
                       <button onClick={()=>{ const val=document.getElementById('new_role_input_hr').value.trim(); if(!val) return alert("입력하세요."); if(safeArray(db.rolesList).includes(val)) return alert("이미 존재하는 직업입니다."); sync({ rolesList:[...safeArray(db.rolesList),val] }); document.getElementById('new_role_input_hr').value=""; }} className="bg-indigo-600 text-white px-8 rounded-xl font-black text-lg shadow-md hover:bg-indigo-700 active:scale-95 transition-transform">목록에 추가</button>
                     </div>
                     <div className="flex flex-wrap gap-3">
-                      {safeArray(db.rolesList).map((r, idx)=>(
+                      {safeArray(db.rolesList).map((r,idx)=>(
                         // 🔥 고유성을 위해 문자열 자체(r)와 index를 결합하여 안전한 key 생성
                         <div key={`role_${r}_${idx}`} className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border-2 border-indigo-100 shadow-sm hover:border-indigo-300 transition-colors">
                           <span className="font-black text-indigo-900 text-lg">{r}</span>
