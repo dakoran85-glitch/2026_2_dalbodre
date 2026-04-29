@@ -795,17 +795,15 @@ export default function App() {
   const submitPraise = () => {
     const curDb = dbRef.current;
     if (!praiseTarget || !praiseFrom || !praiseTag || !praiseText.trim()) { alert("항목을 모두 입력해 주세요."); return; }
-    const finalToId = praiseTarget === 'me' ? 'me' : toInt(praiseTarget);
-    const finalFromId = praiseFrom === 'me' ? 'me' : toInt(praiseFrom);
     
-    const newP = { 
-      id: Date.now(), toId: finalToId, fromId: finalFromId, 
-      tag: praiseTag, text: praiseText.trim(), date: formatDate(), status: 'pending' 
-    };
+    // 🔥 자기 자신에게 보내는 것 차단
+    if (praiseTarget === praiseFrom) { alert("자기 자신에게는 보낼 수 없습니다."); return; }
+
+    const finalToId = toInt(praiseTarget); 
+    const finalFromId = toInt(praiseFrom);
     
-    sync({ pendingPraises: [...safeArray(curDb.pendingPraises), newP] });
-    playSound('good'); 
-    alert("감찰사의 승인 후 칭찬이 전달되고 코인이 지급됩니다! 🕊️");
+    sync({ pendingPraises: [...safeArray(curDb.pendingPraises), { id: generateId(), toId: finalToId, fromId: finalFromId, tag: praiseTag, text: praiseText.trim(), date: formatDate(), status: 'pending' }] });
+    playSound('good'); alert("감찰사의 승인 후 칭찬이 전달되고 코인이 지급됩니다! 🕊️");
     setShowPraiseModal(false); setPraiseTarget(""); setPraiseFrom(""); setPraiseTag(""); setPraiseText("");
   };
 
@@ -1314,46 +1312,45 @@ export default function App() {
               {/* ─── [기능추가] 현령 관리소: 상단에 코인 강제 조정 패널 추가 ─── */}
               {helpSubTab==='magistrate' && (
                 <div className="space-y-8 animate-in fade-in">
-                  {/* 코인 강제 조정 (관리실에서 이동) */}
-                  <div className="bg-amber-50 p-8 rounded-[40px] border-2 border-amber-200 shadow-sm">
-                    <h4 className="font-black text-xl text-amber-900 mb-5 flex items-center gap-3"><Coins className="w-6 h-6 text-amber-500"/> 개별 학생 코인 강제 조정</h4>
-                    <p className="text-sm font-bold text-amber-700 mb-6 bg-white px-4 py-2 rounded-xl border border-amber-200 inline-block">💡 양수 입력 시 코인 추가, 음수 입력 시 코인 차감됩니다.</p>
+                  <div className="bg-amber-50/50 p-10 rounded-[40px] border border-amber-100 shadow-sm">
+                    <h4 className="font-black text-2xl text-amber-900 mb-6 flex items-center gap-3"><Coins className="w-7 h-7 text-amber-500"/> 개별 학생 코인 강제 조정</h4>
                     <div className="flex flex-col md:flex-row gap-4 bg-white p-6 rounded-3xl shadow-sm border border-amber-200">
-                      <select id="coin_adjust_student_mag" className="flex-1 p-4 rounded-2xl border border-slate-200 font-black outline-none text-lg focus:border-amber-400">
+                      <select id="coin_adjust_student" className="flex-1 p-4 rounded-2xl border border-slate-200 font-black outline-none text-lg focus:border-amber-400">
                         <option value="">코인을 조절할 학생 선택</option>
-                        {allStats.map(s=><option key={s.id} value={s.id}>{s.name} {s.status==='crisis' ? '(🚨위기)' : ''} (현재: {s.coins}🪙)</option>)}
+                        {allStats.map((s, idx)=><option key={`coin_adj_${s.id}_${idx}`} value={s.id}>{s.name} {s.status==='crisis' ? '(🚨위기)' : s.status==='pending' ? '(⏳대기)' : ''} (현재: {s.coins}🪙)</option>)}
                       </select>
-                      <input id="coin_adjust_amount_mag" type="number" placeholder="증감 코인 (예: 10 또는 -5)" className="w-64 p-4 rounded-2xl border border-slate-200 font-black outline-none text-base focus:border-amber-400 text-center" onFocus={lockEditing} onBlur={unlockEditing}/>
-                      <button onClick={()=>{
-                        const sid=document.getElementById('coin_adjust_student_mag').value;
-                        const amt=toInt(document.getElementById('coin_adjust_amount_mag').value);
-                        if(!sid||!amt) return alert("학생과 금액을 모두 입력하세요.");
-                        const user=allStats.find(u=>u.id==sid);
-                        const curDb=dbRef.current;
-                        if(window.confirm(`[${user.name}] 학생에게 ${amt>0?'+'+amt:amt} 코인을 적용할까요?`)){
-                          sync({ bonusCoins:{...curDb.bonusCoins,[sid]:(curDb.bonusCoins?.[sid]||0)+amt} });
-                          document.getElementById('coin_adjust_amount_mag').value="";
-                          alert("적용 완료!"); playSound('good');
-                        }
-                      }} className="bg-amber-500 text-white px-10 rounded-2xl font-black text-lg shadow-md hover:bg-amber-600 active:scale-95 transition-transform">강제 적용</button>
+                      <input id="coin_adjust_amount" type="number" placeholder="증감할 코인량 (예: 10 또는 -5)" className="w-64 p-4 rounded-2xl border border-slate-200 font-black outline-none text-base focus:border-amber-400 text-center"/>
+                      <button onClick={()=>{ const sid=document.getElementById('coin_adjust_student').value; const amt=toInt(document.getElementById('coin_adjust_amount').value); if(!sid||!amt) return alert("학생과 금액을 모두 입력하세요."); const user=allStats.find(u=>u.id==sid); if(user && window.confirm(`[${user.name}] 학생에게 ${amt>0?'+'+amt:amt} 코인을 적용할까요?`)){ sync({ bonusCoins:{...db.bonusCoins,[sid]:(db.bonusCoins?.[sid]||0)+amt} }); document.getElementById('coin_adjust_amount').value=""; logPoint(sid, amt, '교사 강제 코인 조정'); playSound('good'); } }} className="bg-amber-500 text-white px-10 rounded-2xl font-black text-lg shadow-md hover:bg-amber-600 active:scale-95 transition-transform">강제 적용</button>
                     </div>
                   </div>
 
-                  <div className="flex flex-col md:flex-row justify-between items-center mb-2 gap-4">
+                  <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                     <h3 className="text-3xl font-black text-slate-800 flex items-center gap-3 bg-blue-100 inline-block px-6 py-3 rounded-full border border-blue-200"><BookOpen className="text-blue-600 w-8 h-8"/> 현령 직업 관리소</h3>
                     <p className="text-sm font-bold text-blue-600 bg-blue-50 px-5 py-3 rounded-2xl border border-blue-100 shadow-sm">💡 이곳에서 올리는 점수만 '장인' 승급에 반영됩니다.</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {[1,2,3,4,5,6].map(gNum=>{
+                    {[1,2,3,4,5,6].map((gNum, gIdx)=>{
                       const members=groupedByGroupStats.filter(s=>s.group===gNum);
                       if(!members.length) return null;
                       return (
-                        <div key={gNum} className="bg-white p-8 rounded-[40px] border-2 border-blue-50 shadow-sm">
+                        <div key={`mag_grp_${gNum}_${gIdx}`} className="bg-white p-8 rounded-[40px] border-2 border-blue-50 shadow-sm">
                           <h4 className="text-xl font-black text-blue-800 mb-6 bg-blue-50 inline-block px-6 py-2 rounded-full border border-blue-100">{gNum}모둠</h4>
                           <div className="grid grid-cols-1 gap-4">
-                            {members.map(s=>(
-                              <div key={s.id} className="bg-slate-50 p-5 rounded-3xl border border-slate-100 flex items-center justify-between">
-                                <div><p className="text-sm font-bold text-slate-400 mb-1">{s.role}</p><p className="font-black text-2xl text-slate-800">{s.name}</p></div>
+                            {members.map((s, sIdx)=>(
+                              <div key={`mag_mem_${s.id}_${sIdx}`} className="bg-slate-50 p-5 rounded-3xl border border-slate-100 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                  <div><p className="text-sm font-bold text-slate-400 mb-1">{s.role}</p><p className="font-black text-2xl text-slate-800">{s.name}</p></div>
+                                  {/* 👇 상태 강제 초기화 기능 추가 */}
+                                  {(s.status === 'pending' || s.status === 'crisis') && (
+                                    <button 
+                                      onClick={() => { if(window.confirm(`${s.name} 학생의 대기/위기 상태를 해제하고 '보통'으로 변경할까요?`)) sync({ studentStatus: { ...db.studentStatus, [s.id]: 'normal' } }); }}
+                                      className="p-2 bg-white text-blue-500 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors"
+                                      title="상태 강제 해제"
+                                    >
+                                      <RotateCcw className="w-5 h-5"/>
+                                    </button>
+                                  )}
+                                </div>
                                 <div className="flex items-center gap-3 bg-white p-2 rounded-[18px] border border-slate-200 shadow-sm">
                                   <button onClick={()=>handleExpAdjust(s.id,-1)} className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"><Minus className="w-6 h-6"/></button>
                                   <span className="w-14 text-center font-black text-blue-600 text-2xl">{s.exp}</span>
@@ -1368,7 +1365,6 @@ export default function App() {
                   </div>
                 </div>
               )}
-
               {/* ─── [기능추가] 명단 및 직업: 학생 카드에서 직접 수정 ─── */}
               {helpSubTab==='roster' && (
                 <div className="space-y-8 animate-in fade-in">
@@ -1380,8 +1376,9 @@ export default function App() {
                       <button onClick={()=>{ const val=document.getElementById('new_role_input_hr').value.trim(); if(!val) return alert("입력하세요."); if(safeArray(db.rolesList).includes(val)) return alert("이미 존재하는 직업입니다."); sync({ rolesList:[...safeArray(db.rolesList),val] }); document.getElementById('new_role_input_hr').value=""; }} className="bg-indigo-600 text-white px-8 rounded-xl font-black text-lg shadow-md hover:bg-indigo-700 active:scale-95 transition-transform">목록에 추가</button>
                     </div>
                     <div className="flex flex-wrap gap-3">
-                      {safeArray(db.rolesList).map((r,idx)=>(
-                        <div key={idx} className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border-2 border-indigo-100 shadow-sm hover:border-indigo-300 transition-colors">
+                      {safeArray(db.rolesList).map((r, idx)=>(
+                        // 🔥 고유성을 위해 문자열 자체(r)와 index를 결합하여 안전한 key 생성
+                        <div key={`role_${r}_${idx}`} className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border-2 border-indigo-100 shadow-sm hover:border-indigo-300 transition-colors">
                           <span className="font-black text-indigo-900 text-lg">{r}</span>
                           <button onClick={()=>{ if(window.confirm(`'${r}' 직업을 삭제하시겠습니까?`)) sync({ rolesList:safeArray(db.rolesList).filter(role=>role!==r) }); }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4"/></button>
                         </div>
@@ -1829,8 +1826,15 @@ export default function App() {
             </div>
             <div className="space-y-6 mb-10 relative z-10">
               <div className="flex gap-4">
-                <select value={praiseFrom} onChange={e=>setPraiseFrom(e.target.value)} className="flex-1 p-5 rounded-3xl bg-pink-50 border border-pink-200 font-black text-lg outline-none focus:border-pink-400 shadow-sm text-pink-900"><option value="">누가 보내나요?</option><option value="me">익명 (비밀 천사 👼)</option>{activeStudents.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select>
-                <select value={praiseTarget} onChange={e=>setPraiseTarget(e.target.value)} className="flex-1 p-5 rounded-3xl bg-white border-2 border-slate-200 font-black text-lg outline-none focus:border-pink-400 shadow-sm"><option value="">누구에게 보낼까요?</option><option value="me" className="text-pink-600">🙋 나 자신에게</option>{activeStudents.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select>
+                <select value={praiseFrom} onChange={e=>{setPraiseFrom(e.target.value); if(praiseTarget===e.target.value) setPraiseTarget("");}} className="flex-1 p-5 rounded-3xl bg-pink-50 border border-pink-200 font-black text-lg outline-none focus:border-pink-400 shadow-sm text-pink-900">
+                  <option value="">누가 보내나요?</option>
+                  {activeStudents.map(s=><option key={`praiseFrom_${s.id}`} value={s.id}>{s.name}</option>)}
+                </select>
+                <select value={praiseTarget} onChange={e=>setPraiseTarget(e.target.value)} className="flex-1 p-5 rounded-3xl bg-white border-2 border-slate-200 font-black text-lg outline-none focus:border-pink-400 shadow-sm">
+                  <option value="">누구에게 보낼까요?</option>
+                  {/* 🔥 보내는 사람(praiseFrom)으로 선택된 사람은 목록에서 제외 */}
+                  {activeStudents.filter(s => String(s.id) !== String(praiseFrom)).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
               </div>
               <select value={praiseTag} onChange={e=>setPraiseTag(e.target.value)} className="w-full p-5 rounded-3xl bg-white border-2 border-slate-200 font-black text-xl outline-none focus:border-pink-400 shadow-sm"><option value="">어떤 역량인가요?</option>{SEL_OPTIONS.map(opt=><option key={opt.name} value={opt.name}>{opt.name}</option>)}</select>
               <textarea value={praiseText} onChange={e=>setPraiseText(e.target.value)} rows="4" placeholder={praiseTag?PRAISE_GUIDES[praiseTag]:"위에서 역량을 먼저 선택해 주세요! 💌"} className="w-full p-6 rounded-[30px] bg-pink-50/50 border-2 border-pink-200 font-black text-lg outline-none focus:border-pink-400 text-pink-900 shadow-inner resize-none placeholder:text-pink-300"/>
