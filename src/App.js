@@ -225,7 +225,8 @@ const INITIAL_DB = {
   approvedPraises:[], donations:[], manualRepOffset:0,
   allTime:{ exp:{}, penalty:{}, donate:{}, fund:{} },
   attendance:{}, attendanceBonus:{}, streakWeeks:{}, notes:{}, extraAttendDays:0,
-  attendCoinLog:{}, questLog:{}, moodLog: {}, mistakes: []
+  attendCoinLog:{}, questLog:{}, moodLog: {}, mistakes: [],
+  suggestions: [], inventory: {} // 👈 건의함 및 인벤토리 추가
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -296,6 +297,10 @@ export default function App() {
   
   const [rescueTarget, setRescueTarget] = useState("");
   const [rescuer, setRescuer] = useState("");
+  
+  // 👇 건의함용 상태 추가
+  const [suggestionFrom, setSuggestionFrom] = useState("");
+  const [suggestionText, setSuggestionText] = useState("");
 
   const [selectedReportStudent, setSelectedReportStudent] = useState("");
   const [newStudentName, setNewStudentName] = useState("");
@@ -713,7 +718,21 @@ export default function App() {
   
   const handleExpAdjust = (sid, d) => { 
     const curDb = dbRef.current;
-    const n=Math.max(0,(curDb.roleExp[sid]||0)+d); let u={roleExp:{...curDb.roleExp,[sid]:n}}; if(d>0) u.allTime={...curDb.allTime,exp:{...(curDb.allTime?.exp||{}),[sid]:(curDb.allTime?.exp?.[sid]||0)+d}}; sync(u); if(d>0) playSound('good'); 
+    const currentExp = curDb.roleExp[sid] || 0;
+    // 0점일 때 마이너스를 누르면 아무 작동도 하지 않음 (방어 로직)
+    if (d < 0 && currentExp <= 0) return; 
+    
+    const n = currentExp + d; 
+    let u = {
+      roleExp: { ...curDb.roleExp, [sid]: n },
+      // +든 -든 누적 점수(allTime.exp)에 똑같이 반영되도록 수정 완료!
+      allTime: { 
+        ...curDb.allTime, 
+        exp: { ...(curDb.allTime?.exp || {}), [sid]: Math.max(0, (curDb.allTime?.exp?.[sid] || 0) + d) } 
+      }
+    }; 
+    sync(u); 
+    if (d > 0) playSound('good'); 
   };
   
   const handleDonate = (sid, amt) => { 
@@ -935,6 +954,18 @@ export default function App() {
     sync({ mistakes: [newM, ...safeArray(curDb.mistakes)].slice(0, 30) });
     alert("멋진 실패입니다! 이 실수가 당신을 더 빛나게 할 거예요. ✨");
     setShowMistakeModal(false); setMistakeText(""); setMistakeLesson("");
+  };
+
+  // 👇 건의함 제출 함수 추가
+  const submitSuggestion = () => {
+    const curDb = dbRef.current;
+    if (!suggestionFrom || !suggestionText.trim()) return alert("이름과 건의 내용을 모두 입력해 주세요.");
+    const student = activeStudents.find(s => String(s.id) === String(suggestionFrom));
+    const newSug = { id: generateId(), fromId: suggestionFrom, fromName: student?.name, text: suggestionText.trim(), date: formatDate() };
+    sync({ suggestions: [...safeArray(curDb.suggestions), newSug] });
+    playSound('good');
+    alert("행복 건의함에 의견이 소중하게 전달되었습니다! 🌸");
+    setSuggestionFrom(""); setSuggestionText("");
   };
 
   // ══════════════════════════════════════════════════════════════
@@ -1384,6 +1415,40 @@ export default function App() {
                     </div>
                   </div>
 
+                  {/* 🔥 [새로 추가된 기능] 누적 직업 점수 강제 조정 */}
+                  <div className="bg-indigo-50/50 p-10 rounded-[40px] border border-indigo-100 shadow-sm">
+                    <h4 className="font-black text-2xl text-indigo-900 mb-4 flex items-center gap-3"><BarChart3 className="w-7 h-7 text-indigo-500"/> 누적 직업 점수(랭킹) 강제 조정</h4>
+                    <p className="text-sm font-bold text-indigo-700 mb-6 bg-white p-3 rounded-xl shadow-sm border border-indigo-200 inline-block">💡 TOP 5 랭킹에 반영되는 '평생 누적 완수 횟수'의 오류를 바로잡을 수 있습니다.</p>
+                    <div className="flex flex-col md:flex-row gap-4 bg-white p-6 rounded-3xl shadow-sm border border-indigo-200">
+                      <select id="exp_adjust_student" className="flex-1 p-4 rounded-2xl border border-slate-200 font-black outline-none text-lg focus:border-indigo-400">
+                        <option value="">누적 점수를 조절할 학생 선택</option>
+                        {allStats.map((s, idx)=><option key={`exp_adj_${s.id}_${idx}`} value={s.id}>{s.name} (현재 누적: {s.atExp}회)</option>)}
+                      </select>
+                      <input id="exp_adjust_amount" type="number" placeholder="증감 수치 (예: 5 또는 -3)" className="w-64 p-4 rounded-2xl border border-slate-200 font-black outline-none text-base focus:border-indigo-400 text-center"/>
+                      <button onClick={()=>{ 
+                        const sid = document.getElementById('exp_adjust_student').value; 
+                        const amt = toInt(document.getElementById('exp_adjust_amount').value); 
+                        if(!sid || !amt) return alert("학생과 수치를 모두 입력하세요."); 
+                        const user = allStats.find(u=>u.id==sid); 
+                        if(user && window.confirm(`[${user.name}] 학생의 누적 점수에 ${amt>0?'+'+amt:amt}을 적용할까요?`)){ 
+                          const curDb = dbRef.current; 
+                          sync({ 
+                            allTime: {
+                              ...curDb.allTime,
+                              exp: {
+                                ...(curDb.allTime?.exp||{}),
+                                [sid]: Math.max(0, (curDb.allTime?.exp?.[sid]||0) + amt)
+                              }
+                            } 
+                          }); 
+                          document.getElementById('exp_adjust_amount').value=""; 
+                          playSound('good'); 
+                          alert("누적 점수가 정상적으로 수정되었습니다."); 
+                        } 
+                      }} className="bg-indigo-500 text-white px-10 rounded-2xl font-black text-lg shadow-md hover:bg-indigo-600 active:scale-95 transition-transform">강제 적용</button>
+                    </div>
+                  </div>
+
                   <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                     <h3 className="text-3xl font-black text-slate-800 flex items-center gap-3 bg-blue-100 inline-block px-6 py-3 rounded-full border border-blue-200"><BookOpen className="text-blue-600 w-8 h-8"/> 현령 직업 관리소</h3>
                     <p className="text-sm font-bold text-blue-600 bg-blue-50 px-5 py-3 rounded-2xl border border-blue-100 shadow-sm">💡 이곳에서 올리는 점수만 '장인' 승급에 반영됩니다.</p>
@@ -1400,8 +1465,8 @@ export default function App() {
                               <div key={`mag_mem_${s.id}_${sIdx}`} className="bg-slate-50 p-5 rounded-3xl border border-slate-100 flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                   <div><p className="text-sm font-bold text-slate-400 mb-1">{s.role}</p><p className="font-black text-2xl text-slate-800">{s.name}</p></div>
-  
-                                  {/* 👇 기존 RotateCcw 아이콘 코드를 이 빨간색 버튼 코드로 교체하세요! */}
+                                  
+                                  {/* 👇 상태 강제 초기화 버튼 */}
                                   {(s.status === 'pending' || s.status === 'crisis') && (
                                   <button 
                                     onClick={() => { 
@@ -1535,7 +1600,7 @@ export default function App() {
                         <div className="flex gap-4">
                           <select id={`buyer_${item.id}`} className="flex-1 p-5 rounded-2xl bg-slate-50 border border-slate-200 font-bold outline-none text-lg shadow-sm">
                             <option value="">누가 구매하나요?</option>
-                            {activeStudents.map(s=><option key={s.id} value={s.id}>{s.name} (잔여: {s.coins}🪙)</option>)}
+                            {activeStudents.map(s=><option key={`shop_${s.id}`} value={s.id}>{s.name} (잔여: {s.coins}🪙)</option>)}
                           </select>
                           <button onClick={()=>{
                             if(!isShopOpen) return alert("오늘은 상점 운영일이 아닙니다!");
@@ -1547,8 +1612,15 @@ export default function App() {
                             if(!window.confirm(`${user.name}의 코인 ${price}🪙을 차감할까요?`)) return;
                             const repBonus=Math.ceil(price*0.10);
                             const coinBonus=Math.ceil(price*0.05);
-                            const newHistory={ id:Date.now(),date:formatDate(),itemName:String(item.name),buyerName:user.name,price };
-                            let updates={ usedCoins:{...db.usedCoins,[sid]:(db.usedCoins[sid]||0)+price}, purchaseHistory:[newHistory,...safeArray(db.purchaseHistory)].slice(0,50) };
+                            const newHistory={ id:generateId(),date:formatDate(),itemName:String(item.name),buyerName:user.name,price };
+                            
+                            // 🔥 인벤토리 업데이트 로직
+                            const newInventory = { ...(db.inventory || {}) };
+                            const userInv = { ...(newInventory[sid] || {}) };
+                            userInv[item.name] = (userInv[item.name] || 0) + 1;
+                            newInventory[sid] = userInv;
+
+                            let updates={ usedCoins:{...db.usedCoins,[sid]:(db.usedCoins[sid]||0)+price}, purchaseHistory:[newHistory,...safeArray(db.purchaseHistory)].slice(0,50), inventory: newInventory };
                             let alertMsg="결제 승인 완료!";
                             if(item.creatorId){ updates.bonusCoins={...db.bonusCoins,[item.creatorId]:(db.bonusCoins?.[item.creatorId]||0)+coinBonus}; updates.manualRepOffset=(db.manualRepOffset||0)+repBonus; alertMsg=`결제 완료! 💸 장인(${item.creator}) 로열티 +${coinBonus}🪙, 학급 명성 +${repBonus}p!`; }
                             sync(updates); alert(alertMsg); playSound('buy');
@@ -1566,7 +1638,7 @@ export default function App() {
                           <div className="w-full h-6 bg-black/30 rounded-full mb-10 overflow-hidden border border-white/20"><div className="h-full bg-yellow-400 transition-all duration-1000" style={{ width:`${Math.min((toInt(f.current)/toInt(f.target,1))*100,100)}%` }}/></div>
                         </div>
                         <div className="flex gap-4 relative z-10">
-                          <select id={`funder_${f.id}`} className="flex-1 p-5 rounded-2xl bg-white/20 border-none text-white font-bold outline-none text-lg backdrop-blur-sm"><option value="" className="text-slate-800">누가 투자할까요?</option>{activeStudents.map(s=><option key={s.id} value={s.id} className="text-slate-800">{s.name} ({s.coins}🪙)</option>)}</select>
+                          <select id={`funder_${f.id}`} className="flex-1 p-5 rounded-2xl bg-white/20 border-none text-white font-bold outline-none text-lg backdrop-blur-sm"><option value="" className="text-slate-800">누가 투자할까요?</option>{activeStudents.map(s=><option key={`fund_${s.id}`} value={s.id} className="text-slate-800">{s.name} ({s.coins}🪙)</option>)}</select>
                           <input id={`f_amt_${f.id}`} type="number" placeholder="금액" className="w-28 p-5 rounded-2xl bg-white/20 border-none text-white font-bold outline-none text-lg text-center placeholder:text-blue-200 backdrop-blur-sm"/>
                           <button onClick={()=>{ const sid=document.getElementById(`funder_${f.id}`).value; const amt=toInt(document.getElementById(`f_amt_${f.id}`).value); if(!sid||!amt) return alert("정확히 입력하세요."); handleFund(f.id,toInt(sid),amt); }} className="bg-yellow-400 text-yellow-900 px-10 rounded-2xl font-black text-xl shadow-lg hover:bg-yellow-300 active:scale-95 transition-transform">투자</button>
                         </div>
@@ -1584,8 +1656,56 @@ export default function App() {
                       ))}
                     </div>
                   </div>
+
+                  {/* 👇 [새기능] 인벤토리 화면 */}
+                  <div className="mt-10 bg-white p-10 rounded-[40px] shadow-sm border-2 border-slate-100">
+                    <h4 className="text-2xl font-black text-slate-800 mb-6 flex items-center gap-3"><Briefcase className="w-7 h-7 text-indigo-500"/> 학생별 보유 물품 현황</h4>
+                    <p className="text-slate-500 font-bold mb-8 bg-slate-50 p-4 rounded-2xl border border-slate-200">학생들이 구매한 물품 목록입니다. 아이템을 사용하면 현령이나 감찰사가 <b>[사용]</b> 버튼을 눌러 개수를 줄일 수 있습니다.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {activeStudents.map(s => {
+                        const sInv = db.inventory?.[s.id] || {};
+                        const items = Object.entries(sInv).filter(([_, count]) => count > 0);
+                        if (items.length === 0) return null;
+                        return (
+                          <div key={`inv_${s.id}`} className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100 shadow-sm flex flex-col gap-4">
+                            <span className="font-black text-xl text-indigo-900">{s.name}</span>
+                            <div className="flex flex-col gap-2">
+                              {items.map(([iName, count]) => (
+                                <div key={iName} className="flex items-center justify-between bg-white px-4 py-3 rounded-2xl border border-slate-100 shadow-sm">
+                                  <span className="text-base font-bold text-slate-700 truncate flex-1">{iName} <span className="text-amber-500 font-black ml-1 text-lg">{count}개</span></span>
+                                  <button onClick={() => {
+                                    if(window.confirm(`${s.name} 학생의 '${iName}' 1개를 사용 처리하시겠습니까?`)) {
+                                      const curInv = { ...(db.inventory || {}) };
+                                      curInv[s.id] = { ...curInv[s.id], [iName]: count - 1 };
+                                      sync({ inventory: curInv });
+                                      playSound('good');
+                                    }
+                                  }} className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-black rounded-xl transition-colors shadow-sm shrink-0">사용</button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 👇 [새기능] 달보드레 행복 건의함 */}
+                  <div className="mt-10 bg-gradient-to-br from-emerald-50 to-teal-50 p-10 rounded-[40px] shadow-sm border-2 border-emerald-200">
+                    <h4 className="text-2xl font-black text-emerald-800 mb-3 flex items-center gap-3"><MessageSquare className="w-7 h-7 text-emerald-500"/> 달보드레 행복 건의함</h4>
+                    <p className="text-sm font-bold text-emerald-700 mb-8 bg-white/70 p-4 rounded-2xl border border-emerald-100 shadow-sm inline-block">우리 반을 더 행복하게 만들 아이디어를 실명으로 건의해 주세요!</p>
+                    <div className="flex flex-col md:flex-row gap-6 mb-6">
+                      <select value={suggestionFrom} onChange={e=>setSuggestionFrom(e.target.value)} className="md:w-1/3 p-5 rounded-3xl bg-white border border-emerald-200 font-black text-lg outline-none focus:border-emerald-400 shadow-sm text-emerald-900">
+                        <option value="">누가 건의하나요?</option>
+                        {activeStudents.map(s=><option key={`sug_${s.id}`} value={s.id}>{s.name}</option>)}
+                      </select>
+                      <textarea value={suggestionText} onChange={e=>setSuggestionText(e.target.value)} rows="3" placeholder="어떤 점을 개선하면 좋을지 구체적으로 적어주세요." className="flex-1 p-6 rounded-3xl bg-white border border-emerald-200 font-bold text-lg outline-none focus:border-emerald-400 shadow-inner resize-none"/>
+                    </div>
+                    <button onClick={submitSuggestion} className="w-full bg-emerald-500 text-white py-5 rounded-3xl font-black text-xl shadow-md hover:bg-emerald-600 active:scale-95 transition-transform flex justify-center items-center gap-2"><Send className="w-6 h-6"/> 건의사항 제출하기</button>
+                  </div>
+
                 </div>
-              )}
+              )}}
             </section>
           </div>
         )}
@@ -1685,6 +1805,25 @@ export default function App() {
                       )}
                     </div>
                   </div>
+
+                  {/* 👇 여기에 건의함 확인 기능 추가 */}
+                  {safeArray(db.suggestions).length > 0 && (
+                    <div className="bg-emerald-50 p-8 rounded-[40px] border-2 border-emerald-200 shadow-sm mt-10">
+                      <h3 className="text-2xl font-black text-emerald-800 mb-6 flex items-center gap-2"><MessageSquare className="w-7 h-7"/> 행복 건의함 접수 알림 ({safeArray(db.suggestions).length}건)</h3>
+                      <div className="space-y-4">
+                        {safeArray(db.suggestions).map(sug => (
+                          <div key={sug.id} className="bg-white p-6 rounded-3xl border border-emerald-100 flex justify-between items-start gap-4 shadow-sm">
+                            <div className="flex-1">
+                              <p className="text-sm font-black text-emerald-600 mb-2 bg-emerald-50 inline-block px-3 py-1 rounded-lg border border-emerald-100">{sug.fromName} 학생의 건의 ({sug.date})</p>
+                              <p className="font-bold text-slate-700 whitespace-pre-wrap text-lg bg-slate-50 p-4 rounded-2xl">{sug.text}</p>
+                            </div>
+                            <button onClick={()=>{ if(window.confirm("이 건의사항을 확인 완료 처리하고 지우시겠습니까?")) sync({ suggestions:safeArray(db.suggestions).filter(x=>x.id!==sug.id) }); }} className="bg-slate-200 text-slate-600 px-6 py-4 rounded-2xl font-black text-sm hover:bg-slate-300 shadow-sm shrink-0">확인 완료</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               )}
               {adminSubTab==='shopAdmin' && (
