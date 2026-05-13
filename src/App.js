@@ -502,7 +502,13 @@ export default function App() {
   const isAllAttendCompleted = useMemo(()=> db.questLog?.[formatDate()]?.allAttend === true, [db.questLog]);
   
   const { praiseFeed, topGivers, topReceivers, fireflyCount } = useMemo(() => {
-    const feed = safeArray(db.approvedPraises).sort((a,b) => b.id - a.id);
+    // 🔥 문자열로 된 ID에서 시간 값을 추출하여 정확하게 최신순 정렬하도록 수정
+    const feed = safeArray(db.approvedPraises).sort((a,b) => {
+      const timeA = parseInt(String(a.id).split('-')[0]) || 0;
+      const timeB = parseInt(String(b.id).split('-')[0]) || 0;
+      return timeB - timeA;
+    });
+    
     const givers = {}, receivers = {};
     let totalHearts = 0;
     feed.forEach(p => {
@@ -711,8 +717,25 @@ export default function App() {
   
   const handleGivePenalty = (sid) => { 
     const curDb = dbRef.current;
-    if(!window.confirm("위기 상태로 지정할까요?")) return; 
-    sync({ studentStatus:{...curDb.studentStatus,[sid]:'crisis'}, penaltyCount:{...curDb.penaltyCount,[sid]:(curDb.penaltyCount[sid]||0)+1}, allTime:{...curDb.allTime,penalty:{...(curDb.allTime?.penalty||{}),[sid]:(curDb.allTime?.penalty?.[sid]||0)+1}} }); 
+    if(!window.confirm("위기 상태로 지정할까요? (학급 명성 -100p, 개인 코인 -50🪙)")) return; 
+    
+    // 기본 설정된 페널티 점수를 가져와서, 학급 명성이 정확히 총 -100점이 되도록 보정값 계산
+    const penaltyUnit = curDb.settings?.pointConfig?.penalty || 20;
+    const repOffsetAdjust = -50 + penaltyUnit; 
+    
+    sync({ 
+      studentStatus: { ...curDb.studentStatus, [sid]: 'crisis' }, 
+      penaltyCount: { ...curDb.penaltyCount, [sid]: (curDb.penaltyCount[sid] || 0) + 1 }, 
+      allTime: { ...curDb.allTime, penalty: { ...(curDb.allTime?.penalty || {}), [sid]: (curDb.allTime?.penalty?.[sid] || 0) + 1 } },
+      
+      // 🔥 개인 코인 -50 차감 적용
+      bonusCoins: { ...curDb.bonusCoins, [sid]: (curDb.bonusCoins?.[sid] || 0) - 50 },
+      // 🔥 학급 명성 총 -100 차감 적용
+      manualRepOffset: (curDb.manualRepOffset || 0) + repOffsetAdjust
+    }); 
+    
+    // 점수 변동 기록장에 감점 내역 저장
+    logPoint(sid, -50, '위기 상태 감점');
     playSound('bad'); 
   };
   
