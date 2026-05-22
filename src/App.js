@@ -717,9 +717,13 @@ export default function App() {
   
   const handleGivePenalty = (sid) => { 
     const curDb = dbRef.current;
-    if(!window.confirm("위기 상태로 지정할까요? (학급 명성 -100p, 개인 코인 -50🪙)")) return; 
     
-    // 기본 설정된 페널티 점수를 가져와서, 학급 명성이 정확히 총 -100점이 되도록 보정값 계산
+    // 🔥 마이너스 빚 방지: 현재 보유 코인을 파악해서 가진 돈까지만 차감 (최대 50)
+    const currentCoins = Math.max(0, (curDb.roleExp[sid]||0)*10 + (curDb.bonusCoins?.[sid]||0) - (curDb.usedCoins?.[sid]||0));
+    const deduction = Math.min(50, currentCoins); 
+    
+    if(!window.confirm(`위기 상태로 지정할까요? (학급 명성 -100p / 개인 코인 -${deduction}🪙 차감)`)) return; 
+    
     const penaltyUnit = curDb.settings?.pointConfig?.penalty || 20;
     const repOffsetAdjust = -50 + penaltyUnit; 
     
@@ -728,27 +732,35 @@ export default function App() {
       penaltyCount: { ...curDb.penaltyCount, [sid]: (curDb.penaltyCount[sid] || 0) + 1 }, 
       allTime: { ...curDb.allTime, penalty: { ...(curDb.allTime?.penalty || {}), [sid]: (curDb.allTime?.penalty?.[sid] || 0) + 1 } },
       
-      // 🔥 개인 코인 -50 차감 적용
-      bonusCoins: { ...curDb.bonusCoins, [sid]: (curDb.bonusCoins?.[sid] || 0) - 50 },
-      // 🔥 학급 명성 총 -100 차감 적용
+      // 🔥 깎을 수 있는 금액(deduction)만 차감하여 0점 바닥 유지
+      bonusCoins: { ...curDb.bonusCoins, [sid]: (curDb.bonusCoins?.[sid] || 0) - deduction },
       manualRepOffset: (curDb.manualRepOffset || 0) + repOffsetAdjust
     }); 
     
-    // 점수 변동 기록장에 감점 내역 저장
-    logPoint(sid, -50, '위기 상태 감점');
+    logPoint(sid, -deduction, '위기 상태 감점');
     playSound('bad'); 
   };
   
   const handleExpAdjust = (sid, d) => { 
     const curDb = dbRef.current;
     const currentExp = curDb.roleExp[sid] || 0;
-    // 0점일 때 마이너스를 누르면 아무 작동도 하지 않음 (방어 로직)
     if (d < 0 && currentExp <= 0) return; 
     
+    let newBonusCoins = curDb.bonusCoins?.[sid] || 0;
+    
+    // 🔥 직업 점수를 취소해서(-10코인) 총 잔액이 마이너스가 되는 것을 방어
+    if (d < 0) {
+      const currentCoins = (curDb.roleExp[sid]||0)*10 + (curDb.bonusCoins?.[sid]||0) - (curDb.usedCoins?.[sid]||0);
+      if (currentCoins < 10) { 
+        // 깎여서 마이너스가 될 금액만큼 보너스에 채워넣어 정확히 0점 안착
+        newBonusCoins += (10 - currentCoins); 
+      }
+    }
+
     const n = currentExp + d; 
     let u = {
       roleExp: { ...curDb.roleExp, [sid]: n },
-      // +든 -든 누적 점수(allTime.exp)에 똑같이 반영되도록 수정 완료!
+      bonusCoins: { ...curDb.bonusCoins, [sid]: newBonusCoins },
       allTime: { 
         ...curDb.allTime, 
         exp: { ...(curDb.allTime?.exp || {}), [sid]: Math.max(0, (curDb.allTime?.exp?.[sid] || 0) + d) } 
@@ -1434,7 +1446,31 @@ export default function App() {
                         {allStats.map((s, idx)=><option key={`coin_adj_${s.id}_${idx}`} value={s.id}>{s.name} {s.status==='crisis' ? '(🚨위기)' : s.status==='pending' ? '(⏳대기)' : ''} (현재: {s.coins}🪙)</option>)}
                       </select>
                       <input id="coin_adjust_amount" type="number" placeholder="증감할 코인량 (예: 10 또는 -5)" className="w-64 p-4 rounded-2xl border border-slate-200 font-black outline-none text-base focus:border-amber-400 text-center"/>
-                      <button onClick={()=>{ const sid=document.getElementById('coin_adjust_student').value; const amt=toInt(document.getElementById('coin_adjust_amount').value); if(!sid||!amt) return alert("학생과 금액을 모두 입력하세요."); const user=allStats.find(u=>u.id==sid); if(user && window.confirm(`[${user.name}] 학생에게 ${amt>0?'+'+amt:amt} 코인을 적용할까요?`)){ sync({ bonusCoins:{...db.bonusCoins,[sid]:(db.bonusCoins?.[sid]||0)+amt} }); document.getElementById('coin_adjust_amount').value=""; logPoint(sid, amt, '교사 강제 코인 조정'); playSound('good'); } }} className="bg-amber-500 text-white px-10 rounded-2xl font-black text-lg shadow-md hover:bg-amber-600 active:scale-95 transition-transform">강제 적용</button>
+                      <button onClick={()=>{ 
+                        const sidStr = document.getElementById('coin_adjust_student').value;
+                        const amt = toInt(document.getElementById('coin_adjust_amount').value); 
+                        if(!sidStr || !amt) return alert("학생과 금액을 모두 입력하세요."); 
+                        
+                        const sid = toInt(sidStr);
+                        const user = allStats.find(u=>u.id===sid); 
+                        
+                        if(user && window.confirm(`[${user.name}] 학생에게 ${amt>0?'+'+amt:amt} 코인을 적용할까요?`)){ 
+                          const curDb = dbRef.current;
+                          
+                          // 🔥 빚 방지: 마이너스 입력 시 현재 잔액을 넘어서 깎지 않도록 제한
+                          let appliedAmt = amt;
+                          if (amt < 0) {
+                            const currentCoins = Math.max(0, (curDb.roleExp[sid]||0)*10 + (curDb.bonusCoins?.[sid]||0) - (curDb.usedCoins?.[sid]||0));
+                            appliedAmt = -Math.min(Math.abs(amt), currentCoins);
+                          }
+                          
+                          sync({ bonusCoins:{...curDb.bonusCoins, [sid]: (curDb.bonusCoins?.[sid]||0)+appliedAmt} }); 
+                          document.getElementById('coin_adjust_amount').value=""; 
+                          logPoint(sid, appliedAmt, '교사 강제 코인 조정'); 
+                          playSound('good'); 
+                          alert(`코인 적용 완료! (실제 반영 변동폭: ${appliedAmt}🪙)`);
+                        } 
+                      }} className="bg-amber-500 text-white px-10 rounded-2xl font-black text-lg shadow-md hover:bg-amber-600 active:scale-95 transition-transform">강제 적용</button>
                     </div>
                   </div>
 
