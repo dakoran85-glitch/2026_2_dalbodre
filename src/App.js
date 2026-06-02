@@ -1213,6 +1213,7 @@ export default function App() {
                       <div className="absolute -top-4 -right-4 z-20"><button onClick={()=>toggleTimeAttackClear(s.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-black text-xs shadow-md border-2 ${isTaCleared?'bg-green-500 text-white border-green-600':'bg-white text-slate-400 border-slate-200 hover:text-red-500'}`}>{isTaCleared?<><CheckCircle2 className="w-3 h-3"/>완료</>:<><Timer className="w-3 h-3"/>도전 중</>}</button></div>
                     )}
                     {isAnim && <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none"><span className="text-4xl font-black text-amber-500 drop-shadow-xl animate-flyToScore">+1</span></div>}
+                    
                     <div className="flex justify-between items-center mb-5 border-b-2 border-slate-100/50 pb-4">
                       <div className="flex items-center gap-3">
                         <span className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-xl shadow-inner ${s.status==='crisis'?'bg-slate-200 text-slate-500':'bg-amber-100 text-amber-800'}`}>{s.id}</span>
@@ -1220,6 +1221,7 @@ export default function App() {
                       </div>
                       {isAuthenticated==='teacher' && <button onClick={()=>openNoteModal(s.id)} className="p-3 rounded-2xl bg-yellow-50 text-yellow-600 hover:bg-yellow-100 border border-yellow-200 shadow-sm"><StickyNote className="w-5 h-5"/></button>}
                     </div>
+                    
                     <div className="flex flex-col mb-5 gap-3">
                       <p className="text-[12px] font-bold text-slate-400 tracking-wide truncate bg-slate-50 w-max px-3 py-1 rounded-md">{s.group}모둠 · {s.role}</p>
                       <button onClick={()=>handleAttendanceStep1(s.id)} disabled={s.status==='crisis' || getTodayWeekdayIdx()<0 || (!isAttendanceOpen() && !s.attendedToday)} className={`text-left transition-all ${(s.status==='crisis' || (!isAttendanceOpen() && !s.attendedToday)) ? 'cursor-not-allowed opacity-50' : 'hover:bg-amber-50 active:scale-95'} rounded-xl py-1 px-1 w-full relative`} title={!isAttendanceOpen() && !s.attendedToday ? "출석 마감" : s.attendedToday ? "출석 취소" : "출석 체크 (마음 날씨 선택)"}>
@@ -1251,14 +1253,15 @@ export default function App() {
                           </div>
                         );
                       })()}
-
                     </div>
+
                     {db.settings?.showCumulativeStats && (
                       <div className="bg-slate-50 border border-slate-200 p-3 rounded-2xl mb-4 text-xs font-bold text-slate-600 grid grid-cols-2 gap-2 shadow-inner">
                         <span>✅완수: <span className="text-blue-600">{s.atExp}</span></span><span>💎기부: <span className="text-amber-600">{s.atDonate}</span></span>
                         <span>🚀펀딩: <span className="text-pink-600">{s.atFund}</span></span><span>🚨위기: <span className="text-red-600">{s.atPen}</span></span>
                       </div>
                     )}
+                    
                     <div className="mt-auto pt-2">
                       {s.status==='normal' && <button onClick={()=>handleGivePenalty(s.id)} className="w-full py-3 bg-slate-50 border border-slate-200 hover:bg-red-50 text-slate-400 hover:text-red-600 hover:border-red-200 rounded-[18px] font-black text-sm flex items-center justify-center gap-2 transition-all"><AlertTriangle className="w-4 h-4"/> 위기 상태로 지정</button>}
                       {s.status==='crisis' && <p className="text-center font-black text-white bg-slate-600 py-3 rounded-[18px] text-sm flex items-center justify-center gap-2">🚨 성찰과 회복 요망</p>}
