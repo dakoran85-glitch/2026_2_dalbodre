@@ -1235,6 +1235,23 @@ export default function App() {
                         </div>
                       </button>
                       <div className={`text-sm font-black px-3 py-1.5 rounded-2xl border-2 self-start shadow-sm ${s.status==='crisis'?'bg-slate-200 border-slate-300 text-slate-500':`${s.mastery.bg} ${s.mastery.color}`}`}>{s.mastery.label} <span className="opacity-70">({s.exp})</span></div>
+                      
+                      {/* 🔥 [새기능] 대시보드 학생 카드에 보유 아이템(인벤토리) 표시 */}
+                      {(() => {
+                        const sInv = db.inventory?.[s.id] || {};
+                        const items = Object.entries(sInv).filter(([_, count]) => count > 0);
+                        if (items.length === 0) return null;
+                        return (
+                          <div className="flex flex-wrap gap-1.5 mt-1 border-t border-slate-100/50 pt-2">
+                            {items.map(([iName, count]) => (
+                              <span key={`dash_inv_${s.id}_${iName}`} className="text-[11px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg flex items-center shadow-sm">
+                                🎁 {iName} <span className="font-black text-indigo-900 ml-1">{count}</span>
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
+
                     </div>
                     {db.settings?.showCumulativeStats && (
                       <div className="bg-slate-50 border border-slate-200 p-3 rounded-2xl mb-4 text-xs font-bold text-slate-600 grid grid-cols-2 gap-2 shadow-inner">
